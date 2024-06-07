@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "neo4j-aura-sdk"
+version = "0.1.0"
+description = ""
+authors = ["Zach Probst <Zach_Probst@intuit.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pydantic = "^2.7.3"
+httpx = "^0.27.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.2"
+black = "^24.4.2"
+ruff = "^0.4.8"
+isort = "^5.13.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
