@@ -5,7 +5,7 @@ from typing import Type
 import httpx
 from pydantic import BaseModel
 
-from .models import AuthResponse, TenantsResponse
+from .models import AuthResponse, TenantsResponse, TenantResponse, InstancesResponse, InstanceResponse, SnapshotsResponse, SnapshotResponse, CustomerManagedKeysResponse, CustomerManagedKeyResponse, InstanceRequest
 
 
 class AuraClient:
@@ -76,7 +76,7 @@ class AuraClient:
         )
 
         # TODO: We should handle the case where the response is not a 200
-        #       and throw a butter excpettion than just raising an error.
+        #       and throw a better exception than just raising an error.
         response.raise_for_status()
 
         auth_response = AuthResponse(**response.json())
@@ -89,10 +89,54 @@ class AuraClient:
     async def _get(self, path: str, model: Type[BaseModel]):
         token = await self._get_token()
         headers = {"Authorization": f"Bearer {token}"}
-        response = await self._client.get(f"{self._base_url}{path}", headers=headers)
+        response = await self._client.get(f"{self._base_url}/v1/{path}", headers=headers)
+        # TODO: These lines are bit brittle, and suffer from the same issue as above.
+        response.raise_for_status()
+        return model(**response.json())
+
+    async def _post(self, path: str, body: Type[BaseModel], model: Type[BaseModel]):
+        token = await self._get_token()
+        headers = {"Authorization": f"Bearer {token}", "Content-Type":"application/json","accept":"application/json"}
+        response = await self._client.post(f"{self._base_url}/v1/{path}", 
+            headers=headers,
+            data=body.model_dump_json())
         # TODO: These lines are bit brittle, and suffer from the same issue as above.
         response.raise_for_status()
         return model(**response.json())
 
     async def tenants(self):
-        return await self._get("/v1/tenants", model=TenantsResponse)
+        return await self._get("tenants", model=TenantsResponse)
+
+    async def tenant(self, tenantId: str):
+        return await self._get(f"tenants/{tenantId}", model=TenantResponse)
+
+    async def instances(self, tenantId: str = ""):
+        path = "instances"
+        if tenantId:
+            path+=f"?tenantId={tenantId}"
+        return await self._get(path, model=InstancesResponse)
+
+    async def instance(self, instanceId: str):
+        return await self._get(f"instances/{instanceId}", model=InstanceResponse)
+
+    async def createInstance(self, details: InstanceRequest):
+        return await self._post(f"instances", details, model=InstanceResponse)
+
+    async def snapshots(self, instanceId: str, date: str = ""):
+        path = f"instances/{instanceId}/snapshots"
+        if date:
+            path+=f"?date={date}"
+        return await self._get(path, model=SnapshotsResponse)
+
+    async def snapshot(self, instanceId: str, snapshotId: str):
+        return await self._get(f"instances/{instanceId}/snapshots/{snapshotId}", model=SnapshotResponse)
+
+    async def customerManagedKeys(self, tenantId: str = ""):
+        path = "customer-managed-keys"
+        if tenantId:
+            path+=f"?tenantId={tenantId}"
+        return await self._get(path, model=CustomerManagedKeysResponse)
+
+    async def customerManagedKey(self, customerManagedKeyId: str):
+        return await self._get(f"customer-managed-keys/{customerManagedKeyId}", model=CustomerManagedKeyResponse)
+
