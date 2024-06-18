@@ -63,7 +63,7 @@ class InstancesResponse(BaseModel):
     data: List[InstanceSummary]
 
 class Instance(InstanceSummary):
-    connection_url: str
+    connection_url: str=""
     memory: str=""
     metrics_integration_url: str=""
     region: str
@@ -77,6 +77,20 @@ class Instance(InstanceSummary):
     username: str=""
     password: str=""
 
+class InstanceSizingRequest(BaseModel):
+    node_count: int
+    relationship_count: int
+    instance_type: str
+    algorithm_categories: List[str]
+
+class InstanceSizing(BaseModel):
+    did_exceed_maximum: bool
+    min_required_memory: str
+    recommended_size: str
+
+class InstanceSizingResponse(BaseModel):
+    data: InstanceSizing
+
 class InstanceResponse(BaseModel):
     data: Instance
 
@@ -88,14 +102,14 @@ class InstanceRequest(BaseModel):
     region: str
     type: str
     version: str
-    
+
 class Snapshot(BaseModel):
     snapshot_id: str
-    exportable: bool
-    instance_id: str
-    profile: str
-    status: str
-    timestamp: str
+    exportable: bool=False
+    instance_id: str=""
+    profile: str=""
+    status: str=""
+    timestamp: str=""
 
 class SnapshotsResponse(BaseModel):
     data: List[Snapshot]
@@ -121,3 +135,11 @@ class CustomerManagedKey(CustomerManagedKeySummary):
 
 class CustomerManagedKeyResponse(BaseModel):
     data: CustomerManagedKeySummary
+
+class CustomerManagedKeyRequest(BaseModel):
+    key_id: str
+    name: str
+    cloud_provider: str
+    instance_type: str
+    region: str
+    tenant_id: str
