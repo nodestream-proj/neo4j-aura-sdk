@@ -5,7 +5,7 @@ from typing import Type
 import httpx
 from pydantic import BaseModel
 
-from .models import *#AuthResponse, TenantsResponse, TenantResponse, InstancesResponse, InstanceResponse, SnapshotsResponse, SnapshotResponse, CustomerManagedKeysResponse, CustomerManagedKeyResponse, InstanceRequest, InstanceSizingRequest, InstanceSizingResponse
+from .models import AuthResponse, TenantsResponse, TenantResponse, InstancesResponse, InstanceResponse, SnapshotsResponse, SnapshotResponse, CustomerManagedKeysResponse, CustomerManagedKeyResponse,CustomerManagedKeyRequest, InstanceRequest, InstanceSizingRequest, InstanceSizingResponse
 
 
 class AuraClient:
@@ -141,7 +141,7 @@ class AuraClient:
         return await self._get(f"instances/{instanceId}", model=InstanceResponse)
 
     async def createInstance(self, details: InstanceRequest):
-        return await self._post("instances", details, model=InstanceResponse)
+        return await self._post("instances", body=details, model=InstanceResponse)
 
     async def deleteInstance(self, instanceId: str):
         return await self._delete(f"instances/{instanceId}")
@@ -172,16 +172,16 @@ class AuraClient:
             cdc_enrichment_mode: str
         return await self._patch(f"instances/{instanceId}",body=_Resize(cdc_enrichment_mode=mode),model=InstanceResponse)
 
-    async def overwriteInstance(self, instanceId: str, sourceId:str):
+    async def overwriteInstance(self, instanceId: str, sourceId: str):
         class _Overwrite(BaseModel):
             source_instance_id: str
-        return await self._post(f"instances/{instanceId}/overwrite",body=_Overwrite(source_instance_id=sourecId),model=InstanceResponse)
+        return await self._post(f"instances/{instanceId}/overwrite",body=_Overwrite(source_instance_id=sourceId),model=InstanceResponse)
 
-    async def overwriteInstance(self, instanceId: str, sourceId:str, snapshotId:str):
+    async def overwriteInstance(self, instanceId: str, sourceId: str, snapshotId:str):
         class _Overwrite(BaseModel):
             source_instance_id: str
             source_snapshot_id: str
-        return await self._post(f"instances/{instanceId}/overwrite",body=_Overwrite(source_instance_id=sourecId,source_snapshot_id=snapshotId),model=InstanceResponse)
+        return await self._post(f"instances/{instanceId}/overwrite",body=_Overwrite(source_instance_id=sourceId,source_snapshot_id=snapshotId),model=InstanceResponse)
 
     async def pauseInstance(self, instanceId: str):
         return await self._post(f"instances/{instanceId}/pause",model=InstanceResponse)
@@ -196,7 +196,7 @@ class AuraClient:
         return await self._post(f"instances/{instanceId}/snapshots",model=SnapshotResponse)
 
     async def instanceSizing(self, details: InstanceSizingRequest):
-        return await self._post("instances/sizing",details, model=InstanceSizingResponse)
+        return await self._post("instances/sizing",body=details, model=InstanceSizingResponse)
 
     async def snapshots(self, instanceId: str, date: str = ""):
         path = f"instances/{instanceId}/snapshots"
@@ -217,7 +217,7 @@ class AuraClient:
         return await self._get(f"customer-managed-keys/{customerManagedKeyId}", model=CustomerManagedKeyResponse)
 
     async def createCustomerManagedKey(self, details: CustomerManagedKeyRequest):
-        return await self._post("customer-managed-keys",body=details model=CustomerManagedKeyResponse)
+        return await self._post("customer-managed-keys",body=details, model=CustomerManagedKeyResponse)
 
     async def deleteCustomerManagedKey(self, customerManagedKeyId: str):
         return await self._delete(f"customer-managed-keys/{customerManagedKeyId}")

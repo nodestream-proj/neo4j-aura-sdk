@@ -1,0 +1,117 @@
+{
+    "tenants": {
+        "data": [
+            {
+                "id": "tenant1",
+                "name": "Tenant 1"
+            },
+            {
+                "id": "tenant2",
+                "name": "Tenant 2"
+            }
+        ]
+    },
+    "tenant": {
+        "data": {
+            "id": "tenant2",
+            "name": "Tenant 2",
+            "instance_configurations": [
+                {
+                    "region": "us-west-2",
+                    "region_name": "US West, Oregon (us-west-2)",
+                    "type": "enterprise-ds",
+                    "memory": "8GB",
+                    "version": "5",
+                    "cloud_provider": "aws"
+                }
+            ]
+        }
+    },
+    "instances": {
+        "data": [
+            {
+                "id": "instance1",
+                "name": "Instance 1",
+                "tenant_id": "tenant2",
+                "cloud_provider": "aws"
+            },
+            {
+                "id": "instance2",
+                "name": "Instance 2",
+                "tenant_id": "tenant2",
+                "cloud_provider": "aws"
+            }
+        ]
+    },
+    "instance": {
+        "data": {
+            "id": "instance2",
+            "name": "Instance 2",
+            "tenant_id": "tenant2",
+            "cloud_provider": "aws",
+            "connection_url": "neo4j+s://instance2.neo4j.io",
+            "memory": "2GB",
+            "metrics_integration_url": "https://metrics",
+            "region": "us-west-2",
+            "secondaries_count": 0,
+            "status": "running",
+            "storage": "4GB",
+            "type": "enterprise-db"
+        }
+    },
+    "createInstance": {
+        "data": {
+            "id": "test2",
+            "name": "Test 2",
+            "tenant_id": "tenant2",
+            "cloud_provider": "aws",
+            "connection_url": "neo4j+s://test2.neo4j.io",
+            "region": "us-west-2",
+            "type": "enterprise-db",
+            "username": "neo4j",
+            "password": "Neo4j123"
+        }
+    },
+    "snapshots": {
+        "data": [
+            {
+                "snapshot_id": "snaposhot1",
+                "exportable": false,
+                "instance_id": "instance2",
+                "profile": "Scheduled",
+                "status": "Completed",
+                "timestamp": "2024-07-01T15:27:53Z"
+            },
+            {
+                "snapshot_id": "snaposhot2",
+                "exportable": false,
+                "instance_id": "instance2",
+                "profile": "Scheduled",
+                "status": "Completed",
+                "timestamp": "2024-07-01T15:27:53Z"
+            }
+        ]
+    },
+    "snapshotsByDate": {
+        "data": [
+            {
+                "snapshot_id": "snaposhot1",
+                "exportable": false,
+                "instance_id": "instance2",
+                "profile": "Scheduled",
+                "status": "Completed",
+                "timestamp": "2024-07-01T15:27:53Z"
+            }
+        ]
+    },
+    "snapshot": {
+        "data": {
+            "snapshot_id": "snaposhot2",
+            "exportable": false,
+            "instance_id": "instance2",
+            "profile": "Scheduled",
+            "status": "Completed",
+            "timestamp": "2024-07-01T15:27:53Z"
+        }
+    }
+}
