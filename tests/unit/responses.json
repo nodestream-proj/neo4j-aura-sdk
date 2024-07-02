@@ -72,10 +72,46 @@
             "password": "Neo4j123"
         }
     },
+    "deleteInstance": {
+        "data": {
+            "id": "test2",
+            "name": "Test 2",
+            "status": "deleting",
+            "tenant_id": "tenant2",
+            "cloud_provider": "aws",
+            "connection_url": "neo4j+s://test2.neo4j.io",
+            "region": "us-west-2",
+            "type": "enterprise-db"
+        }
+    },
+    "pauseInstance": {
+        "data": {
+            "id": "test2",
+            "name": "Test 2",
+            "status": "pausing",
+            "tenant_id": "tenant2",
+            "cloud_provider": "aws",
+            "connection_url": "neo4j+s://test2.neo4j.io",
+            "region": "us-west-2",
+            "type": "enterprise-db"
+        }
+    },
+    "resumeInstance": {
+        "data": {
+            "id": "test2",
+            "name": "Test 2",
+            "status": "resuming",
+            "tenant_id": "tenant2",
+            "cloud_provider": "aws",
+            "connection_url": "neo4j+s://test2.neo4j.io",
+            "region": "us-west-2",
+            "type": "enterprise-db"
+        }
+    },
     "snapshots": {
         "data": [
             {
-                "snapshot_id": "snaposhot1",
+                "snapshot_id": "snapshot1",
                 "exportable": false,
                 "instance_id": "instance2",
                 "profile": "Scheduled",
@@ -83,7 +119,7 @@
                 "timestamp": "2024-07-01T15:27:53Z"
             },
             {
-                "snapshot_id": "snaposhot2",
+                "snapshot_id": "snapshot2",
                 "exportable": false,
                 "instance_id": "instance2",
                 "profile": "Scheduled",
@@ -95,7 +131,7 @@
     "snapshotsByDate": {
         "data": [
             {
-                "snapshot_id": "snaposhot1",
+                "snapshot_id": "snapshot1",
                 "exportable": false,
                 "instance_id": "instance2",
                 "profile": "Scheduled",
@@ -106,12 +142,99 @@
     },
     "snapshot": {
         "data": {
-            "snapshot_id": "snaposhot2",
+            "snapshot_id": "snapshot2",
             "exportable": false,
             "instance_id": "instance2",
             "profile": "Scheduled",
             "status": "Completed",
             "timestamp": "2024-07-01T15:27:53Z"
+        }
+    },
+    "restoreSnapshot": {
+        "data": {
+            "id": "instance2",
+            "name": "Instance 2",
+            "tenant_id": "tenant2",
+            "cloud_provider": "aws",
+            "connection_url": "neo4j+s://instance2.neo4j.io",
+            "memory": "2GB",
+            "region": "us-west-2",
+            "status": "restoring",
+            "type": "enterprise-db"
+        }
+    },
+    "overwriteInstance": {
+        "data": {
+            "id": "instance2",
+            "name": "Instance 2",
+            "tenant_id": "tenant2",
+            "cloud_provider": "aws",
+            "connection_url": "neo4j+s://instance2.neo4j.io",
+            "memory": "2GB",
+            "region": "us-west-2",
+            "status": "overwriting",
+            "type": "enterprise-db"
+        }
+    },
+    "createSnapshot": {
+        "data": {
+            "snapshot_id": "snapshot3"
+        }
+    },
+    "instanceSizing": {
+        "data": {
+          "did_exceed_maximum": false,
+          "min_required_memory": "14GB",
+          "recommended_size": "16GB"
+        }
+    },
+    "customerManagedKeys":{
+        "data": [
+            {
+            "id": "cmk0",
+            "name": "Customer Managed Key 0",
+            "tenant_id": "tenant1"
+            },
+            {
+            "id": "cmk1",
+            "name": "Customer Managed Key 1",
+            "tenant_id": "tenant2"
+            }
+        ]
+    },
+    "customerManagedKeysForTenant":{
+        "data": [
+            {
+            "id": "cmk1",
+            "name": "Customer Managed Key 1",
+            "tenant_id": "tenant2"
+            }
+        ]
+    },
+    "customerManagedKey":{
+        "data": {
+            "id": "cmk1",
+            "name": "Customer Managed Key 1",
+            "created": "2024-01-31T14:06:57Z",
+            "cloud_provider": "aws",
+            "key_id": "arn:aws:kms:us-east-1:123456789:key/11111-a222-1212-x789-1212f1212f",
+            "region": "us-east-1",
+            "type": "enterprise-db",
+            "tenant_id": "tenant2",
+            "status": "ready"
+        }
+    },
+    "createCustomerManagedKey":{
+        "data": {
+            "id": "cmk2",
+            "name": "Customer Managed Key 2",
+            "created": "2024-01-31T14:06:57Z",
+            "cloud_provider": "aws",
+            "key_id": "arn:aws:kms:us-east-1:123456789:key/11111-a222-1212-x789-1212f1212f",
+            "region": "us-east-1",
+            "type": "enterprise-db",
+            "tenant_id": "tenant2",
+            "status": "pending"
         }
     }
 }

@@ -10,7 +10,7 @@ from pydantic import BaseModel
 class AuraError(BaseModel):
     message: str
     reason: str
-    field: str
+    field: str=""
 
 
 class AuraErrors(BaseModel):
@@ -24,6 +24,30 @@ class AuraApiException(Exception):
         self.errors = errors
         super().__init__(errors)
 
+class AuraApiAuthorizationException(AuraApiException):
+    def __init__(self, errors: AuraErrors,status:int):
+        self.status = status
+        super().__init__(errors)
+
+class AuraApiNotFoundException(AuraApiException):
+    def __init__(self, errors: AuraErrors,status:int):
+        self.status = status
+        super().__init__(errors)
+
+class AuraApiBadRequestException(AuraApiException):
+    def __init__(self, errors: AuraErrors,status:int):
+        self.status = status
+        super().__init__(errors)
+
+class AuraApiInternalException(AuraApiException):
+    def __init__(self, errors: AuraErrors,status:int):
+        self.status = status
+        super().__init__(errors)
+
+class AuraApiRateLimitExceededException(AuraApiException):
+    def __init__(self, errors: AuraErrors,status:int):
+        self.status = status
+        super().__init__(errors)
 
 class AuthResponse(BaseModel):
     access_token: str
@@ -68,6 +92,7 @@ class Instance(InstanceSummary):
     metrics_integration_url: str=""
     region: str
     secondaries_count: int=0
+    cdc_enrichment_mode: str=""
     status: str=""
     storage: str=""
     type: str
@@ -119,22 +144,22 @@ class SnapshotResponse(BaseModel):
 
 class CustomerManagedKeySummary(BaseModel):
     id: str
-    name: str
-    tenant_id: str
+    name: str=""
+    tenant_id: str=""
 
 class CustomerManagedKeysResponse(BaseModel):
     data: List[CustomerManagedKeySummary]
 
 class CustomerManagedKey(CustomerManagedKeySummary):
-    created: str
-    cloud_provider: str
-    key_id: str
-    region: str
-    type: str
-    status: str
+    created: str=""
+    cloud_provider: str=""
+    key_id: str=""
+    region: str=""
+    type: str=""
+    status: str=""
 
 class CustomerManagedKeyResponse(BaseModel):
-    data: CustomerManagedKeySummary
+    data: CustomerManagedKey
 
 class CustomerManagedKeyRequest(BaseModel):
     key_id: str

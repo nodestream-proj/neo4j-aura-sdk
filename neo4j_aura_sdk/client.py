@@ -1,11 +1,13 @@
 import os
 import time
+import json
 from typing import Type
 
 import httpx
 from pydantic import BaseModel
+import pydantic_core
 
-from .models import AuthResponse, TenantsResponse, TenantResponse, InstancesResponse, InstanceResponse, SnapshotsResponse, SnapshotResponse, CustomerManagedKeysResponse, CustomerManagedKeyResponse,CustomerManagedKeyRequest, InstanceRequest, InstanceSizingRequest, InstanceSizingResponse
+from .models import *
 
 
 class AuraClient:
@@ -61,6 +63,27 @@ class AuraClient:
     async def __aexit__(self, exc_type, exc, tb):
         await self._client.__aexit__(exc_type, exc, tb)
 
+    def _checkResponseStatus(self, response: httpx.Response):
+        if(response.status_code < 400):
+            return
+        elif(response.status_code in [400,415]):
+            raise AuraApiBadRequestException(AuraErrors(**response.json()),response.status_code)
+        elif(response.status_code in [401,403]):
+            # HACK: the oauth endpoint returns a single object with different properties
+            try:
+                errors = AuraErrors(**response.json())
+            except pydantic_core._pydantic_core.ValidationError:
+                errors = AuraErrors(errors = [AuraError(message=response.json()['error'],reason=response.json()['error_description'])])
+            raise AuraApiAuthorizationException(errors,response.status_code)
+        elif(response.status_code == 404):
+            raise AuraApiNotFoundException(AuraErrors(**response.json()),response.status_code)
+        elif(response.status_code == 429):
+            raise AuraApiRateLimitExceededException(AuraErrors(**response.json()),response.status_code)
+        elif(response.status_code >= 500):
+            raise AuraApiInternalException(AuraErrors(**response.json()),response.status_code)
+        else:
+            raise AuraApiException(AuraErrors(**response.json()))
+
     async def _get_token(self):
         # NOTE: This method is a bit complex because it handles token
         #       expiration. We could simplify it through refactoring or
@@ -77,7 +100,8 @@ class AuraClient:
 
         # TODO: We should handle the case where the response is not a 200
         #       and throw a better exception than just raising an error.
-        response.raise_for_status()
+        # response.raise_for_status()
+        self._checkResponseStatus(response)
 
         auth_response = AuthResponse(**response.json())
         self._token = auth_response.access_token
@@ -91,7 +115,8 @@ class AuraClient:
         headers = {"Authorization": f"Bearer {token}"}
         response = await self._client.get(f"{self._base_url}/v1/{path}", headers=headers)
         # TODO: These lines are bit brittle, and suffer from the same issue as above.
-        response.raise_for_status()
+        # response.raise_for_status()
+        self._checkResponseStatus(response)
         return model(**response.json())
 
     async def _post(self, path: str, model: Type[BaseModel], body: Type[BaseModel]=None):
@@ -102,27 +127,33 @@ class AuraClient:
             data= body.model_dump_json()
         response = await self._client.post(f"{self._base_url}/v1/{path}", 
             headers=headers,
-            data=data)
+            content=data)
         # TODO: These lines are bit brittle, and suffer from the same issue as above.
-        response.raise_for_status()
+        # response.raise_for_status()
+        self._checkResponseStatus(response)
         return model(**response.json())
 
-    async def _delete(self, path: str):
+    async def _delete(self, path: str, model: Type[BaseModel], default: BaseModel = {}):
         token = await self._get_token()
         headers = {"Authorization": f"Bearer {token}"}
         response = await self._client.delete(f"{self._base_url}/v1/{path}", headers=headers)
         # TODO: These lines are bit brittle, and suffer from the same issue as above.
-        response.raise_for_status()
-        return True
+        # response.raise_for_status()
+        self._checkResponseStatus(response)
+        try:
+            return model(**response.json())
+        except json.decoder.JSONDecodeError:
+            return default
 
     async def _patch(self, path: str, body: Type[BaseModel], model: Type[BaseModel]):
         token = await self._get_token()
         headers = {"Authorization": f"Bearer {token}", "Content-Type":"application/json","accept":"application/json"}
         response = await self._client.patch(f"{self._base_url}/v1/{path}", 
             headers=headers,
-            data=body.model_dump_json())
+            content=body.model_dump_json())
         # TODO: These lines are bit brittle, and suffer from the same issue as above.
-        response.raise_for_status()
+        # response.raise_for_status()
+        self._checkResponseStatus(response)
         return model(**response.json())
 
     async def tenants(self):
@@ -144,7 +175,7 @@ class AuraClient:
         return await self._post("instances", body=details, model=InstanceResponse)
 
     async def deleteInstance(self, instanceId: str):
-        return await self._delete(f"instances/{instanceId}")
+        return await self._delete(f"instances/{instanceId}",model=InstanceResponse)
 
     async def renameInstance(self, instanceId: str, name:str):
         class _Rename(BaseModel):
@@ -177,7 +208,7 @@ class AuraClient:
             source_instance_id: str
         return await self._post(f"instances/{instanceId}/overwrite",body=_Overwrite(source_instance_id=sourceId),model=InstanceResponse)
 
-    async def overwriteInstance(self, instanceId: str, sourceId: str, snapshotId:str):
+    async def overwriteInstanceWithSnapshot(self, instanceId: str, sourceId: str, snapshotId:str):
         class _Overwrite(BaseModel):
             source_instance_id: str
             source_snapshot_id: str
@@ -220,4 +251,5 @@ class AuraClient:
         return await self._post("customer-managed-keys",body=details, model=CustomerManagedKeyResponse)
 
     async def deleteCustomerManagedKey(self, customerManagedKeyId: str):
-        return await self._delete(f"customer-managed-keys/{customerManagedKeyId}")
+        default = CustomerManagedKeyResponse(data = CustomerManagedKey(id=customerManagedKeyId,status='deleted'))
+        return await self._delete(f"customer-managed-keys/{customerManagedKeyId}", model=CustomerManagedKeyResponse, default=default)
