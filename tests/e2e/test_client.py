@@ -1,6 +1,7 @@
 import os 
 from dotenv import load_dotenv
 import pytest
+from time import sleep
 from neo4j_aura_sdk import AuraClient,models
 
 load_dotenv()
@@ -42,10 +43,55 @@ async def test_instances():
         assert resp.data.name == 'Test 1'
 
         iid = resp.data.id
-        print(iid)
+
         resp = await client.instance(iid)
         assert resp.data.name == 'Test 1'
+        assert resp.data.status == 'creating'
         
+        while(resp.data.status == 'creating'):
+            sleep(30)
+            resp = await client.instance(iid)
+        assert resp.data.status == 'running'
+        
+        resp = await client.renameInstance(iid,'Test Renamed 1')
+        assert resp.data.name == 'Test Renamed 1'
+        
+        resp = await client.resizeInstance(iid,'4GB')
+        sleep(10)
+        resp = await client.instance(iid)
+        print(resp)
+        assert resp.data.status in ['updating','resizing']
+
+        while(resp.data.status != 'running'):
+            sleep(30)
+            resp = await client.instance(iid)
+        assert resp.data.memory == '4GB'
+        
+        resp = await client.renameAndResizeInstance(iid,'Test 1','2GB')
+        assert resp.data.name == 'Test 1'
+
+        sleep(10)
+        resp = await client.instance(iid)
+        print(resp)
+        assert resp.data.status in ['updating','resizing']
+        
+        while(resp.data.status != 'running'):
+            sleep(30)
+            resp = await client.instance(iid)
+        assert resp.data.memory == '2GB'
+
+        try:
+            resp = await client.resizeInstanceSecondaryCount(iid,1)
+            assert resp.data.secondaries_count == 1
+        except models.AuraApiBadRequestException as e:
+            assert any(obj.reason == 'tenant-incapable-of-action' for obj in e.errors)
+        
+        try:
+            resp = await client.updateInstanceCDCMode(iid,'FULL')
+            assert resp.data.cdc_enrichment_mode == 'FULL'
+        except models.AuraApiBadRequestException as e:
+            assert any(obj.reason == 'tenant-incapable-of-action' for obj in e.errors)
+
         # resp = await client.pauseInstance(iid)
         # assert resp.data.status == 'pausing'
 
