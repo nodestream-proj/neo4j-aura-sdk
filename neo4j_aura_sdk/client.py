@@ -98,9 +98,6 @@ class AuraClient:
             auth=(self._client_id, self._client_secret),
         )
 
-        # TODO: We should handle the case where the response is not a 200
-        #       and throw a better exception than just raising an error.
-        # response.raise_for_status()
         self._checkResponseStatus(response)
 
         auth_response = AuthResponse(**response.json())
@@ -114,8 +111,6 @@ class AuraClient:
         token = await self._get_token()
         headers = {"Authorization": f"Bearer {token}"}
         response = await self._client.get(f"{self._base_url}/v1/{path}", headers=headers)
-        # TODO: These lines are bit brittle, and suffer from the same issue as above.
-        # response.raise_for_status()
         self._checkResponseStatus(response)
         return model(**response.json())
 
@@ -128,8 +123,6 @@ class AuraClient:
         response = await self._client.post(f"{self._base_url}/v1/{path}", 
             headers=headers,
             content=data)
-        # TODO: These lines are bit brittle, and suffer from the same issue as above.
-        # response.raise_for_status()
         self._checkResponseStatus(response)
         return model(**response.json())
 
@@ -137,8 +130,6 @@ class AuraClient:
         token = await self._get_token()
         headers = {"Authorization": f"Bearer {token}"}
         response = await self._client.delete(f"{self._base_url}/v1/{path}", headers=headers)
-        # TODO: These lines are bit brittle, and suffer from the same issue as above.
-        # response.raise_for_status()
         self._checkResponseStatus(response)
         try:
             return model(**response.json())
@@ -151,8 +142,6 @@ class AuraClient:
         response = await self._client.patch(f"{self._base_url}/v1/{path}", 
             headers=headers,
             content=body.model_dump_json())
-        # TODO: These lines are bit brittle, and suffer from the same issue as above.
-        # response.raise_for_status()
         self._checkResponseStatus(response)
         return model(**response.json())
 

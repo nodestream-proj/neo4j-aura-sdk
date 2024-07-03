@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -10,7 +10,7 @@ from pydantic import BaseModel
 class AuraError(BaseModel):
     message: str
     reason: str
-    field: str=""
+    field: Optional[str] = None
 
 
 class AuraErrors(BaseModel):
@@ -20,8 +20,9 @@ class AuraErrors(BaseModel):
 # TODO: Exactly what interfaces should be exposed on this exception is TBD.
 #       This is just a starting point.
 class AuraApiException(Exception):
+    errors: List[AuraError]
     def __init__(self, errors: AuraErrors):
-        self.errors = errors
+        self.errors = errors.errors
         super().__init__(errors)
 
 class AuraApiAuthorizationException(AuraApiException):
@@ -87,20 +88,20 @@ class InstancesResponse(BaseModel):
     data: List[InstanceSummary]
 
 class Instance(InstanceSummary):
-    connection_url: str=""
-    memory: str=""
-    metrics_integration_url: str=""
+    connection_url: Optional[str] = None
+    memory: Optional[str] = None
+    metrics_integration_url: Optional[str] = None
     region: str
-    secondaries_count: int=0
-    cdc_enrichment_mode: str=""
-    status: str=""
-    storage: str=""
+    secondaries_count: Optional[int] = None
+    cdc_enrichment_mode: Optional[str] = None
+    status: Optional[str] = None
+    storage: Optional[str] = None
     type: str
-    customer_managed_key_id: str=""
-    graph_nodes: str=""
-    graph_relationships: str=""
-    username: str=""
-    password: str=""
+    customer_managed_key_id: Optional[str] = None
+    graph_nodes: Optional[str] = None
+    graph_relationships: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
 
 class InstanceSizingRequest(BaseModel):
     node_count: int
@@ -131,10 +132,10 @@ class InstanceRequest(BaseModel):
 class Snapshot(BaseModel):
     snapshot_id: str
     exportable: bool=False
-    instance_id: str=""
-    profile: str=""
-    status: str=""
-    timestamp: str=""
+    instance_id: Optional[str] = None
+    profile: Optional[str] = None
+    status: Optional[str] = None
+    timestamp: Optional[str] = None
 
 class SnapshotsResponse(BaseModel):
     data: List[Snapshot]
@@ -144,19 +145,19 @@ class SnapshotResponse(BaseModel):
 
 class CustomerManagedKeySummary(BaseModel):
     id: str
-    name: str=""
-    tenant_id: str=""
+    name: Optional[str] = None
+    tenant_id: Optional[str] = None
 
 class CustomerManagedKeysResponse(BaseModel):
     data: List[CustomerManagedKeySummary]
 
 class CustomerManagedKey(CustomerManagedKeySummary):
-    created: str=""
-    cloud_provider: str=""
-    key_id: str=""
-    region: str=""
-    type: str=""
-    status: str=""
+    created: Optional[str] = None
+    cloud_provider: Optional[str] = None
+    key_id: Optional[str] = None
+    region: Optional[str] = None
+    type: Optional[str] = None
+    status: Optional[str] = None
 
 class CustomerManagedKeyResponse(BaseModel):
     data: CustomerManagedKey

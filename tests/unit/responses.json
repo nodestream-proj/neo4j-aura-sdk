@@ -1,4 +1,9 @@
 {
+    "token": {
+        "access_token": "mockToken",
+        "expires_in": 3600,
+        "token_type": "access"
+    },
     "tenants": {
         "data": [
             {
@@ -32,9 +37,19 @@
             {
                 "id": "instance1",
                 "name": "Instance 1",
-                "tenant_id": "tenant2",
+                "tenant_id": "tenant1",
                 "cloud_provider": "aws"
             },
+            {
+                "id": "instance2",
+                "name": "Instance 2",
+                "tenant_id": "tenant2",
+                "cloud_provider": "aws"
+            }
+        ]
+    },
+    "instancesByTenant": {
+        "data": [
             {
                 "id": "instance2",
                 "name": "Instance 2",
@@ -183,35 +198,35 @@
     },
     "instanceSizing": {
         "data": {
-          "did_exceed_maximum": false,
-          "min_required_memory": "14GB",
-          "recommended_size": "16GB"
+            "did_exceed_maximum": false,
+            "min_required_memory": "14GB",
+            "recommended_size": "16GB"
         }
     },
-    "customerManagedKeys":{
+    "customerManagedKeys": {
         "data": [
             {
-            "id": "cmk0",
-            "name": "Customer Managed Key 0",
-            "tenant_id": "tenant1"
+                "id": "cmk0",
+                "name": "Customer Managed Key 0",
+                "tenant_id": "tenant1"
             },
             {
-            "id": "cmk1",
-            "name": "Customer Managed Key 1",
-            "tenant_id": "tenant2"
+                "id": "cmk1",
+                "name": "Customer Managed Key 1",
+                "tenant_id": "tenant2"
             }
         ]
     },
-    "customerManagedKeysForTenant":{
+    "customerManagedKeysForTenant": {
         "data": [
             {
-            "id": "cmk1",
-            "name": "Customer Managed Key 1",
-            "tenant_id": "tenant2"
+                "id": "cmk1",
+                "name": "Customer Managed Key 1",
+                "tenant_id": "tenant2"
             }
         ]
     },
-    "customerManagedKey":{
+    "customerManagedKey": {
         "data": {
             "id": "cmk1",
             "name": "Customer Managed Key 1",
@@ -224,7 +239,7 @@
             "status": "ready"
         }
     },
-    "createCustomerManagedKey":{
+    "createCustomerManagedKey": {
         "data": {
             "id": "cmk2",
             "name": "Customer Managed Key 2",
@@ -236,5 +251,18 @@
             "tenant_id": "tenant2",
             "status": "pending"
         }
+    },
+    "authError": {
+        "error": "unauthorized",
+        "error_description": "something bad"
+    },
+    "exception": {
+        "errors": [
+            {
+                "message": "unauthorized",
+                "reason": "something bad",
+                "field": "all"
+            }
+        ]
     }
 }
