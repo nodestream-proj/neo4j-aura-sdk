@@ -73,7 +73,11 @@ class AuraClient:
             try:
                 errors = AuraErrors(**response.json())
             except pydantic_core._pydantic_core.ValidationError:
-                errors = AuraErrors(errors = [AuraError(message=response.json()['error'],reason=response.json()['error_description'])])
+                body = response.json()
+                reason = None
+                if("error_description" in body):
+                    reason = body['error_desctiprion']
+                errors = AuraErrors(errors = [AuraError(message=body['error'],reason=reason)])
             raise AuraApiAuthorizationException(errors,response.status_code)
         elif(response.status_code == 404):
             raise AuraApiNotFoundException(AuraErrors(**response.json()),response.status_code)

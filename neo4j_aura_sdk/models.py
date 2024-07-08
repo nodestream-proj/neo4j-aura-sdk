@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 class AuraError(BaseModel):
     message: str
-    reason: str
+    reason: Optional[str] = None
     field: Optional[str] = None
 
 
