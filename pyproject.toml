@@ -21,6 +21,7 @@ ruff = "^0.4.8"
 isort = "^5.13.2"
 python-dotenv = "^1.0.1"
 mypy = "^1.10.1"
+pytest-cov = "^5.0.0"
 
 [tool.black]
 line-length = 88
