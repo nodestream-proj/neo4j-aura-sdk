@@ -84,7 +84,7 @@ async def test_instances():
             instance_type="enterprise-ds",
             algorithm_categories=["node-embedding"],
         )
-        resp = await client.instanceSizing(req)
+        resp = await client.instance_sizing(req)
         assert resp.data.min_required_memory == "14GB"
 
         req = models.InstanceRequest(
@@ -96,22 +96,22 @@ async def test_instances():
             tenant_id=tid,
             type="enterprise-db",
         )
-        resp = await client.createInstance(req)
+        resp = await client.create_instance(req)
         assert resp.data.password == "Neo4j123"
 
-        resp = await client.pauseInstance(iid)
+        resp = await client.pause_instance(iid)
         assert resp.data.status == "pausing"
 
-        resp = await client.resumeInstance(iid)
+        resp = await client.resume_instance(iid)
         assert resp.data.status == "resuming"
 
-        resp = await client.overwriteInstance(iid, "test2")
+        resp = await client.overwrite_instance(iid, "test2")
         assert resp.data.status == "overwriting"
 
-        resp = await client.overwriteInstanceWithSnapshot(iid, "test2", "snapshot3")
+        resp = await client.overwrite_instance_with_snapshot(iid, "test2", "snapshot3")
         assert resp.data.status == "overwriting"
 
-        resp = await client.deleteInstance(iid)
+        resp = await client.delete_instance(iid)
         assert resp.data.status == "deleting"
 
 
@@ -137,21 +137,21 @@ async def test_instances_edit():
         return httpx.Response(200, json=body)
 
     async with AuraClient(clientId, clientSecret) as client:
-        resp = await client.renameInstance(iid, "Test Renamed 2")
+        resp = await client.rename_instance(iid, "Test Renamed 2")
         assert resp.data.name == "Test Renamed 2"
 
-        resp = await client.resizeInstance(iid, "8GB")
+        resp = await client.resize_instance(iid, "8GB")
         assert resp.data.memory == "8GB"
         assert resp.data.name == "Test 2"
 
-        resp = await client.renameAndResizeInstance(iid, "Test Rename 2", "2GB")
+        resp = await client.rename_and_resize_instance(iid, "Test Rename 2", "2GB")
         assert resp.data.memory == "2GB"
         assert resp.data.name == "Test Rename 2"
 
-        resp = await client.resizeInstanceSecondaryCount(iid, 1)
+        resp = await client.resize_instance_secondary_count(iid, 1)
         assert resp.data.secondaries_count == 1
 
-        resp = await client.updateInstanceCDCMode(iid, "FULL")
+        resp = await client.update_instance_cdc_mode(iid, "FULL")
         assert resp.data.cdc_enrichment_mode == "FULL"
 
 
@@ -184,10 +184,10 @@ async def test_snapshots():
         resp = await client.snapshot(iid, "snapshot2")
         assert resp.data.status == "Completed"
 
-        resp = await client.snapshotInstance(iid)
+        resp = await client.snapshot_instance(iid)
         assert resp.data.snapshot_id == "snapshot3"
 
-        resp = await client.restoreInstance(iid, "snapshot3")
+        resp = await client.restore_instance(iid, "snapshot3")
         assert resp.data.status == "restoring"
 
 
@@ -209,13 +209,13 @@ async def test_customer_managed_keys():
     respx.delete(f"{apiUrl}customer-managed-keys/cmk2").respond(status_code=204)
 
     async with AuraClient(clientId, clientSecret) as client:
-        resp = await client.customerManagedKeys()
+        resp = await client.get_customer_managed_keys()
         assert len(resp.data) == 2
 
-        resp = await client.customerManagedKeys(tid)
+        resp = await client.get_customer_managed_keys(tid)
         assert len(resp.data) == 1
 
-        resp = await client.customerManagedKey("cmk1")
+        resp = await client.get_customer_managed_key("cmk1")
         assert resp.data.name == "Customer Managed Key 1"
 
         req = models.CustomerManagedKeyRequest(
@@ -226,10 +226,10 @@ async def test_customer_managed_keys():
             tenant_id=tid,
             instance_type="enterprise-db",
         )
-        resp = await client.createCustomerManagedKey(req)
+        resp = await client.create_customer_managed_key(req)
         assert resp.data.status == "pending"
 
-        resp = await client.deleteCustomerManagedKey("cmk2")
+        resp = await client.delete_customer_managed_key("cmk2")
         assert resp.data.status == "deleted"
 
 

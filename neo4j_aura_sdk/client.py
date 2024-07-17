@@ -101,7 +101,7 @@ class AuraClient:
                 body = response.json()
                 reason = None
                 if "error_description" in body:
-                    reason = body["error_desctiprion"]
+                    reason = body["error_description"]
                 errors = AuraErrors(
                     errors=[AuraError(message=body["error"], reason=reason)]
                 )
