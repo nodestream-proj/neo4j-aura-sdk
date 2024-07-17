@@ -166,7 +166,7 @@ async def test_create_instances():
         assert resp.data.status == "Completed"
 
         resp = await client.snapshotInstance(overwriteId)
-        assert resp.data.snapshot_id != None
+        assert resp.data.snapshot_id is not None
 
         resp = await client.overwriteInstanceWithSnapshot(
             overwriteId, instanceId, snapshotId
