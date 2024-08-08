@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "neo4j-aura-sdk"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Zach Probst <Zach_Probst@intuit.com>"]
 readme = "README.md"
