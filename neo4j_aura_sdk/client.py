@@ -328,9 +328,6 @@ class AuraClient:
             f"instances/{instanceId}/snapshots/{snapshotId}", model=SnapshotResponse
         )
 
-    async def get_upload_url(self, instanceId: str, size: int, ext: str="tar"):
-        path = "upload"
-    
     async def get_customer_managed_keys(self, tenantId: str = ""):
         path = "customer-managed-keys"
         if tenantId:
