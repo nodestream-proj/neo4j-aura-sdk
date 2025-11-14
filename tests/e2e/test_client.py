@@ -196,6 +196,37 @@ async def test_create_instances():
         # resp = await client.customer_managed_key('cmk1')
         # assert resp.data.name == 'Customer Managed Key 1'
 
+
+@pytest.mark.asyncio
+@pytest.mark.e2e
+async def test_v2beta1_guard_behavior():
+    """Verify that v2 endpoints are blocked when the client is configured for v1 and allowed when configured for v2.
+
+    This test is non-destructive: it doesn't rely on any particular organization id to succeed. It asserts
+    the API-version guard behaviour added to the client.
+    """
+    # Ensure default from_env() uses v1 and v2 methods are blocked
+    async with AuraClient.from_env() as client:
+        with pytest.raises(ValueError):
+            # organization id value doesn't matter — guard should raise before any network call
+            await client.list_organization_ip_filters("dummy-org-id")
+
+    # Now set env var to v2beta1 and ensure the guard does not raise ValueError
+    os.environ["AURA_API_VERSION"] = "v2beta1"
+    try:
+        async with AuraClient.from_env() as client_v2:
+            # Should not raise ValueError; subsequent network calls may raise other exceptions
+            try:
+                await client_v2.list_organization_ip_filters("dummy-org-id")
+            except ValueError:
+                pytest.fail("Client configured for v2beta1 raised ValueError unexpectedly")
+            except Exception:
+                # We accept any other exception (auth/404/etc.) because this is non-destructive
+                pass
+    finally:
+        # Clean up env var to not affect other tests
+        os.environ.pop("AURA_API_VERSION", None)
+
         # req = models.CustomerManagedKeyRequest( name='Customer Managed Key 2',key_id='cmk2',region='us-west-2',cloud_provider='aws',tenant_id=tid,instance_type="enterprise-db")
         # resp = await client.create_customer_managed_key(req)
         # assert resp.data.status == 'pending'

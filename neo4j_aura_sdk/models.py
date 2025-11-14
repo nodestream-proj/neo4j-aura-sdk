@@ -194,3 +194,96 @@ class CustomerManagedKeyRequest(BaseModel):
     instance_type: str
     region: str
     tenant_id: str
+
+
+# --- Models from v2beta1 OpenAPI spec ---
+class IpFilterAllowListItem(BaseModel):
+    address: str
+    prefix_len: int
+    description: Optional[str] = None
+
+
+class FilteredEntities(BaseModel):
+    instances: Optional[List[str]] = []
+    projects: Optional[List[str]] = []
+    organizations: Optional[List[str]] = []
+
+
+class IpFilter(BaseModel):
+    id: Optional[str] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    organization_id: Optional[str] = None
+    allow_list: Optional[List[IpFilterAllowListItem]] = []
+    filtering_disabled: Optional[bool] = False
+    filtered_entities: Optional[FilteredEntities] = FilteredEntities()
+    updated_at: Optional[str] = None
+
+
+class IpFilterWithStatus(IpFilter):
+    status: Optional[str] = None
+
+
+class CreateImportJobRequest(BaseModel):
+    importModelId: str
+    auraCredentials: Optional[dict] = None
+
+
+class ImportExitStatus(BaseModel):
+    state: Optional[str] = None
+    message: Optional[str] = None
+
+
+class NodeProgress(BaseModel):
+    id: Optional[str] = None
+    labels: Optional[List[str]] = None
+    total_rows: Optional[int] = None
+    processed_rows: Optional[int] = None
+    created_nodes: Optional[int] = None
+    created_constraints: Optional[int] = None
+    created_indexes: Optional[int] = None
+
+
+class RelationshipProgress(BaseModel):
+    id: Optional[str] = None
+    type: Optional[str] = None
+    total_rows: Optional[int] = None
+    processed_rows: Optional[int] = None
+    created_relationships: Optional[int] = None
+    created_constraints: Optional[int] = None
+    created_indexes: Optional[int] = None
+
+
+class ImportJobProgress(BaseModel):
+    nodes: Optional[List[NodeProgress]] = None
+    relationships: Optional[List[RelationshipProgress]] = None
+
+
+class ImportJobInfo(BaseModel):
+    state: Optional[str] = None
+    start_time: Optional[str] = None
+    completion_time: Optional[str] = None
+    exit_status: Optional[ImportExitStatus] = None
+    cancellation_requested_time: Optional[str] = None
+    submitted_time: Optional[str] = None
+    last_update_time: Optional[str] = None
+    percentage_complete: Optional[float] = None
+    progress: Optional[ImportJobProgress] = None
+
+
+class ImportJobData(BaseModel):
+    id: Optional[str] = None
+    import_type: Optional[str] = None
+    info: Optional[ImportJobInfo] = None
+    data_source: Optional[dict] = None
+    aura_target: Optional[dict] = None
+    user_id: Optional[str] = None
+
+
+class ImportJobEnvelope(BaseModel):
+    data: Optional[ImportJobData] = None
+
+
+class JobIdEnvelope(BaseModel):
+    data: Optional[dict] = None
+

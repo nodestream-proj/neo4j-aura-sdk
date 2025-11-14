@@ -1,0 +1,695 @@
+openapi: 3.0.0
+info:
+  title: Aura API
+  version: v2beta1
+  description: |-
+    This is the v2beta1 release of the Aura API.
+
+    For more information on how to use the API, see the
+    [Aura API documentation](https://neo4j.com/docs/aura/platform/api/overview/).
+
+    [Provide feedback](https://docs.google.com/forms/d/e/1FAIpQLSfNZMyQRnI_ZzK8IJ2E266DP_-zLDBWzk1OaUkPem16V-ekZQ/viewform)
+    on the Aura API.
+  termsOfService: "https://console.neo4j.io/#terms"
+
+tags:
+  - name: instances
+    description: Relates to Aura Instances.
+  - name: ip-filters
+    description: Relates to Aura IP Filtering Rules.
+  - name: import-jobs
+    description: Relates to Import Jobs.
+
+servers:
+  - url: "https://api.neo4j.io/v2beta1"
+    description: Aura API v2beta1
+
+paths:
+  "/organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/ip-filters":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+      - $ref: "#/components/parameters/instanceId"
+    get:
+      summary: Returns a list of IP filters for the organization
+      tags:
+        - instances
+      operationId: list-ip-filters
+      description: |-
+        Returns the IP filter with its status applied to an instance, if present.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/IpFilter"
+                  - type: object
+                    properties:
+                      status:
+                        type: string
+                        description: The status of the IP filter on the instance
+                        enum:
+                          - UNKNOWN
+                          - SUBMITTED
+                          - ACTIVE
+                          - DELETED
+                          - ERROR
+
+              examples:
+                IP filter with Status:
+                  value:
+                    id: 12345678
+                    name: My IP filter
+                    organization_id: "example-org-id"
+                    allow_list:
+                      - address: "192.168.1.1"
+                        prefix_len: 24
+                        description: Office Network
+                    filtering_disabled: false
+                    filtered_entities:
+                      instances: ["some-instance-id"]
+                      projects: []
+                      organizations: []
+                    status: ACTIVE
+
+  "/organizations/{organizationId}/ip-filters":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+    get:
+      summary: Returns a list of IP filters for the organization
+      tags:
+        - ip-filters
+      operationId: list-ip-filters
+      description: |-
+        Returns a list of IP filters of the organization.
+
+        For an IP filter's status on individual databases please see the 
+        ``/organizations/{organizationId}/projects/{projectId}/instances/{instanceId}ip-filters``
+        endpoint.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IpFilter"
+              examples:
+                List of IP filters:
+                  value:
+                    - id: 12345678
+                      name: My IP filter
+                      organization_id: "example-org-id"
+                      allow_list:
+                        - address: "192.168.1.1"
+                          prefix_len: 24
+                          description: Office Network
+                      filtering_disabled: false
+                      filtered_entities:
+                        instances: ["some-instance-id"]
+                        projects: []
+                        organizations: []
+                    - id: 87654321
+                      name: My Other IP filter
+                      organization_id: "example-org-id"
+                      allow_list:
+                        - address: "192.168.1.1"
+                          prefix_len: 24
+                          description: Home Network
+                      filtering_disabled: false
+                      filtered_entities:
+                        instances: ["other-id-1", "other-id-2"]
+                        projects: ["project-id"]
+                        organizations: []
+    post:
+      summary: Creates a new IP filter for the organization
+      tags:
+        - ip-filters
+      operationId: create-ip-filter
+      description: |-
+        Create a new IP filter.
+      requestBody:
+        description: The IP filter to create.
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/IpFilter"
+                - type: object
+                  required:
+                    - name
+                    - organization_id
+                    - allow_list
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IpFilter"
+              examples:
+                Created IP filter:
+                  value:
+                    id: 12345678
+                    name: My IP filter
+                    organization_id: "example-org-id"
+                    allow_list:
+                      - address: "192.168.1.1"
+                        prefix_len: 24
+                        description: Office Network
+                    filtering_disabled: false
+                    filtered_entities:
+                      instances: ["some-instance-id"]
+                      projects: []
+
+  "/organizations/{organizationId}/ip-filters/{ipFilterId}":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/ipFilterId"
+    get:
+      summary: Returns a specific IP filter of the organization
+      tags:
+        - ip-filters
+      operationId: get-ip-filter
+      description: |-
+        Returns a specific IP filter by its ID.
+
+        For an IP filter's status on individual instances see the 
+        ``/organizations/{organizationId}/projects/{projectId}/instances/{instanceId}ip-filters``
+        endpoint.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IpFilter"
+              examples:
+                Specific IP filters:
+                  value:
+                    id: 12345678
+                    name: My IP filter
+                    organization_id: "example-org-id"
+                    allow_list:
+                      - address: "192.168.1.1"
+                        prefix_len: 24
+                        description: Office Network
+                    filtering_disabled: false
+                    filtered_entities:
+                      instances: ["some-instance-id"]
+                      projects: []
+                      organizations: []
+    patch:
+      summary: Updates an existing IP filter
+      tags:
+        - ip-filters
+      operationId: update-ip-filter
+      requestBody:
+        description: The IP filter to update.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IpFilter"
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IpFilter"
+              examples:
+                Updated IP filter:
+                  value:
+                    id: 12345678
+                    name: My IP filter
+                    organization_id: "example-org-id"
+                    allow_list:
+                      - address: "192.168.1.1"
+                        prefix_len: 24
+                        description: Office Network
+                    filtering_disabled: false
+                    filtered_entities:
+                      instances: ["some-instance-id"]
+                      projects: []
+    delete:
+      summary: Deletes an existing IP filter
+      tags:
+        - ip-filters
+      operationId: delete-ip-filter
+      responses:
+        "204":
+          description: No Content
+          content: {}
+
+  "/organizations/{organizationId}/projects/{projectId}/import/jobs":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+    post:
+      summary: Create a new import job
+      tags:
+        - import-jobs
+      operationId: create-import-job
+      description: |-
+        Create a new import job by the specified import model ID, Aura instance ID and optional Aura credentials.
+        The model ID can be found in the URL as such `console-preview.neo4j.io/tools/import/model/<model ID>`.
+      requestBody:
+        description: The import job creation request.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateImportJobRequest"
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobIdEnvelope"
+              examples:
+                Created import job:
+                  value:
+                    data:
+                      id: "87d485b4-73fc-4a7f-bb03-720f4672947e"
+
+  "/organizations/{organizationId}/projects/{projectId}/import/jobs/{jobId}":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+      - $ref: "#/components/parameters/jobId"
+    get:
+      summary: Get job by ID
+      tags:
+        - import-jobs
+      operationId: get-import-job
+      description: |-
+        Retrieves a single job details by its ID.
+      parameters:
+        - name: progress
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: |-
+            Whether to include progress details for nodes and relationships.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportJobEnvelope"
+              examples:
+                Without progress details:
+                  value:
+                    data:
+                      id: "87d485b4-73fc-4a7f-bb03-720f4672947e"
+                      import_type: "cloud"
+                      info:
+                        state: "Completed"
+                        start_time: "2025-08-15T13:12:51Z"
+                        completion_time: "2025-08-15T13:15:19Z"
+                        exit_status:
+                          state: "Cancelled"
+                          message: "Cancelled"
+                        cancellation_requested_time: "2025-08-15T13:15:19.655209Z"
+                        submitted_time: "2025-08-15T13:12:50.499797Z"
+                        last_update_time: "2025-08-18T12:25:53.469873Z"
+                        percentage_complete: 95.23
+                      data_source:
+                        id: "177216b3-49b9-4e24-a414-a9ecbb448c53"
+                        type: "postgresql"
+                        name: "AWS_POSTGRES_FLIGHTS"
+                      aura_target:
+                        db_id: "07e49cf5"
+                        project_id: "f607bebe-0cc0-4166-b60c-b4eed69ee7ee"
+                      user_id: "f607bebe-0cc0-4166-b60c-b4eed69ee7ee"
+                With progress details:
+                  value:
+                    data:
+                      id: "87d485b4-73fc-4a7f-bb03-720f4672947e"
+                      import_type: "cloud"
+                      info:
+                        state: "Completed"
+                        start_time: "2025-08-15T13:12:51Z"
+                        completion_time: "2025-08-15T13:15:19Z"
+                        exit_status:
+                          state: "Cancelled"
+                          message: "Cancelled"
+                        cancellation_requested_time: "2025-08-15T13:15:19.655209Z"
+                        submitted_time: "2025-08-15T13:12:50.499797Z"
+                        last_update_time: "2025-08-18T12:25:53.469873Z"
+                        percentage_complete: 95.23
+                        progress:
+                          nodes:
+                            - id: "n:1"
+                              labels: ["AircraftData"]
+                              total_rows: 9
+                              processed_rows: 9
+                              created_nodes: 9
+                              created_constraints: 1
+                              created_indexes: 0
+                          relationships:
+                            - id: "r:8"
+                              type: "TICKET_BELONGS_TO_BOOKING"
+                              total_rows: 366733
+                              processed_rows: 255000
+                              created_relationships: 255000
+                              created_constraints: 0
+                              created_indexes: 0
+                      data_source:
+                        id: "177216b3-49b9-4e24-a414-a9ecbb448c53"
+                        type: "postgresql"
+                        name: "AWS_POSTGRES_FLIGHTS"
+                      aura_target:
+                        db_id: "07e49cf5"
+                        project_id: "f607bebe-0cc0-4166-b60c-b4eed69ee7ee"
+                      user_id: "f607bebe-0cc0-4166-b60c-b4eed69ee7ee"
+
+  "/organizations/{organizationId}/projects/{projectId}/import/jobs/{jobId}/cancellation":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+      - $ref: "#/components/parameters/jobId"
+    post:
+      summary: Cancel an import job
+      tags:
+        - import-jobs
+      operationId: cancel-import-job
+      description: |-
+        Cancel an existing import job.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobIdEnvelope"
+              examples:
+                Cancelled import job:
+                  value:
+                    data:
+                      id: "87d485b4-73fc-4a7f-bb03-720f4672947e"
+
+components:
+  schemas:
+    IpFilter:
+      type: object
+      description: Describes an IP filter
+      properties:
+        id:
+          type: string
+          description: The id of the IP filter
+          readOnly: true
+        name:
+          type: string
+          description: The name of the IP filter
+        description:
+          type: string
+          description: The name of the project
+        organization_id:
+          type: string
+          description: The id of the organization that owns the IP filter
+        allow_list:
+          type: array
+          description: A list of CIDR that are allowed by the filter
+          items:
+            type: object
+            required:
+              - address
+              - prefix_len
+            properties:
+              address:
+                type: string
+                description: The CIDR IP address
+              prefix_len:
+                type: integer
+                description: The prefix length of the CIDR
+              description:
+                type: string
+                description: A human-friendly description of the CIDR
+        filtering_disabled:
+          type: boolean
+          description: Indicates if the IP filter is disabled
+        filtered_entities:
+          type: object
+          description: The entities that are currently filtered by this IP filter rule
+          properties:
+            instances:
+              type: array
+              description: A list containing a summary of Aura instances filtered by this IP filter rule
+              items:
+                type: string
+                description: The id of the instance configuration that is filtered by this IP filter rule
+            projects:
+              type: array
+              description: A list of projects that are filtered by this IP filter rule
+              items:
+                type: string
+                description: The id of the project that is filtered by this IP filter rule
+            organizations:
+              type: array
+              description: A list of organizations that are filtered by this IP filter rule
+              items:
+                type: string
+                description: The id of the organization that is filtered by this IP filter rule
+        updated_at:
+          type: string
+          format: date-time
+          description: The date and time when the IP filter was last updated
+          readOnly: true
+
+    CreateImportJobRequest:
+      type: object
+      required:
+        - importModelId
+      properties:
+        importModelId:
+          type: string
+          description: The unique identifier of an import model.
+        auraCredentials:
+          type: object
+          description: Aura credentials for specifying target database.
+          required:
+            - dbId
+          properties:
+            dbId:
+              type: string
+              description: Unique identifier of Aura DB ID.
+            user:
+              type: string
+              description: Optional. Only for Free or VDC DB instances.
+            password:
+              type: string
+              description: Optional. Only for Free or VDC DB instances.
+
+    ImportJobEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/ImportJob"
+
+    JobIdEnvelope:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+
+    ImportJob:
+      type: object
+      properties:
+        id:
+          type: string
+        import_type:
+          type: string
+          enum:
+            - cloud
+            - initial
+        info:
+          $ref: "#/components/schemas/ImportJobInfo"
+        data_source:
+          type: object
+          properties:
+            id:
+              type: string
+            type:
+              type: string
+            name:
+              type: string
+        aura_target:
+          type: object
+          properties:
+            db_id:
+              type: string
+            project_id:
+              type: string
+        user_id:
+          type: string
+
+    ImportJobInfo:
+      type: object
+      properties:
+        state:
+          type: string
+          enum:
+            - SecretCreated
+            - ModelConfigMapOwnerUpdated
+            - Queued
+            - Running
+            - Completed
+        start_time:
+          type: string
+          format: date-time
+        completion_time:
+          type: string
+          format: date-time
+        exit_status:
+          $ref: "#/components/schemas/ImportExitStatus"
+        cancellation_requested_time:
+          type: string
+          format: date-time
+        submitted_time:
+          type: string
+          format: date-time
+        last_update_time:
+          type: string
+          format: date-time
+        percentage_complete:
+          type: number
+          format: float
+        progress:
+          $ref: "#/components/schemas/ImportJobProgress"
+
+    ImportExitStatus:
+      type: object
+      properties:
+        state:
+          type: string
+          enum:
+            - Success
+            - Failure
+            - Cancelled
+        message:
+          type: string
+
+    ImportJobProgress:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/NodeProgress"
+        relationships:
+          type: array
+          items:
+            $ref: "#/components/schemas/RelationshipProgress"
+
+    NodeProgress:
+      type: object
+      properties:
+        id:
+          type: string
+        labels:
+          type: array
+          items:
+            type: string
+        total_rows:
+          type: integer
+        processed_rows:
+          type: integer
+        created_nodes:
+          type: integer
+        created_constraints:
+          type: integer
+        created_indexes:
+          type: integer
+
+    RelationshipProgress:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        total_rows:
+          type: integer
+        processed_rows:
+          type: integer
+        created_relationships:
+          type: integer
+        created_constraints:
+          type: integer
+        created_indexes:
+          type: integer
+  
+  securitySchemes:
+    oauthToken:
+      type: oauth2
+      flows:
+        clientCredentials:
+          scopes: {}
+          tokenUrl: 'https://api.neo4j.io/oauth/token'
+      description: ''
+  
+  parameters:
+    instanceId:
+      name: instanceId
+      in: path
+      schema:
+        type: string
+      description: Instance ID
+      required: true
+    projectId:
+      name: projectId
+      in: path
+      schema:
+        type: string
+      description: Project ID
+      required: true
+    organizationId:
+      name: organizationId
+      in: path
+      schema:
+        type: string
+      description: Organization ID
+      required: true
+    ipFilterId:
+      name: ipFilterId
+      in: path
+      schema:
+        type: string
+      description: IP filter ID
+      required: true
+    jobId:
+      name: jobId
+      in: path
+      schema:
+        type: string
+      description: Import job ID
+      required: true
+
+  headers:
+    X-Request-Id:
+      description: |-
+        This response header is returned with all authenticated API requests.
+
+        The header is set with a unique request id that tracks every Aura API request across our internal components.
+
+        This Id would be particularly useful to quote for any troubleshooting when contacting Aura Support.
+      schema:
+        type: string
+        example: "8a35fa95b983aeff3e70394832706f45/12383853214941892751"
+
+  examples: {}
+
+security:
+  - oauthToken: []

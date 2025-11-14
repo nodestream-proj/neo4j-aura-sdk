@@ -21,6 +21,11 @@ from .models import (
     CustomerManagedKeyRequest,
     CustomerManagedKeyResponse,
     CustomerManagedKeysResponse,
+    IpFilter,
+    IpFilterWithStatus,
+    CreateImportJobRequest,
+    ImportJobEnvelope,
+    JobIdEnvelope,
     InstanceRequest,
     InstanceResponse,
     InstanceSizingRequest,
@@ -61,10 +66,13 @@ class AuraClient:
         client_id: str,
         client_secret: str,
         base_url: str = "https://api.neo4j.io",
+        api_version: str = "v1",
     ):
         self._client_id = client_id
         self._client_secret = client_secret
         self._base_url = base_url
+        # Exposed API version for the client. Use 'v1', 'v2beta1', etc.
+        self._api_version = api_version
         self._token = None
         self._token_expiration = 0
         self._client = httpx.AsyncClient(timeout=30)
@@ -73,17 +81,20 @@ class AuraClient:
     def from_env(cls):
         client_id = os.environ["AURA_API_CLIENT_TOKEN"]
         client_secret = os.environ["AURA_API_CLIENT_SECRET"]
-        return cls(client_id, client_secret)
+        api_version = os.environ.get("AURA_API_VERSION", "v1")
+        return cls(client_id, client_secret, api_version=api_version)
 
     # AsyncClient is a context manager, so we need to implement __aenter__ and
     # __aexit__ to make this class a context manager as well. This allows us to
     # use the `async with` syntax.
 
     async def __aenter__(self):
+        """Enter async context for the underlying HTTP client."""
         await self._client.__aenter__()
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
+        """Exit async context for the underlying HTTP client."""
         await self._client.__aexit__(exc_type, exc, tb)
 
     def _checkResponseStatus(self, response: httpx.Response):
@@ -122,6 +133,10 @@ class AuraClient:
             raise AuraApiException(AuraErrors(**response.json()))
 
     async def _get_token(self):
+        """Fetch an OAuth2 token using client credentials and cache it until expiration.
+
+        Returns the access token string.
+        """
         # NOTE: This method is a bit complex because it handles token
         #       expiration. We could simplify it through refactoring or
         #       by using a custom authentication class.
@@ -144,87 +159,151 @@ class AuraClient:
         )  # 50s buffer
         return self._token
 
-    async def _get(self, path: str, model: Type[BaseModel]):
-        token = await self._get_token()
-        headers = {"Authorization": f"Bearer {token}"}
-        response = await self._client.get(
-            f"{self._base_url}/v1/{path}", headers=headers
-        )
-        self._checkResponseStatus(response)
-        return model(**response.json())
+    async def _get(self, path: str, model: Type[BaseModel] | None = None, api_version: str | None = None):
+        """Perform a GET request to the API.
+
+        - path: relative path (without leading slash)
+        - model: optional Pydantic model to parse the response into (or None for raw JSON)
+        - api_version: optional API version override (defaults to client's configured version)
+        """
+        return await self._request("GET", path, model=model, api_version=api_version)
 
     async def _post(
-        self, path: str, model: Type[BaseModel], body: BaseModel | None = None
+        self, path: str, model: Type[BaseModel] | None = None, body: BaseModel | None = None, api_version: str | None = None
     ):
-        token = await self._get_token()
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-            "accept": "application/json",
-        }
-        data = "{}"
-        if body:
-            data = body.model_dump_json()
-        response = await self._client.post(
-            f"{self._base_url}/v1/{path}", headers=headers, content=data
-        )
-        self._checkResponseStatus(response)
-        return model(**response.json())
+        """Perform a POST request to the API. See `_get` for parameter semantics."""
+        return await self._request("POST", path, model=model, body=body, api_version=api_version)
 
     async def _delete(
-        self, path: str, model: Type[BaseModel], default: BaseModel | None = None
+        self, path: str, model: Type[BaseModel] | None = None, default: BaseModel | None = None, api_version: str | None = None
     ):
+        """Perform a DELETE request to the API. Returns `default` when response has no JSON."""
+        return await self._request("DELETE", path, model=model, default=default, api_version=api_version)
+
+    async def _patch(self, path: str, body: BaseModel, model: Type[BaseModel] | None = None, api_version: str | None = None):
+        """Perform a PATCH request to the API. See `_get` for parameter semantics."""
+        return await self._request("PATCH", path, model=model, body=body, api_version=api_version)
+
+    async def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        model: Type[BaseModel] | None = None,
+        body: BaseModel | None = None,
+        default: BaseModel | None = None,
+        api_version: str | None = None,
+    ):
+        """Generic request helper that supports API versioning and optional model parsing.
+
+        - method: HTTP method (GET/POST/PATCH/DELETE)
+        - path: relative path without leading slash (e.g. 'tenants' or 'organizations/...')
+        - model: optional Pydantic model class to parse response into
+        - body: optional Pydantic model to send as JSON body
+        - default: value to return if response has no JSON (useful for 204 responses)
+        - api_version: API version segment to use (defaults to 'v1')
+        """
         token = await self._get_token()
         headers = {"Authorization": f"Bearer {token}"}
-        response = await self._client.delete(
-            f"{self._base_url}/v1/{path}", headers=headers
-        )
+        if method in ("POST", "PATCH"):
+            headers.update({"Content-Type": "application/json", "accept": "application/json"})
+
+        effective_api_version = api_version or self._api_version
+        url = f"{self._base_url}/{effective_api_version}/{path}"
+        content = None
+        if body:
+            content = body.model_dump_json()
+
+        response = await self._client.request(method, url, headers=headers, content=content)
         self._checkResponseStatus(response)
-        try:
+
+        # Handle 204 No Content or empty response body
+        if response.status_code == 204 or not response.content or response.text.strip() == "":
+            return default
+
+        if model:
             return model(**response.json())
+
+        try:
+            return response.json()
         except json.decoder.JSONDecodeError:
             return default
 
-    async def _patch(self, path: str, body: BaseModel, model: Type[BaseModel]):
-        token = await self._get_token()
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-            "accept": "application/json",
-        }
-        response = await self._client.patch(
-            f"{self._base_url}/v1/{path}",
-            headers=headers,
-            content=body.model_dump_json(),
-        )
-        self._checkResponseStatus(response)
-        return model(**response.json())
+    def _ensure_api_is_v2(self):
+        """Raise a clear error when attempting to call v2 endpoints on a v1-configured client."""
+        if not str(self._api_version).startswith("v2"):
+            raise ValueError(
+                f"Client is configured for API version '{self._api_version}'; v2 endpoints are not available."
+            )
+
+    @property
+    def api_version(self) -> str:
+        """Return the API version configured for this client (e.g. 'v1', 'v2beta1')."""
+        return self._api_version
 
     async def tenants(self):
+        """Get a list of tenants (v1).
+
+        Returns: TenantsResponse parsed from the v1 `/v1/tenants` endpoint.
+        """
         return await self._get("tenants", model=TenantsResponse)
 
     async def tenant(self, tenantId: str):
+        """Get a single tenant by ID (v1).
+
+        Args:
+            tenantId: tenant identifier
+
+        Returns: TenantResponse parsed from `/v1/tenants/{tenantId}`.
+        """
         return await self._get(f"tenants/{tenantId}", model=TenantResponse)
 
     async def instances(self, tenantId: str = ""):
         path = "instances"
         if tenantId:
             path += f"?tenantId={tenantId}"
+        """List instances. By default lists all instances; if tenantId is provided,
+        lists instances for that tenant (v1).
+
+        Args:
+            tenantId: optional tenant id to scope instances
+
+        Returns: InstancesResponse parsed from `/v1/instances`.
+        """
         return await self._get(path, model=InstancesResponse)
 
     async def instance(self, instanceId: str):
+        """Get a single instance by id (v1).
+
+        Returns: InstanceResponse parsed from `/v1/instances/{instanceId}`.
+        """
         return await self._get(f"instances/{instanceId}", model=InstanceResponse)
 
     async def create_instance(self, details: InstanceRequest):
+        """Create a new instance (v1).
+
+        Args:
+            details: InstanceRequest model describing the instance to create
+
+        Returns: InstanceResponse for the created instance.
+        """
         return await self._post("instances", body=details, model=InstanceResponse)
 
     async def delete_instance(self, instanceId: str):
+        """Delete an instance by id (v1).
+
+        Returns: InstanceResponse for the deleted instance when available.
+        """
         return await self._delete(f"instances/{instanceId}", model=InstanceResponse)
 
     async def rename_instance(self, instanceId: str, name: str):
         class _Rename(BaseModel):
             name: str
 
+        """Rename an instance (v1).
+
+        Returns: InstanceResponse for the updated instance.
+        """
         return await self._patch(
             f"instances/{instanceId}", body=_Rename(name=name), model=InstanceResponse
         )
@@ -233,6 +312,13 @@ class AuraClient:
         class _Resize(BaseModel):
             memory: str
 
+        """Resize an instance's memory (v1).
+
+        Args:
+            memory: new memory size string (e.g. '4GB')
+
+        Returns: InstanceResponse for the resizing operation.
+        """
         return await self._patch(
             f"instances/{instanceId}",
             body=_Resize(memory=memory),
@@ -244,6 +330,10 @@ class AuraClient:
             name: str
             memory: str
 
+        """Rename and resize an instance in a single request (v1).
+
+        Returns: InstanceResponse.
+        """
         return await self._patch(
             f"instances/{instanceId}",
             body=_RenameResize(name=name, memory=memory),
@@ -254,6 +344,10 @@ class AuraClient:
         class _Resize(BaseModel):
             secondaries_count: int
 
+        """Update the secondary count for an instance (v1).
+
+        Returns: InstanceResponse or raises AuraApiBadRequestException on invalid action.
+        """
         return await self._patch(
             f"instances/{instanceId}",
             body=_Resize(secondaries_count=count),
@@ -264,6 +358,13 @@ class AuraClient:
         class _Resize(BaseModel):
             cdc_enrichment_mode: str
 
+        """Update an instance's CDC enrichment mode (v1).
+
+        Args:
+            mode: CDC mode string (e.g. 'FULL')
+
+        Returns: InstanceResponse or raises AuraApiBadRequestException.
+        """
         return await self._patch(
             f"instances/{instanceId}",
             body=_Resize(cdc_enrichment_mode=mode),
@@ -274,6 +375,10 @@ class AuraClient:
         class _Overwrite(BaseModel):
             source_instance_id: str
 
+        """Overwrite an instance from another instance (v1).
+
+        Returns: InstanceResponse indicating overwrite status.
+        """
         return await self._post(
             f"instances/{instanceId}/overwrite",
             body=_Overwrite(source_instance_id=sourceId),
@@ -287,6 +392,10 @@ class AuraClient:
             source_instance_id: str
             source_snapshot_id: str
 
+        """Overwrite an instance from a snapshot of another instance (v1).
+
+        Returns: InstanceResponse.
+        """
         return await self._post(
             f"instances/{instanceId}/overwrite",
             body=_Overwrite(source_instance_id=sourceId, source_snapshot_id=snapshotId),
@@ -294,63 +403,205 @@ class AuraClient:
         )
 
     async def pause_instance(self, instanceId: str):
+        """Pause an instance (v1). Returns InstanceResponse with pausing status."""
         return await self._post(f"instances/{instanceId}/pause", model=InstanceResponse)
 
     async def resume_instance(self, instanceId: str):
+        """Resume a paused instance (v1). Returns InstanceResponse with resuming status."""
         return await self._post(
             f"instances/{instanceId}/resume", model=InstanceResponse
         )
 
     async def restore_instance(self, instanceId: str, snapshotId: str):
+        """Restore an instance from a snapshot (v1)."""
         return await self._post(
             f"instances/{instanceId}/snapshots/{snapshotId}/restore",
             model=InstanceResponse,
         )
 
     async def snapshot_instance(self, instanceId: str):
+        """Create a snapshot for an instance (v1). Returns SnapshotResponse."""
         return await self._post(
             f"instances/{instanceId}/snapshots", model=SnapshotResponse
         )
 
     async def instance_sizing(self, details: InstanceSizingRequest):
+        """Estimate instance sizing based on node/relationship counts (v1).
+
+        Args:
+            details: InstanceSizingRequest containing node/relationship counts and instance type
+
+        Returns: InstanceSizingResponse with sizing recommendation.
+        """
         return await self._post(
             "instances/sizing", body=details, model=InstanceSizingResponse
         )
 
     async def snapshots(self, instanceId: str, date: str = ""):
+        """List snapshots for an instance (v1). Optionally filter by date.
+
+        Returns: SnapshotsResponse.
+        """
         path = f"instances/{instanceId}/snapshots"
         if date:
             path += f"?date={date}"
         return await self._get(path, model=SnapshotsResponse)
 
     async def snapshot(self, instanceId: str, snapshotId: str):
+        """Get a single snapshot by id (v1). Returns SnapshotResponse."""
         return await self._get(
             f"instances/{instanceId}/snapshots/{snapshotId}", model=SnapshotResponse
         )
 
     async def get_customer_managed_keys(self, tenantId: str = ""):
+        """List customer managed keys (v1). Optionally filter by tenantId."""
         path = "customer-managed-keys"
         if tenantId:
             path += f"?tenantId={tenantId}"
         return await self._get(path, model=CustomerManagedKeysResponse)
 
     async def get_customer_managed_key(self, customerManagedKeyId: str):
+        """Get a specific customer managed key by id (v1)."""
         return await self._get(
             f"customer-managed-keys/{customerManagedKeyId}",
             model=CustomerManagedKeyResponse,
         )
 
     async def create_customer_managed_key(self, details: CustomerManagedKeyRequest):
+        """Create a new customer managed key (v1). Returns CustomerManagedKeyResponse."""
         return await self._post(
             "customer-managed-keys", body=details, model=CustomerManagedKeyResponse
         )
 
     async def delete_customer_managed_key(self, customerManagedKeyId: str):
+        """Delete a customer managed key (v1). Returns a default deleted response if empty."""
         default = CustomerManagedKeyResponse(
             data=CustomerManagedKey(id=customerManagedKeyId, status="deleted")
         )
-        return await self._delete(
+        resp = await self._delete(
             f"customer-managed-keys/{customerManagedKeyId}",
             model=CustomerManagedKeyResponse,
             default=default,
+        )
+        # If the response is None (e.g., 204 No Content), return the default deleted response
+        if resp is None:
+            return default
+        return resp
+
+    # --- v2beta1 endpoints from OpenAPI spec ---
+    async def list_organization_ip_filters(self, organizationId: str):
+        """List IP filters for an organization (v2beta1). Returns a list of IpFilter models."""
+        self._ensure_api_is_v2()
+        items = await self._get(f"organizations/{organizationId}/ip-filters", model=None, api_version="v2beta1")
+        return [IpFilter(**i) for i in items]
+
+    async def create_organization_ip_filter(self, organizationId: str, details: IpFilter):
+        """Create an IP filter for an organization."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/ip-filters",
+            model=IpFilter,
+            body=details,
+            api_version="v2beta1",
+        )
+
+    async def get_organization_ip_filter(self, organizationId: str, ipFilterId: str):
+        """Retrieve a specific IP filter by id for an organization (v2beta1).
+
+        Args:
+            organizationId: the organization id
+            ipFilterId: the ip filter id
+
+        Returns: IpFilter model parsed from the v2beta1 endpoint.
+        """
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/ip-filters/{ipFilterId}",
+            model=IpFilter,
+            api_version="v2beta1",
+        )
+
+    async def update_organization_ip_filter(self, organizationId: str, ipFilterId: str, details: IpFilter):
+        """Update an existing IP filter for an organization (v2beta1).
+
+        Args:
+            details: IpFilter model with updated fields
+
+        Returns: IpFilter parsed from the response.
+        """
+        self._ensure_api_is_v2()
+        return await self._patch(
+            f"organizations/{organizationId}/ip-filters/{ipFilterId}",
+            body=details,
+            model=IpFilter,
+            api_version="v2beta1",
+        )
+
+    async def delete_organization_ip_filter(self, organizationId: str, ipFilterId: str):
+        """Delete an IP filter. Returns None on success (204)."""
+        self._ensure_api_is_v2()
+        """Delete an IP filter (v2beta1).
+
+        Returns: IpFilter when response includes body, otherwise None for 204 No Content.
+        """
+        return await self._delete(
+            f"organizations/{organizationId}/ip-filters/{ipFilterId}",
+            model=IpFilter,
+            default=None,
+            api_version="v2beta1",
+        )
+
+    async def get_instance_ip_filter_status(self, organizationId: str, projectId: str, instanceId: str):
+        """Get the IP filter applied to a specific instance including status (v2beta1).
+
+        Returns: IpFilterWithStatus or None when no filter is applied.
+        """
+        self._ensure_api_is_v2()
+        body = await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/ip-filters",
+            model=None,
+            api_version="v2beta1",
+        )
+        if not body:
+            return None
+        return IpFilterWithStatus(**body)
+
+    # Import jobs
+    async def create_import_job(self, organizationId: str, projectId: str, details: CreateImportJobRequest):
+        """Create an import job for a project (v2beta1).
+
+        Args:
+            details: CreateImportJobRequest describing the model id and optional credentials.
+
+        Returns: JobIdEnvelope containing the created job id.
+        """
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/import/jobs",
+            model=JobIdEnvelope,
+            body=details,
+            api_version="v2beta1",
+        )
+
+    async def get_import_job(self, organizationId: str, projectId: str, jobId: str, progress: bool = False):
+        """Retrieve an import job by ID (v2beta1).
+
+        Args:
+            progress: when True include detailed progress info for nodes/relationships.
+
+        Returns: ImportJobEnvelope.
+        """
+        self._ensure_api_is_v2()
+        path = f"organizations/{organizationId}/projects/{projectId}/import/jobs/{jobId}"
+        if progress:
+            path += "?progress=true"
+        return await self._get(path, model=ImportJobEnvelope, api_version="v2beta1")
+
+    async def cancel_import_job(self, organizationId: str, projectId: str, jobId: str):
+        """Cancel an existing import job (v2beta1). Returns JobIdEnvelope on success."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/import/jobs/{jobId}/cancellation",
+            model=JobIdEnvelope,
+            api_version="v2beta1",
         )
