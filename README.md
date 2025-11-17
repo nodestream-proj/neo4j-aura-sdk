@@ -1,5 +1,6 @@
 # Neo4j Aura SDK for Python
 
+
 This SDK provides a thin, async client for the Neo4j Aura HTTP API.
 
 Highlights in this branch
