@@ -39,6 +39,103 @@ from .models import (
 
 
 class AuraClient:
+
+    # --- v1beta5-only methods ---
+
+    # GraphQL Data API CRUD
+    async def list_graphql_data_apis(self, instanceId: str):
+        """List GraphQL Data APIs for an instance (v1beta5 only)."""
+        self._ensure_api_is_v1beta5()
+        return await self._get(f"instances/{instanceId}/data-apis/graphql", model=None, api_version="v1beta5")
+
+    async def create_graphql_data_api(self, instanceId: str, details):
+        """Create a new GraphQL Data API for an instance (v1beta5 only)."""
+        self._ensure_api_is_v1beta5()
+        return await self._post(f"instances/{instanceId}/data-apis/graphql", body=details, model=None, api_version="v1beta5")
+
+    async def get_graphql_data_api(self, instanceId: str, dataApiId: str):
+        """Get details of a GraphQL Data API (v1beta5 only)."""
+        self._ensure_api_is_v1beta5()
+        return await self._get(f"instances/{instanceId}/data-apis/graphql/{dataApiId}", model=None, api_version="v1beta5")
+
+    async def update_graphql_data_api(self, instanceId: str, dataApiId: str, details):
+        """Update a GraphQL Data API (v1beta5 only)."""
+        self._ensure_api_is_v1beta5()
+        return await self._patch(f"instances/{instanceId}/data-apis/graphql/{dataApiId}", body=details, model=None, api_version="v1beta5")
+
+    async def delete_graphql_data_api(self, instanceId: str, dataApiId: str):
+        """Delete a GraphQL Data API (v1beta5 only)."""
+        self._ensure_api_is_v1beta5()
+        return await self._delete(f"instances/{instanceId}/data-apis/graphql/{dataApiId}", model=None, api_version="v1beta5")
+
+    async def pause_graphql_data_api(self, instanceId: str, dataApiId: str):
+        """Pause a GraphQL Data API (v1beta5 only)."""
+        self._ensure_api_is_v1beta5()
+        return await self._post(f"instances/{instanceId}/data-apis/graphql/{dataApiId}/pause", model=None, api_version="v1beta5")
+
+    async def resume_graphql_data_api(self, instanceId: str, dataApiId: str):
+        """Resume a GraphQL Data API (v1beta5 only)."""
+        self._ensure_api_is_v1beta5()
+        return await self._post(f"instances/{instanceId}/data-apis/graphql/{dataApiId}/resume", model=None, api_version="v1beta5")
+
+    # GraphQL Data API Auth Providers
+    async def list_graphql_auth_providers(self, instanceId: str, dataApiId: str):
+        """List auth providers for a GraphQL Data API (v1beta5 only)."""
+        self._ensure_api_is_v1beta5()
+        return await self._get(f"instances/{instanceId}/data-apis/graphql/{dataApiId}/auth-providers", model=None, api_version="v1beta5")
+
+    async def create_graphql_auth_provider(self, instanceId: str, dataApiId: str, details):
+        """Create an auth provider for a GraphQL Data API (v1beta5 only)."""
+        self._ensure_api_is_v1beta5()
+        return await self._post(f"instances/{instanceId}/data-apis/graphql/{dataApiId}/auth-providers", body=details, model=None, api_version="v1beta5")
+
+    async def get_graphql_auth_provider(self, instanceId: str, dataApiId: str, authProviderId: str):
+        """Get details of an auth provider for a GraphQL Data API (v1beta5 only)."""
+        self._ensure_api_is_v1beta5()
+        return await self._get(f"instances/{instanceId}/data-apis/graphql/{dataApiId}/auth-providers/{authProviderId}", model=None, api_version="v1beta5")
+
+    async def update_graphql_auth_provider(self, instanceId: str, dataApiId: str, authProviderId: str, details):
+        """Update an auth provider for a GraphQL Data API (v1beta5 only)."""
+        self._ensure_api_is_v1beta5()
+        return await self._patch(f"instances/{instanceId}/data-apis/graphql/{dataApiId}/auth-providers/{authProviderId}", body=details, model=None, api_version="v1beta5")
+
+    async def delete_graphql_auth_provider(self, instanceId: str, dataApiId: str, authProviderId: str):
+        """Delete an auth provider for a GraphQL Data API (v1beta5 only)."""
+        self._ensure_api_is_v1beta5()
+        return await self._delete(f"instances/{instanceId}/data-apis/graphql/{dataApiId}/auth-providers/{authProviderId}", model=None, api_version="v1beta5")
+
+    # Instance upgrade
+    async def upgrade_instance(self, instanceId: str, details=None):
+        """Upgrade an AuraDB Professional instance to Business Critical (v1beta5 only)."""
+        self._ensure_api_is_v1beta5()
+        return await self._post(f"instances/{instanceId}/upgrade", body=details, model=None, api_version="v1beta5")
+
+    # Project metrics integration
+    async def get_project_metrics_integration(self, tenantId: str):
+        """Get metrics integration details for a project (v1beta5 only)."""
+        self._ensure_api_is_v1beta5()
+        return await self._get(f"tenants/{tenantId}/metrics-integration", model=None, api_version="v1beta5")
+
+    def _ensure_api_is_v1beta5(self):
+        """Raise ValueError if the client is not configured for v1beta5 endpoints."""
+        if self._api_version != "v1beta5":
+            raise ValueError("This method is only available when api_version is set to 'v1beta5'.")
+
+    async def patch_instance(self, instanceId: str, patch: "InstancePatchRequest"):
+        """Generic PATCH for an instance (v1). Allows updating name, memory, storage, vector_optimized, graph_analytics_plugin, secondaries_count, cdc_enrichment_mode in one call.
+
+        Args:
+            instanceId: The ID of the instance to update.
+            patch: InstancePatchRequest with any fields to update.
+
+        Returns: InstanceResponse for the updated instance.
+        """
+        from .models import InstancePatchRequest, InstanceResponse
+        return await self._patch(
+            f"instances/{instanceId}",
+            body=patch,
+            model=InstanceResponse,
+        )
     """An API Client for the Neo4j Aura service.
 
     This client provides a low-ish level interface to the Neo4j Aura service.

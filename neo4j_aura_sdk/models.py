@@ -1,6 +1,68 @@
 from typing import List, Optional
 
 from pydantic import BaseModel
+# --- v1beta5 GraphQL Data API models ---
+class ProjectMetricsIntegrationResponse(BaseModel):
+    url: str
+    enabled: bool
+    # Add other fields as per v1beta5 spec if needed
+
+class InstanceUpgradeRequest(BaseModel):
+    memory: Optional[str] = None
+    storage: Optional[str] = None
+    version: Optional[str] = None
+    # Add other upgradable fields as per v1beta5 spec if needed
+
+class GraphQLDataAPISummary(BaseModel):
+    id: str
+    name: Optional[str] = None
+    url: Optional[str] = None
+    status: Optional[str] = None
+
+class GraphQLDataAPI(GraphQLDataAPISummary):
+    type_definitions: Optional[str] = None
+    security: Optional[dict] = None
+
+class GraphQLDataAPISummaryWithAuthProviders(GraphQLDataAPISummary):
+    authentication_providers: Optional[list] = None
+
+class DataApiAuthProviderSummary(BaseModel):
+    id: str
+    name: Optional[str] = None
+    type: Optional[str] = None
+    enabled: Optional[bool] = None
+
+class DataApiApiKeyAuthProvider(DataApiAuthProviderSummary):
+    key: Optional[str] = None
+
+class DataApiJwksAuthProvider(DataApiAuthProviderSummary):
+    url: Optional[str] = None
+
+class DataApiAuthProviderWithApiKey(DataApiApiKeyAuthProvider):
+    pass
+
+class DataApiAuthProviderCreateInput(BaseModel):
+    name: str
+    type: str
+    url: Optional[str] = None
+
+class DataApiApiKeyAuthProviderEditInput(BaseModel):
+    name: Optional[str] = None
+
+class DataApiJwksAuthProviderEditInput(BaseModel):
+    name: Optional[str] = None
+    url: Optional[str] = None
+
+
+# PATCH /instances/{instanceId} request model (all fields optional)
+class InstancePatchRequest(BaseModel):
+    name: Optional[str] = None
+    memory: Optional[str] = None
+    storage: Optional[str] = None
+    vector_optimized: Optional[bool] = None
+    graph_analytics_plugin: Optional[bool] = None
+    secondaries_count: Optional[int] = None
+    cdc_enrichment_mode: Optional[str] = None
 
 # Model Defintion Here:
 #   https://neo4j.com/docs/aura/platform/api/specification/#/
@@ -114,6 +176,8 @@ class Instance(InstanceSummary):
     graph_relationships: Optional[str] = None
     username: Optional[str] = None
     password: Optional[str] = None
+    vector_optimized: Optional[bool] = None
+    graph_analytics_plugin: Optional[bool] = None
 
 
 class InstanceSizingRequest(BaseModel):
