@@ -336,6 +336,7 @@ async def test_patch_instance():
 
     async with AuraClient(clientId, clientSecret) as client:
         from neo4j_aura_sdk.models import InstancePatchRequest
+
         # Patch name and memory
         patch = InstancePatchRequest(name="Patched Name", memory="8GB")
         resp = await client.patch_instance(iid, patch)
@@ -360,5 +361,3 @@ async def test_patch_instance():
         assert resp.data.graph_analytics_plugin is True
         assert resp.data.secondaries_count == 2
         assert resp.data.cdc_enrichment_mode == "FULL"
-
-
