@@ -17,30 +17,26 @@ from .models import (
     AuraError,
     AuraErrors,
     AuthResponse,
+    CreateDeploymentRequest,
+    CreateImportJobRequest,
     CustomerManagedKey,
     CustomerManagedKeyRequest,
     CustomerManagedKeyResponse,
     CustomerManagedKeysResponse,
-    IpFilter,
-    IpFilterWithStatus,
-    CreateImportJobRequest,
     ImportJobEnvelope,
-    JobIdEnvelope,
+    InstancePatchRequest,
     InstanceRequest,
     InstanceResponse,
     InstanceSizingRequest,
     InstanceSizingResponse,
     InstancesResponse,
+    IpFilter,
+    IpFilterWithStatus,
+    JobIdEnvelope,
     SnapshotResponse,
     SnapshotsResponse,
     TenantResponse,
     TenantsResponse,
-    Deployment,
-    DetailedDeployment,
-    Database,
-    Server,
-    ServerDatabase,
-    CreateDeploymentRequest,
 )
 
 
@@ -52,82 +48,151 @@ class AuraClient:
     async def list_graphql_data_apis(self, instanceId: str):
         """List GraphQL Data APIs for an instance (v1beta5 only)."""
         self._ensure_api_is_v1beta5()
-        return await self._get(f"instances/{instanceId}/data-apis/graphql", model=None, api_version="v1beta5")
+        return await self._get(
+            f"instances/{instanceId}/data-apis/graphql",
+            model=None,
+            api_version="v1beta5",
+        )
 
     async def create_graphql_data_api(self, instanceId: str, details):
         """Create a new GraphQL Data API for an instance (v1beta5 only)."""
         self._ensure_api_is_v1beta5()
-        return await self._post(f"instances/{instanceId}/data-apis/graphql", body=details, model=None, api_version="v1beta5")
+        return await self._post(
+            f"instances/{instanceId}/data-apis/graphql",
+            body=details,
+            model=None,
+            api_version="v1beta5",
+        )
 
     async def get_graphql_data_api(self, instanceId: str, dataApiId: str):
         """Get details of a GraphQL Data API (v1beta5 only)."""
         self._ensure_api_is_v1beta5()
-        return await self._get(f"instances/{instanceId}/data-apis/graphql/{dataApiId}", model=None, api_version="v1beta5")
+        return await self._get(
+            f"instances/{instanceId}/data-apis/graphql/{dataApiId}",
+            model=None,
+            api_version="v1beta5",
+        )
 
     async def update_graphql_data_api(self, instanceId: str, dataApiId: str, details):
         """Update a GraphQL Data API (v1beta5 only)."""
         self._ensure_api_is_v1beta5()
-        return await self._patch(f"instances/{instanceId}/data-apis/graphql/{dataApiId}", body=details, model=None, api_version="v1beta5")
+        return await self._patch(
+            f"instances/{instanceId}/data-apis/graphql/{dataApiId}",
+            body=details,
+            model=None,
+            api_version="v1beta5",
+        )
 
     async def delete_graphql_data_api(self, instanceId: str, dataApiId: str):
         """Delete a GraphQL Data API (v1beta5 only)."""
         self._ensure_api_is_v1beta5()
-        return await self._delete(f"instances/{instanceId}/data-apis/graphql/{dataApiId}", model=None, api_version="v1beta5")
+        return await self._delete(
+            f"instances/{instanceId}/data-apis/graphql/{dataApiId}",
+            model=None,
+            api_version="v1beta5",
+        )
 
     async def pause_graphql_data_api(self, instanceId: str, dataApiId: str):
         """Pause a GraphQL Data API (v1beta5 only)."""
         self._ensure_api_is_v1beta5()
-        return await self._post(f"instances/{instanceId}/data-apis/graphql/{dataApiId}/pause", model=None, api_version="v1beta5")
+        return await self._post(
+            f"instances/{instanceId}/data-apis/graphql/{dataApiId}/pause",
+            model=None,
+            api_version="v1beta5",
+        )
 
     async def resume_graphql_data_api(self, instanceId: str, dataApiId: str):
         """Resume a GraphQL Data API (v1beta5 only)."""
         self._ensure_api_is_v1beta5()
-        return await self._post(f"instances/{instanceId}/data-apis/graphql/{dataApiId}/resume", model=None, api_version="v1beta5")
+        return await self._post(
+            f"instances/{instanceId}/data-apis/graphql/{dataApiId}/resume",
+            model=None,
+            api_version="v1beta5",
+        )
 
     # GraphQL Data API Auth Providers
     async def list_graphql_auth_providers(self, instanceId: str, dataApiId: str):
         """List auth providers for a GraphQL Data API (v1beta5 only)."""
         self._ensure_api_is_v1beta5()
-        return await self._get(f"instances/{instanceId}/data-apis/graphql/{dataApiId}/auth-providers", model=None, api_version="v1beta5")
+        return await self._get(
+            f"instances/{instanceId}/data-apis/graphql/{dataApiId}/auth-providers",
+            model=None,
+            api_version="v1beta5",
+        )
 
-    async def create_graphql_auth_provider(self, instanceId: str, dataApiId: str, details):
+    async def create_graphql_auth_provider(
+        self, instanceId: str, dataApiId: str, details
+    ):
         """Create an auth provider for a GraphQL Data API (v1beta5 only)."""
         self._ensure_api_is_v1beta5()
-        return await self._post(f"instances/{instanceId}/data-apis/graphql/{dataApiId}/auth-providers", body=details, model=None, api_version="v1beta5")
+        return await self._post(
+            f"instances/{instanceId}/data-apis/graphql/{dataApiId}/auth-providers",
+            body=details,
+            model=None,
+            api_version="v1beta5",
+        )
 
-    async def get_graphql_auth_provider(self, instanceId: str, dataApiId: str, authProviderId: str):
+    async def get_graphql_auth_provider(
+        self, instanceId: str, dataApiId: str, authProviderId: str
+    ):
         """Get details of an auth provider for a GraphQL Data API (v1beta5 only)."""
         self._ensure_api_is_v1beta5()
-        return await self._get(f"instances/{instanceId}/data-apis/graphql/{dataApiId}/auth-providers/{authProviderId}", model=None, api_version="v1beta5")
+        return await self._get(
+            f"instances/{instanceId}/data-apis/graphql/{dataApiId}/auth-providers/{authProviderId}",
+            model=None,
+            api_version="v1beta5",
+        )
 
-    async def update_graphql_auth_provider(self, instanceId: str, dataApiId: str, authProviderId: str, details):
+    async def update_graphql_auth_provider(
+        self, instanceId: str, dataApiId: str, authProviderId: str, details
+    ):
         """Update an auth provider for a GraphQL Data API (v1beta5 only)."""
         self._ensure_api_is_v1beta5()
-        return await self._patch(f"instances/{instanceId}/data-apis/graphql/{dataApiId}/auth-providers/{authProviderId}", body=details, model=None, api_version="v1beta5")
+        return await self._patch(
+            f"instances/{instanceId}/data-apis/graphql/{dataApiId}/auth-providers/{authProviderId}",
+            body=details,
+            model=None,
+            api_version="v1beta5",
+        )
 
-    async def delete_graphql_auth_provider(self, instanceId: str, dataApiId: str, authProviderId: str):
+    async def delete_graphql_auth_provider(
+        self, instanceId: str, dataApiId: str, authProviderId: str
+    ):
         """Delete an auth provider for a GraphQL Data API (v1beta5 only)."""
         self._ensure_api_is_v1beta5()
-        return await self._delete(f"instances/{instanceId}/data-apis/graphql/{dataApiId}/auth-providers/{authProviderId}", model=None, api_version="v1beta5")
+        return await self._delete(
+            f"instances/{instanceId}/data-apis/graphql/{dataApiId}/auth-providers/{authProviderId}",
+            model=None,
+            api_version="v1beta5",
+        )
 
     # Instance upgrade
     async def upgrade_instance(self, instanceId: str, details=None):
         """Upgrade an AuraDB Professional instance to Business Critical (v1beta5 only)."""
         self._ensure_api_is_v1beta5()
-        return await self._post(f"instances/{instanceId}/upgrade", body=details, model=None, api_version="v1beta5")
+        return await self._post(
+            f"instances/{instanceId}/upgrade",
+            body=details,
+            model=None,
+            api_version="v1beta5",
+        )
 
     # Project metrics integration
     async def get_project_metrics_integration(self, tenantId: str):
         """Get metrics integration details for a project (v1beta5 only)."""
         self._ensure_api_is_v1beta5()
-        return await self._get(f"tenants/{tenantId}/metrics-integration", model=None, api_version="v1beta5")
+        return await self._get(
+            f"tenants/{tenantId}/metrics-integration", model=None, api_version="v1beta5"
+        )
 
     def _ensure_api_is_v1beta5(self):
         """Raise ValueError if the client is not configured for v1beta5 endpoints."""
         if self._api_version != "v1beta5":
-            raise ValueError("This method is only available when api_version is set to 'v1beta5'.")
+            raise ValueError(
+                "This method is only available when api_version is set to 'v1beta5'."
+            )
 
-    async def patch_instance(self, instanceId: str, patch: "InstancePatchRequest"):
+    async def patch_instance(self, instanceId: str, patch: InstancePatchRequest):
         """Generic PATCH for an instance (v1). Allows updating name, memory, storage, vector_optimized, graph_analytics_plugin, secondaries_count, cdc_enrichment_mode in one call.
 
         Args:
@@ -136,12 +201,12 @@ class AuraClient:
 
         Returns: InstanceResponse for the updated instance.
         """
-        from .models import InstancePatchRequest, InstanceResponse
         return await self._patch(
             f"instances/{instanceId}",
             body=patch,
             model=InstanceResponse,
         )
+
     """An API Client for the Neo4j Aura service.
 
     This client provides a low-ish level interface to the Neo4j Aura service.
@@ -262,7 +327,12 @@ class AuraClient:
         )  # 50s buffer
         return self._token
 
-    async def _get(self, path: str, model: Type[BaseModel] | None = None, api_version: str | None = None):
+    async def _get(
+        self,
+        path: str,
+        model: Type[BaseModel] | None = None,
+        api_version: str | None = None,
+    ):
         """Perform a GET request to the API.
 
         - path: relative path (without leading slash)
@@ -272,20 +342,40 @@ class AuraClient:
         return await self._request("GET", path, model=model, api_version=api_version)
 
     async def _post(
-        self, path: str, model: Type[BaseModel] | None = None, body: BaseModel | None = None, api_version: str | None = None
+        self,
+        path: str,
+        model: Type[BaseModel] | None = None,
+        body: BaseModel | None = None,
+        api_version: str | None = None,
     ):
         """Perform a POST request to the API. See `_get` for parameter semantics."""
-        return await self._request("POST", path, model=model, body=body, api_version=api_version)
+        return await self._request(
+            "POST", path, model=model, body=body, api_version=api_version
+        )
 
     async def _delete(
-        self, path: str, model: Type[BaseModel] | None = None, default: BaseModel | None = None, api_version: str | None = None
+        self,
+        path: str,
+        model: Type[BaseModel] | None = None,
+        default: BaseModel | None = None,
+        api_version: str | None = None,
     ):
         """Perform a DELETE request to the API. Returns `default` when response has no JSON."""
-        return await self._request("DELETE", path, model=model, default=default, api_version=api_version)
+        return await self._request(
+            "DELETE", path, model=model, default=default, api_version=api_version
+        )
 
-    async def _patch(self, path: str, body: BaseModel, model: Type[BaseModel] | None = None, api_version: str | None = None):
+    async def _patch(
+        self,
+        path: str,
+        body: BaseModel,
+        model: Type[BaseModel] | None = None,
+        api_version: str | None = None,
+    ):
         """Perform a PATCH request to the API. See `_get` for parameter semantics."""
-        return await self._request("PATCH", path, model=model, body=body, api_version=api_version)
+        return await self._request(
+            "PATCH", path, model=model, body=body, api_version=api_version
+        )
 
     async def _request(
         self,
@@ -309,7 +399,9 @@ class AuraClient:
         token = await self._get_token()
         headers = {"Authorization": f"Bearer {token}"}
         if method in ("POST", "PATCH"):
-            headers.update({"Content-Type": "application/json", "accept": "application/json"})
+            headers.update(
+                {"Content-Type": "application/json", "accept": "application/json"}
+            )
 
         effective_api_version = api_version or self._api_version
         url = f"{self._base_url}/{effective_api_version}/{path}"
@@ -317,11 +409,17 @@ class AuraClient:
         if body:
             content = body.model_dump_json()
 
-        response = await self._client.request(method, url, headers=headers, content=content)
+        response = await self._client.request(
+            method, url, headers=headers, content=content
+        )
         self._checkResponseStatus(response)
 
         # Handle 204 No Content or empty response body
-        if response.status_code == 204 or not response.content or response.text.strip() == "":
+        if (
+            response.status_code == 204
+            or not response.content
+            or response.text.strip() == ""
+        ):
             return default
 
         if model:
@@ -595,10 +693,16 @@ class AuraClient:
     async def list_organization_ip_filters(self, organizationId: str):
         """List IP filters for an organization (v2beta1). Returns a list of IpFilter models."""
         self._ensure_api_is_v2()
-        items = await self._get(f"organizations/{organizationId}/ip-filters", model=None, api_version="v2beta1")
+        items = await self._get(
+            f"organizations/{organizationId}/ip-filters",
+            model=None,
+            api_version="v2beta1",
+        )
         return [IpFilter(**i) for i in items]
 
-    async def create_organization_ip_filter(self, organizationId: str, details: IpFilter):
+    async def create_organization_ip_filter(
+        self, organizationId: str, details: IpFilter
+    ):
         """Create an IP filter for an organization."""
         self._ensure_api_is_v2()
         return await self._post(
@@ -624,7 +728,9 @@ class AuraClient:
             api_version="v2beta1",
         )
 
-    async def update_organization_ip_filter(self, organizationId: str, ipFilterId: str, details: IpFilter):
+    async def update_organization_ip_filter(
+        self, organizationId: str, ipFilterId: str, details: IpFilter
+    ):
         """Update an existing IP filter for an organization (v2beta1).
 
         Args:
@@ -654,7 +760,9 @@ class AuraClient:
             api_version="v2beta1",
         )
 
-    async def get_instance_ip_filter_status(self, organizationId: str, projectId: str, instanceId: str):
+    async def get_instance_ip_filter_status(
+        self, organizationId: str, projectId: str, instanceId: str
+    ):
         """Get the IP filter applied to a specific instance including status (v2beta1).
 
         Returns: IpFilterWithStatus or None when no filter is applied.
@@ -670,7 +778,9 @@ class AuraClient:
         return IpFilterWithStatus(**body)
 
     # Import jobs
-    async def create_import_job(self, organizationId: str, projectId: str, details: CreateImportJobRequest):
+    async def create_import_job(
+        self, organizationId: str, projectId: str, details: CreateImportJobRequest
+    ):
         """Create an import job for a project (v2beta1).
 
         Args:
@@ -686,7 +796,9 @@ class AuraClient:
             api_version="v2beta1",
         )
 
-    async def get_import_job(self, organizationId: str, projectId: str, jobId: str, progress: bool = False):
+    async def get_import_job(
+        self, organizationId: str, projectId: str, jobId: str, progress: bool = False
+    ):
         """Retrieve an import job by ID (v2beta1).
 
         Args:
@@ -695,7 +807,9 @@ class AuraClient:
         Returns: ImportJobEnvelope.
         """
         self._ensure_api_is_v2()
-        path = f"organizations/{organizationId}/projects/{projectId}/import/jobs/{jobId}"
+        path = (
+            f"organizations/{organizationId}/projects/{projectId}/import/jobs/{jobId}"
+        )
         if progress:
             path += "?progress=true"
         return await self._get(path, model=ImportJobEnvelope, api_version="v2beta1")
@@ -719,7 +833,9 @@ class AuraClient:
             api_version="v2beta1",
         )
 
-    async def create_deployment(self, organizationId: str, projectId: str, details: "CreateDeploymentRequest"):
+    async def create_deployment(
+        self, organizationId: str, projectId: str, details: CreateDeploymentRequest
+    ):
         """Create a new Fleet Manager deployment (v2beta1)."""
         self._ensure_api_is_v2()
         return await self._post(
@@ -728,7 +844,9 @@ class AuraClient:
             api_version="v2beta1",
         )
 
-    async def get_deployment(self, organizationId: str, projectId: str, deploymentId: str):
+    async def get_deployment(
+        self, organizationId: str, projectId: str, deploymentId: str
+    ):
         """Get details of a specific Fleet Manager deployment (v2beta1)."""
         self._ensure_api_is_v2()
         return await self._get(
@@ -736,7 +854,9 @@ class AuraClient:
             api_version="v2beta1",
         )
 
-    async def delete_deployment(self, organizationId: str, projectId: str, deploymentId: str):
+    async def delete_deployment(
+        self, organizationId: str, projectId: str, deploymentId: str
+    ):
         """Delete/unregister a Fleet Manager deployment (v2beta1)."""
         self._ensure_api_is_v2()
         return await self._delete(
@@ -744,7 +864,9 @@ class AuraClient:
             api_version="v2beta1",
         )
 
-    async def get_deployment_databases(self, organizationId: str, projectId: str, deploymentId: str):
+    async def get_deployment_databases(
+        self, organizationId: str, projectId: str, deploymentId: str
+    ):
         """Get logical databases for a deployment (v2beta1)."""
         self._ensure_api_is_v2()
         return await self._get(
@@ -752,7 +874,9 @@ class AuraClient:
             api_version="v2beta1",
         )
 
-    async def get_deployment_servers(self, organizationId: str, projectId: str, deploymentId: str):
+    async def get_deployment_servers(
+        self, organizationId: str, projectId: str, deploymentId: str
+    ):
         """Get servers for a deployment (v2beta1)."""
         self._ensure_api_is_v2()
         return await self._get(
@@ -760,7 +884,9 @@ class AuraClient:
             api_version="v2beta1",
         )
 
-    async def get_deployment_server_databases(self, organizationId: str, projectId: str, deploymentId: str, serverId: str):
+    async def get_deployment_server_databases(
+        self, organizationId: str, projectId: str, deploymentId: str, serverId: str
+    ):
         """Get physical databases for a server on a deployment (v2beta1)."""
         self._ensure_api_is_v2()
         return await self._get(
@@ -768,7 +894,9 @@ class AuraClient:
             api_version="v2beta1",
         )
 
-    async def create_deployment_token(self, organizationId: str, projectId: str, deploymentId: str):
+    async def create_deployment_token(
+        self, organizationId: str, projectId: str, deploymentId: str
+    ):
         """Create a token for a Fleet Manager deployment (v2beta1)."""
         self._ensure_api_is_v2()
         return await self._post(
@@ -776,7 +904,9 @@ class AuraClient:
             api_version="v2beta1",
         )
 
-    async def update_deployment_token(self, organizationId: str, projectId: str, deploymentId: str):
+    async def update_deployment_token(
+        self, organizationId: str, projectId: str, deploymentId: str
+    ):
         """Update/rotate a token for a Fleet Manager deployment (v2beta1)."""
         self._ensure_api_is_v2()
         return await self._patch(
@@ -785,7 +915,9 @@ class AuraClient:
             api_version="v2beta1",
         )
 
-    async def delete_deployment_token(self, organizationId: str, projectId: str, deploymentId: str):
+    async def delete_deployment_token(
+        self, organizationId: str, projectId: str, deploymentId: str
+    ):
         """Delete a token for a Fleet Manager deployment (v2beta1)."""
         self._ensure_api_is_v2()
         return await self._delete(

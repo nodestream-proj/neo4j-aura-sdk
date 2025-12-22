@@ -1,11 +1,14 @@
 from typing import List, Optional
 
 from pydantic import BaseModel
+
+
 # --- v1beta5 GraphQL Data API models ---
 class ProjectMetricsIntegrationResponse(BaseModel):
     url: str
     enabled: bool
     # Add other fields as per v1beta5 spec if needed
+
 
 class InstanceUpgradeRequest(BaseModel):
     memory: Optional[str] = None
@@ -13,18 +16,22 @@ class InstanceUpgradeRequest(BaseModel):
     version: Optional[str] = None
     # Add other upgradable fields as per v1beta5 spec if needed
 
+
 class GraphQLDataAPISummary(BaseModel):
     id: str
     name: Optional[str] = None
     url: Optional[str] = None
     status: Optional[str] = None
 
+
 class GraphQLDataAPI(GraphQLDataAPISummary):
     type_definitions: Optional[str] = None
     security: Optional[dict] = None
 
+
 class GraphQLDataAPISummaryWithAuthProviders(GraphQLDataAPISummary):
     authentication_providers: Optional[list] = None
+
 
 class DataApiAuthProviderSummary(BaseModel):
     id: str
@@ -32,22 +39,28 @@ class DataApiAuthProviderSummary(BaseModel):
     type: Optional[str] = None
     enabled: Optional[bool] = None
 
+
 class DataApiApiKeyAuthProvider(DataApiAuthProviderSummary):
     key: Optional[str] = None
+
 
 class DataApiJwksAuthProvider(DataApiAuthProviderSummary):
     url: Optional[str] = None
 
+
 class DataApiAuthProviderWithApiKey(DataApiApiKeyAuthProvider):
     pass
+
 
 class DataApiAuthProviderCreateInput(BaseModel):
     name: str
     type: str
     url: Optional[str] = None
 
+
 class DataApiApiKeyAuthProviderEditInput(BaseModel):
     name: Optional[str] = None
+
 
 class DataApiJwksAuthProviderEditInput(BaseModel):
     name: Optional[str] = None
@@ -63,6 +76,7 @@ class InstancePatchRequest(BaseModel):
     graph_analytics_plugin: Optional[bool] = None
     secondaries_count: Optional[int] = None
     cdc_enrichment_mode: Optional[str] = None
+
 
 # Model Defintion Here:
 #   https://neo4j.com/docs/aura/platform/api/specification/#/
@@ -444,97 +458,3 @@ class ServerDatabase(BaseModel):
 class CreateDeploymentRequest(BaseModel):
     name: str
     connection_url: Optional[str] = None
-
-# --- Fleet Manager Deployment Models (v2beta1) ---
-class DeploymentToken(BaseModel):
-    claimed_time: Optional[str] = None
-    created_by: Optional[str] = None
-    creation_time: Optional[str] = None
-    release_time: Optional[str] = None
-    last_used_time: Optional[str] = None
-    expiry_time: Optional[str] = None
-    auto_rotate: Optional[bool] = None
-
-
-class DeploymentDBMS(BaseModel):
-    edition: Optional[str] = None
-    packaging: Optional[str] = None
-    metric_collection_enabled: Optional[bool] = None
-
-
-class Deployment(BaseModel):
-    id: str
-    name: str
-    status: Optional[str] = None
-    connection_url: Optional[str] = None
-    created_by: Optional[str] = None
-
-
-class DetailedDeployment(Deployment):
-    dbms: Optional[DeploymentDBMS] = None
-    token: Optional[DeploymentToken] = None
-
-
-class Database(BaseModel):
-    node_count: Optional[int] = None
-    relationship_count: Optional[int] = None
-    aliases: Optional[List[str]] = None
-    access: Optional[str] = None
-    default: Optional[bool] = None
-    requested_status: Optional[str] = None
-    current_primaries_count: Optional[str] = None
-    current_secondaries_count: Optional[str] = None
-    requested_primaries_count: Optional[str] = None
-    requested_secondaries_count: Optional[str] = None
-    creation_time: Optional[str] = None
-    last_start_time: Optional[str] = None
-    store: Optional[str] = None
-
-
-class License(BaseModel):
-    type: Optional[str] = None
-    state: Optional[str] = None
-    days_left_on_trial: Optional[int] = None
-    total_trial_days: Optional[int] = None
-
-
-class Plugin(BaseModel):
-    filename: Optional[str] = None
-    name: Optional[str] = None
-    version: Optional[str] = None
-
-
-class Server(BaseModel):
-    address: Optional[str] = None
-    name: Optional[str] = None
-    state: Optional[str] = None
-    mode_constraints: Optional[str] = None
-    version: Optional[str] = None
-    status: Optional[str] = None
-    last_ping: Optional[str] = None
-    plugin_version: Optional[str] = None
-    os_name: Optional[str] = None
-    os_version: Optional[str] = None
-    jvm_version: Optional[str] = None
-    jvm_vendor: Optional[str] = None
-    license: Optional[License] = None
-    plugins: Optional[List[Plugin]] = None
-
-
-class ServerDatabase(BaseModel):
-    name: Optional[str] = None
-    role: Optional[str] = None
-    type: Optional[str] = None
-    current_status: Optional[str] = None
-    status_message: Optional[str] = None
-    writer: Optional[bool] = None
-    last_committed_txn: Optional[int] = None
-    replication_lag: Optional[int] = None
-    graph_shards: Optional[List[str]] = None
-    property_shards: Optional[List[str]] = None
-
-
-class CreateDeploymentRequest(BaseModel):
-    name: str
-    connection_url: Optional[str] = None
-

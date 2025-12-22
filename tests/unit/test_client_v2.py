@@ -1,10 +1,7 @@
-import os
-
 import pytest
 import respx
 
 from neo4j_aura_sdk import AuraClient, models
-
 
 clientId = "mockId"
 clientSecret = "mockSecret"
@@ -25,7 +22,8 @@ async def test_v2_guard_raises():
 async def test_list_organization_ip_filters_v2():
     # Mock token
     respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200, json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"}
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
     )
 
     ip_filters = [
@@ -37,12 +35,18 @@ async def test_list_organization_ip_filters_v2():
                 {"address": "192.168.1.1", "prefix_len": 24, "description": "Office"}
             ],
             "filtering_disabled": False,
-            "filtered_entities": {"instances": ["inst1"], "projects": [], "organizations": []},
+            "filtered_entities": {
+                "instances": ["inst1"],
+                "projects": [],
+                "organizations": [],
+            },
             "updated_at": "2025-11-14T00:00:00Z",
         }
     ]
 
-    respx.get(f"{baseUrl}v2beta1/organizations/org1/ip-filters").respond(status_code=200, json=ip_filters)
+    respx.get(f"{baseUrl}v2beta1/organizations/org1/ip-filters").respond(
+        status_code=200, json=ip_filters
+    )
 
     async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
         resp = await client.list_organization_ip_filters("org1")
@@ -56,12 +60,13 @@ async def test_list_organization_ip_filters_v2():
 async def test_create_import_job_v2():
     # Mock token
     respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200, json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"}
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
     )
 
-    respx.post(f"{baseUrl}v2beta1/organizations/org1/projects/proj1/import/jobs").respond(
-        status_code=200, json={"data": {"id": "job-1"}}
-    )
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/org1/projects/proj1/import/jobs"
+    ).respond(status_code=200, json={"data": {"id": "job-1"}})
 
     async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
         req = models.CreateImportJobRequest(importModelId="model-1")

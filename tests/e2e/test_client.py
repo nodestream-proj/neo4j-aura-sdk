@@ -219,7 +219,9 @@ async def test_v2beta1_guard_behavior():
             try:
                 await client_v2.list_organization_ip_filters("dummy-org-id")
             except ValueError:
-                pytest.fail("Client configured for v2beta1 raised ValueError unexpectedly")
+                pytest.fail(
+                    "Client configured for v2beta1 raised ValueError unexpectedly"
+                )
             except Exception:
                 # We accept any other exception (auth/404/etc.) because this is non-destructive
                 pass
