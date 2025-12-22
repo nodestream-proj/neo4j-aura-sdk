@@ -19,6 +19,8 @@ tags:
     description: Relates to Aura IP Filtering Rules.
   - name: import-jobs
     description: Relates to Import Jobs.
+  - name: deployments
+    description: Relates to Fleet Manager Deployments
 
 servers:
   - url: "https://api.neo4j.io/v2beta1"
@@ -397,6 +399,274 @@ paths:
                     data:
                       id: "87d485b4-73fc-4a7f-bb03-720f4672947e"
 
+  "/organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+    get:
+      summary: Returns a list of deployments
+      tags:
+        - deployments
+      operationId: get-deployments
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Deployment'
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+      description: This endpoint returns a list containing a summary of each of your Fleet Manager deployments. To find out more about a specific deployment, retrieve the details using the GET /deployments/{deploymentId} endpoint.
+    post:
+      summary: Create a new deployment
+      tags:
+        - deployments
+      operationId: create-deployment
+      description: |-
+        Create a new Fleet Manager deployment.
+      requestBody:
+        description: The deployment to create.
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/CreateDeploymentRequest"
+                - type: object
+                  required:
+                    - name
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The ID of the created deployment
+        "400":
+          description: Bad request. Can be caused by a name that is too long. The name must be a maximum of 30 characters.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+
+  "/organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+      - $ref: "#/components/parameters/deploymentId"
+    get:
+      summary: Returns the given deployment
+      tags:
+        - deployments
+      operationId: get-deployment
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/DetailedDeployment"
+                  - type: object
+        "400":
+          description: Bad request. Can be caused by a malformed deployment ID.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the given deployment.
+      description: This endpoint returns detailed information about the given Fleet Manager deployment.
+    delete:
+      summary: Unregister a deployment
+      tags:
+        - deployments
+      operationId: delete-deployment
+      description: |-
+        Unregister a Fleet Manager deployment.
+      responses:
+        "204":
+          description: Unregistered
+        "400":
+          description: Bad request. Can be caused by a malformed deployment ID.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the given deployment.
+
+  "/organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/databases":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+      - $ref: "#/components/parameters/deploymentId"
+    get:
+      summary: Returns databases for the given deployment
+      tags:
+        - deployments
+      operationId: get-deployment-databases
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Database'
+        "400":
+          description: Bad request. Can be caused by a malformed deployment ID.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the given deployment.
+      description: This endpoint returns details for the logical databases on the given Fleet Manager deployment.
+
+  "/organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/servers":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+      - $ref: "#/components/parameters/deploymentId"
+    get:
+      summary: Returns servers for the given deployment
+      tags:
+        - deployments
+      operationId: get-deployment-servers
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Server'
+        "400":
+          description: Bad request. Can be caused by a malformed deployment ID.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the given deployment.
+      description: This endpoint returns details for the servers on the given Fleet Manager deployment.
+
+  "/organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/servers/{serverId}/databases":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+      - $ref: "#/components/parameters/deploymentId"
+      - $ref: "#/components/parameters/serverId"
+    get:
+      summary: Returns server databases for the given deployment
+      tags:
+        - deployments
+      operationId: get-deployment-server-databases
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ServerDatabase'
+        "400":
+          description: Bad request. Can be caused by a malformed deployment ID.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the given deployment.
+      description: This endpoint returns details for the physical databases on the server on the given Fleet Manager deployment.
+
+  "/organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/token":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+      - $ref: "#/components/parameters/deploymentId"
+    post:
+      summary: Create a deployment token
+      tags:
+        - deployments
+      operationId: create-deployment-token
+      description: |-
+        Create a Fleet Manager deployment token.
+      responses:
+        "201":
+          description: Token created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: |-
+                      Token to register the deployment with Fleet Manager.
+                      
+                      This token should be applied to the deployment through 'call.fleetManagement.registerToken("token")';
+        "400":
+          description: Bad request. Can be caused by the deployment already having a token registered to it or a malformed deployment ID.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the given deployment.
+    patch:
+      summary: Update a deployment token
+      tags:
+        - deployments
+      operationId: update-deployment-token
+      description: |-
+        Create a new Fleet Manager deployment token for a deployment that is already registered.
+      responses:
+        "200":
+          description: New token created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: |-
+                      The new token for the given deployment.
+                      
+                      This token should be applied to the deployment through 'call.fleetManagement.registerToken("token")';
+        "400":
+          description: Bad request. Can be caused by a malformed deployment ID.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the given deployment.
+    delete:
+      summary: Delete a deployment token
+      tags:
+        - deployments
+      operationId: delete-token
+      description: |-
+        Delete a Fleet Manager deployment token.
+      responses:
+        "204":
+          description: Token deleted
+        "400":
+          description: Bad request. Can be caused by a malformed deployment ID.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the given deployment.
+
 components:
   schemas:
     IpFilter:
@@ -630,6 +900,277 @@ components:
           type: integer
         created_indexes:
           type: integer
+    
+    Deployment:
+      type: object
+      description: Describes a Fleet Manager deployment
+      properties:
+        id:
+          type: string
+          description: The ID of the deployment
+          readOnly: true
+        name:
+          type: string
+          description: The name of the deployment
+        status:
+          type: string
+          description: The status of the deployment
+          enum:
+            - running
+            - degraded
+            - offline
+            - unmonitored
+        connection_url:
+          type: string
+          description: The connection URL of the deployment
+        created_by:
+          type: string
+          description: The ID of the user who created the deployment
+
+    DetailedDeployment:
+      type: object
+      description: Describes a Fleet Manager deployment with more details
+      properties:
+        id:
+          type: string
+          description: The ID of the deployment
+          readOnly: true
+        name:
+          type: string
+          description: The name of the deployment
+        connection_url:
+          type: string
+          description: The connection URL of the deployment
+        created_by:
+          type: string
+          description: The ID of the user who created the deployment
+        dbms:
+          type: object
+          description: The DBMS of the deployment
+          properties:
+            edition:
+              type: string
+              description: The edition of the DBMS
+            packaging:
+              type: string
+              description: The packaging used by the DBMS
+            metric_collection_enabled:
+              type: boolean
+              description: Defines if metrics are collected for the DBMS
+        token:
+          type: object
+          properties:
+            claimed_time:
+              type: string
+              format: date-time
+              description: The time when the token was claimed by a DBMS
+            created_by:
+              type: string
+              description: The ID of the user that created the token
+            creation_time:
+              type: string
+              format: date-time
+              description: The time the token was created
+            release_time:
+              type: string
+              format: date-time
+              description: The time the token was released
+            last_used_time:
+              type: string
+              format: date-time
+              description: The time the token was last used
+            expiry_time:
+              type: string
+              format: date-time
+              description: The time when the token expires
+            auto_rotate:
+              type: boolean
+              description: Defines if the token will auto renew on expiry
+          description: The token registered to the deployment
+
+    Database:
+      type: object
+      description: A DBMS database for a deployment
+      properties:
+        node_count:
+          type: integer
+          description: The node count in the database
+        relationship_count:
+          type: integer
+          description: The relationships count in the database
+        aliases:
+          type: array
+          items:
+            type: string
+          description: Aliases in the database
+        access:
+          type: string
+          description: Database access
+        default:
+          type: boolean
+          description: If this is the default database in the cluster
+        requested_status:
+          type: string
+          description: Requested database status
+        current_primaries_count:
+          type: string
+          description: The current count of primary databases
+        current_secondaries_count:
+          type: string
+          description: The current count of secondary databases
+        requested_primaries_count:
+          type: string
+          description: The requested amount of primary databases
+        requested_secondaries_count:
+          type: string
+          description: The requested amount of secondary databases
+        creation_time:
+          type: string
+          format: date-time
+          description: The time when the database was created
+        last_start_time:
+          type: string
+          format: date-time
+          description: The time when the database was last started
+        store:
+          type: string
+          description: The store type for the database
+
+    Server:
+      type: object
+      description: A DBMS server for a deployment
+      properties:
+        address:
+          type: string
+          description: The address of the server
+        name:
+          type: string
+          description: The name of the server
+        state:
+          type: string
+          description: The state of the server
+        mode_constraints:
+          type: string
+          description: The mode constraint of the server
+        version:
+          type: string
+          description: The version of the server
+        status:
+          type: string
+          description: The status of the server
+        last_ping:
+          type: string
+          format: date-time
+          description: The time when the server last pinged fleet-manager-api
+        plugin_version:
+          type: string
+          description: The version of the plugin running on the server
+        os_name:
+          type: string
+          description: The OS name of the server
+        os_version:
+          type: string
+          description: The OS version of the server
+        jvm_version:
+          type: string
+          description: The JVM version of the server
+        jvm_vendor:
+          type: string
+          description: The JVM vendor of the server
+        license:
+          type: object
+          description: The license on the server
+          properties:
+            type:
+              type: string
+              description: The type of the license
+              enum:
+                - FREE
+                - COMMERCIAL
+                - EVALUATION
+                - UNSUPPORTED
+                - INCONSISTENT
+            state:
+              type: string
+              description: The state of the license
+              enum:
+                - VALID
+                - EXPIRED
+                - NOT_ACCEPTED
+                - INVALID
+                - UNKNOWN
+                - INCONSISTENT
+            days_left_on_trial:
+              type: integer
+              description: The amount of days left on the trial
+            total_trial_days:
+              type: integer
+              description: The total amount of days on the trial
+        plugins:
+          type: array
+          description: The plugins installed on the server
+          items:
+            type: object
+            properties:
+              filename:
+                type: string
+                description: The filename of the plugin
+              name:
+                type: string
+                description: The name of the plugin
+              version:
+                type: string
+                description: The version of the plugin
+
+    ServerDatabase:
+      type: object
+      description: A DBMS server database for a deployment
+      properties:
+        name:
+          type: string
+          description: The name of the database
+        role:
+          type: string
+          description: The role of the database
+        type:
+          type: string
+          description: The type of the database
+        current_status:
+          type: string
+          description: The current status of the database
+        status_message:
+          type: string
+          description: The current status message of the database
+        writer:
+          type: boolean
+          description: Defines if this database is a writer in the cluster
+        last_committed_txn:
+          type: integer
+          description: The number of the last committed transaction
+        replication_lag:
+          type: integer
+          description: The replication lag on the database
+        graph_shards:
+          type: array
+          description: The graph shards of the database
+          items:
+            type: string
+        property_shards:
+          type: array
+          description: The property shards of the database
+          items:
+            type: string
+
+    CreateDeploymentRequest:
+      type: object
+      description: The request body for creating a deployment
+      properties:
+        name:
+          type: string
+          description: The name for the deployment
+        connection_url:
+          type: string
+          description: Optional connection url for the deployment
   
   securitySchemes:
     oauthToken:
@@ -675,6 +1216,20 @@ components:
       schema:
         type: string
       description: Import job ID
+      required: true
+    deploymentId:
+      name: deploymentId
+      in: path
+      schema:
+        type: string
+      description: Deployment ID
+      required: true
+    serverId:
+      name: serverId
+      in: path
+      schema:
+        type: string
+      description: Deployment server ID
       required: true
 
   headers:

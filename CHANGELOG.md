@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 ## [0.1.3] - 2025-11-17
 ### Added
 - Added support for v2beta1 endpoints: IP filters and import jobs (models and client methods).
+- Added comprehensive Fleet Manager deployment support (v2beta1):
+	- All deployment CRUD operations: list, create, get, delete
+	- Deployment database and server retrieval endpoints
+	- Deployment token management (create, update, delete)
+	- Complete Pydantic models for all deployment-related responses
 - Introduced a client-level `api_version` option. The client defaults to `v1` and can be configured with `api_version="v2beta1"` to allow v2 calls.
 - `AuraClient.from_env()` now reads `AURA_API_VERSION` (defaults to `v1`).
 - Implemented an API-version guard: v2 methods raise a clear `ValueError` if the client is configured for v1.
@@ -27,6 +32,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - All v1beta5 tests now use Pydantic models for request bodies, matching client expectations.
+
+### Notes
+- All v2beta1 endpoints from the OpenAPI spec are now fully implemented and tested.
 
 ### Notes
 - Nested models for some v2 responses (e.g., import job `data_source` / `aura_target`) are currently represented as plain dicts for minimal surface-area changes; they can be expanded to full Pydantic models in a follow-up.

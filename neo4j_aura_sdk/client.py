@@ -35,6 +35,12 @@ from .models import (
     SnapshotsResponse,
     TenantResponse,
     TenantsResponse,
+    Deployment,
+    DetailedDeployment,
+    Database,
+    Server,
+    ServerDatabase,
+    CreateDeploymentRequest,
 )
 
 
@@ -700,5 +706,89 @@ class AuraClient:
         return await self._post(
             f"organizations/{organizationId}/projects/{projectId}/import/jobs/{jobId}/cancellation",
             model=JobIdEnvelope,
+            api_version="v2beta1",
+        )
+
+    # --- Fleet Manager Deployment Methods (v2beta1) ---
+
+    async def list_deployments(self, organizationId: str, projectId: str):
+        """List all Fleet Manager deployments for a project (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments",
+            api_version="v2beta1",
+        )
+
+    async def create_deployment(self, organizationId: str, projectId: str, details: "CreateDeploymentRequest"):
+        """Create a new Fleet Manager deployment (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments",
+            body=details,
+            api_version="v2beta1",
+        )
+
+    async def get_deployment(self, organizationId: str, projectId: str, deploymentId: str):
+        """Get details of a specific Fleet Manager deployment (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}",
+            api_version="v2beta1",
+        )
+
+    async def delete_deployment(self, organizationId: str, projectId: str, deploymentId: str):
+        """Delete/unregister a Fleet Manager deployment (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}",
+            api_version="v2beta1",
+        )
+
+    async def get_deployment_databases(self, organizationId: str, projectId: str, deploymentId: str):
+        """Get logical databases for a deployment (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/databases",
+            api_version="v2beta1",
+        )
+
+    async def get_deployment_servers(self, organizationId: str, projectId: str, deploymentId: str):
+        """Get servers for a deployment (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/servers",
+            api_version="v2beta1",
+        )
+
+    async def get_deployment_server_databases(self, organizationId: str, projectId: str, deploymentId: str, serverId: str):
+        """Get physical databases for a server on a deployment (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/servers/{serverId}/databases",
+            api_version="v2beta1",
+        )
+
+    async def create_deployment_token(self, organizationId: str, projectId: str, deploymentId: str):
+        """Create a token for a Fleet Manager deployment (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/token",
+            api_version="v2beta1",
+        )
+
+    async def update_deployment_token(self, organizationId: str, projectId: str, deploymentId: str):
+        """Update/rotate a token for a Fleet Manager deployment (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._patch(
+            f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/token",
+            body=JobIdEnvelope(),
+            api_version="v2beta1",
+        )
+
+    async def delete_deployment_token(self, organizationId: str, projectId: str, deploymentId: str):
+        """Delete a token for a Fleet Manager deployment (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/token",
             api_version="v2beta1",
         )
