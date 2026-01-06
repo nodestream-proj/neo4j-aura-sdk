@@ -15,7 +15,7 @@ from typing import Dict
 import httpx
 import yaml
 
-from specs import BASE_SPEC_URL, SPECS
+from specs import BASE_SPEC_URL, SPECS, UNMAPPED_SPECS
 
 
 def get_file_hash(filepath: Path) -> str:
@@ -196,6 +196,15 @@ def main():
     print(f"{'=' * 60}")
 
     all_ok = True
+    
+    # Check for unmapped specs
+    if UNMAPPED_SPECS:
+        print(f"❌ Configuration error - unmapped specs found:")
+        for unmapped in UNMAPPED_SPECS:
+            print(f"   - {unmapped['name']} ({unmapped['url']})")
+        print("   Please update version_mapping in scripts/specs.py\n")
+        all_ok = False
+    
     for version, result in results.items():
         status = result["status"]
         message = result["message"]

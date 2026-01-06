@@ -80,12 +80,14 @@ def fetch_specs_from_swagger() -> Dict[str, Dict]:
                 "description": mapping["description"],
             }
         
-        # Notify about unmapped specs
+        # Notify about unmapped specs and store them globally
         if unmapped_specs:
             print("⚠️  Warning: Found unmapped API specs in swagger-initializer.js:")
             for unmapped in unmapped_specs:
                 print(f"   - {unmapped['name']} ({unmapped['url']})")
             print("   Please add mappings in scripts/specs.py if needed.\n")
+            global UNMAPPED_SPECS
+            UNMAPPED_SPECS = unmapped_specs
 
         return specs
 
@@ -115,6 +117,9 @@ def _get_fallback_specs() -> Dict[str, Dict]:
         },
     }
 
+
+# Track unmapped specs for validation
+UNMAPPED_SPECS: list = []
 
 # Fetch specs at module load time
 SPECS = fetch_specs_from_swagger()
