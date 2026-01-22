@@ -8,6 +8,7 @@ import pydantic_core
 from pydantic import BaseModel
 
 from .models import (
+    ActivityLog,
     AuraApiAuthorizationException,
     AuraApiBadRequestException,
     AuraApiException,
@@ -924,3 +925,87 @@ class AuraClient:
             f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/token",
             api_version="v2beta1",
         )
+
+    # --- Activity Feed Methods (v2beta1) ---
+
+    async def get_organization_activity_feed(
+        self,
+        organizationId: str,
+        start: str = None,
+        end: str = None,
+        page_limit: int = None,
+        page_token: str = None,
+    ):
+        """Get activity feed for an organization (v2beta1).
+
+        Args:
+            organizationId: the organization id
+            start: ISO 8601 datetime to filter by start time (optional)
+            end: ISO 8601 datetime to filter by end time (optional)
+            page_limit: number of items per page (optional)
+            page_token: pagination token (optional, cannot be combined with other query params)
+
+        Returns: dict with 'data' key containing list of ActivityLog objects.
+        """
+        self._ensure_api_is_v2()
+        path = f"organizations/{organizationId}/activity-feed"
+        params = {}
+        if start:
+            params["start"] = start
+        if end:
+            params["end"] = end
+        if page_limit:
+            params["page_limit"] = page_limit
+        if page_token:
+            params["page_token"] = page_token
+
+        if params:
+            query_string = "&".join(f"{k}={v}" for k, v in params.items())
+            path += f"?{query_string}"
+
+        result = await self._get(path, model=None, api_version="v2beta1")
+        if result and "data" in result:
+            result["data"] = [ActivityLog(**item) for item in result["data"]]
+        return result
+
+    async def get_project_activity_feed(
+        self,
+        organizationId: str,
+        projectId: str,
+        start: str = None,
+        end: str = None,
+        page_limit: int = None,
+        page_token: str = None,
+    ):
+        """Get activity feed for a project (v2beta1).
+
+        Args:
+            organizationId: the organization id
+            projectId: the project id
+            start: ISO 8601 datetime to filter by start time (optional)
+            end: ISO 8601 datetime to filter by end time (optional)
+            page_limit: number of items per page (optional)
+            page_token: pagination token (optional, cannot be combined with other query params)
+
+        Returns: dict with 'data' key containing list of ActivityLog objects.
+        """
+        self._ensure_api_is_v2()
+        path = f"organizations/{organizationId}/projects/{projectId}/activity-feed"
+        params = {}
+        if start:
+            params["start"] = start
+        if end:
+            params["end"] = end
+        if page_limit:
+            params["page_limit"] = page_limit
+        if page_token:
+            params["page_token"] = page_token
+
+        if params:
+            query_string = "&".join(f"{k}={v}" for k, v in params.items())
+            path += f"?{query_string}"
+
+        result = await self._get(path, model=None, api_version="v2beta1")
+        if result and "data" in result:
+            result["data"] = [ActivityLog(**item) for item in result["data"]]
+        return result

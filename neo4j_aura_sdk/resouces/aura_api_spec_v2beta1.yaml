@@ -21,6 +21,8 @@ tags:
     description: Relates to Import Jobs.
   - name: deployments
     description: Relates to Fleet Manager Deployments
+  - name: activity-feed
+    description: Relates to Activity Feed.
 
 servers:
   - url: "https://api.neo4j.io/v2beta1"
@@ -419,7 +421,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Deployment'
+                      $ref: "#/components/schemas/Deployment"
         "401":
           description: Unauthorized. Cannot access the given organization or project.
       description: This endpoint returns a list containing a summary of each of your Fleet Manager deployments. To find out more about a specific deployment, retrieve the details using the GET /deployments/{deploymentId} endpoint.
@@ -521,7 +523,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Database'
+                      $ref: "#/components/schemas/Database"
         "400":
           description: Bad request. Can be caused by a malformed deployment ID.
         "401":
@@ -551,7 +553,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Server'
+                      $ref: "#/components/schemas/Server"
         "400":
           description: Bad request. Can be caused by a malformed deployment ID.
         "401":
@@ -582,7 +584,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/ServerDatabase'
+                      $ref: "#/components/schemas/ServerDatabase"
         "400":
           description: Bad request. Can be caused by a malformed deployment ID.
         "401":
@@ -615,7 +617,7 @@ paths:
                     type: string
                     description: |-
                       Token to register the deployment with Fleet Manager.
-                      
+
                       This token should be applied to the deployment through 'call.fleetManagement.registerToken("token")';
         "400":
           description: Bad request. Can be caused by the deployment already having a token registered to it or a malformed deployment ID.
@@ -642,7 +644,7 @@ paths:
                     type: string
                     description: |-
                       The new token for the given deployment.
-                      
+
                       This token should be applied to the deployment through 'call.fleetManagement.registerToken("token")';
         "400":
           description: Bad request. Can be caused by a malformed deployment ID.
@@ -666,6 +668,70 @@ paths:
           description: Unauthorized. Cannot access the given organization or project.
         "403":
           description: Forbidden. Cannot access the given deployment.
+
+  "/organizations/{organizationId}/activity-feed":
+    parameters:
+      - $ref: "#/components/parameters/start"
+      - $ref: "#/components/parameters/end"
+      - $ref: "#/components/parameters/pageLimit"
+      - $ref: "#/components/parameters/pageToken"
+    get:
+      summary: Get activity feed for the given organization.
+      tags:
+        - activity-feed
+      operationId: get-organization-activity-feed
+      description: |-
+        Get activity feed for the given organization.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ActivityLog"
+        "400":
+          description: Bad request.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the activity feed.
+
+  "/organizations/{organizationId}/projects/{projectId}/activity-feed":
+    parameters:
+      - $ref: "#/components/parameters/start"
+      - $ref: "#/components/parameters/end"
+      - $ref: "#/components/parameters/pageLimit"
+      - $ref: "#/components/parameters/pageToken"
+    get:
+      summary: Get activity feed for the given project.
+      tags:
+        - activity-feed
+      operationId: get-project-activity-feed
+      description: |-
+        Get activity feed for the given project.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ActivityLog"
+        "400":
+          description: Bad request.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the activity feed.
 
 components:
   schemas:
@@ -900,7 +966,7 @@ components:
           type: integer
         created_indexes:
           type: integer
-    
+
     Deployment:
       type: object
       description: Describes a Fleet Manager deployment
@@ -1171,16 +1237,67 @@ components:
         connection_url:
           type: string
           description: Optional connection url for the deployment
-  
+
+    ActivityLog:
+      type: object
+      description: Activity log
+      properties:
+        id:
+          type: string
+          description: Activity log ID
+        timestamp:
+          type: integer
+          description: The timestamp for when the activity was stored in the system
+        logged_at:
+          type: string
+          format: date-time
+          description: The time when the activity happened
+        status:
+          type: string
+          description: The activity status
+        org_id:
+          type: string
+          format: uuid
+          description: The organization ID the activity belongs to
+        project_id:
+          type: string
+          format: uuid
+          description: The project ID the activity belongs to
+        project_name:
+          type: string
+          description: The project name the activity belongs to
+        user_id:
+          type: string
+          format: uuid
+          description: The user responsible of the activity
+        email:
+          type: string
+          description: The user's email
+        action_id:
+          type: string
+          description: The action ID
+        action_name:
+          type: string
+          description: A human readable name for the activity
+        description:
+          type: string
+          description: The description of the activity
+        ip_address:
+          type: string
+          description: The user IP address
+        payload:
+          type: string
+          description: The payload for the activity with detailed information
+
   securitySchemes:
     oauthToken:
       type: oauth2
       flows:
         clientCredentials:
           scopes: {}
-          tokenUrl: 'https://api.neo4j.io/oauth/token'
-      description: ''
-  
+          tokenUrl: "https://api.neo4j.io/oauth/token"
+      description: ""
+
   parameters:
     instanceId:
       name: instanceId
@@ -1231,6 +1348,36 @@ components:
         type: string
       description: Deployment server ID
       required: true
+    start:
+      name: start
+      in: query
+      schema:
+        type: string
+        format: date-time
+      required: false
+      description: Filter activity feed by start time
+    end:
+      name: end
+      in: query
+      schema:
+        type: string
+        format: date-time
+      required: false
+      description: Filter activity feed by end time
+    pageLimit:
+      name: page_limit
+      in: query
+      schema:
+        type: integer
+      required: false
+      description: Set the number of items per page
+    pageToken:
+      name: page_token
+      in: query
+      schema:
+        type: string
+      required: false
+      description: Page token to use for pagination. This cannot be combined with the other query parameters.
 
   headers:
     X-Request-Id:

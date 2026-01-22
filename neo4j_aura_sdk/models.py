@@ -458,3 +458,21 @@ class ServerDatabase(BaseModel):
 class CreateDeploymentRequest(BaseModel):
     name: str
     connection_url: Optional[str] = None
+
+
+# --- Activity Feed Models (v2beta1) ---
+class ActivityLog(BaseModel):
+    id: Optional[str] = None
+    timestamp: Optional[int] = None
+    logged_at: Optional[str] = None
+    status: Optional[str] = None
+    org_id: Optional[str] = None
+    project_id: Optional[str] = None
+    project_name: Optional[str] = None
+    user_id: Optional[str] = None
+    email: Optional[str] = None
+    action_id: Optional[str] = None
+    action_name: Optional[str] = None
+    description: Optional[str] = None
+    ip_address: Optional[str] = None
+    payload: Optional[str] = None
