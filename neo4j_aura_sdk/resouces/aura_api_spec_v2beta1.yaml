@@ -13,6 +13,10 @@ info:
   termsOfService: "https://console.neo4j.io/#terms"
 
 tags:
+  - name: projects
+    description: Relates to Aura Projects.
+  - name: organizations
+    description: Relates to Aura Organizations.
   - name: instances
     description: Relates to Aura Instances.
   - name: ip-filters
@@ -29,6 +33,62 @@ servers:
     description: Aura API v2beta1
 
 paths:
+  "/organizations/{organizationId}":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+    get:
+      summary: Get an organization by its ID
+      tags:
+        - organizations
+      operationId: show-organization
+      description: Returns information about an Aura Organization.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/OrganizationDetails"
+
+              examples:
+                Get org info:
+                  value:
+                    data:
+                      id: c4ea09e5-44b2-418e-9aae-0c98c37d1f38
+                      name: MetaCortex
+
+  "/organizations/{organizationId}/projects":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+    get:
+      summary: List projects
+      tags:
+        - projects
+      operationId: show-organization
+      description: Returns a list of projects for a given Aura organization
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProjectDetails"
+
+              examples:
+                List projects:
+                  value:
+                    data:
+                      - name: Operation Dark Storm
+                        id: 9aa289f6-1ccf-57c8-bc90-a0c3cecc82ac
+
   "/organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/ip-filters":
     parameters:
       - $ref: "#/components/parameters/organizationId"
@@ -735,6 +795,28 @@ paths:
 
 components:
   schemas:
+    OrganizationDetails:
+      type: object
+      description: Holds details about an Aura Organization
+      properties:
+        id:
+          type: string
+          description: The UUID of the Aura organization
+        name:
+          type: string
+          description: The name of the company
+
+    ProjectDetails:
+      type: object
+      description: Holds details about a project
+      properties:
+        id:
+          type: string
+          description: The UUID of the project
+        name:
+          type: string
+          description: The name of the project
+
     IpFilter:
       type: object
       description: Describes an IP filter

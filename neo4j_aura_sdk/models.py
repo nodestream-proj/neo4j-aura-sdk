@@ -460,6 +460,87 @@ class CreateDeploymentRequest(BaseModel):
     connection_url: Optional[str] = None
 
 
+# --- Organization & Project Response Models (v2beta1) ---
+class OrganizationDetailsEnvelope(BaseModel):
+    data: Optional[dict] = None
+
+
+class ProjectsResponse(BaseModel):
+    data: Optional[List[dict]] = None
+
+
+# --- Deployment Models (v2beta1) ---
+class DeploymentDbms(BaseModel):
+    edition: Optional[str] = None
+    packaging: Optional[str] = None
+
+
+class DeploymentSummary(BaseModel):
+    id: Optional[str] = None
+    name: Optional[str] = None
+    status: Optional[str] = None
+    connection_url: Optional[str] = None
+
+
+class Deployment(DeploymentSummary):
+    dbms: Optional[DeploymentDbms] = None
+
+
+class DeploymentsResponse(BaseModel):
+    data: Optional[List[Deployment]] = None
+
+
+# For create_deployment response which returns the deployment directly
+class DeploymentResponse(Deployment):
+    pass
+
+
+# For get_deployment response which wraps in data envelope
+class DeploymentDetailsResponse(BaseModel):
+    data: Optional[Deployment] = None
+
+
+class Database(BaseModel):
+    node_count: Optional[int] = None
+    relationship_count: Optional[int] = None
+    default: Optional[bool] = None
+    access: Optional[str] = None
+
+
+class DatabasesResponse(BaseModel):
+    data: Optional[List[Database]] = None
+
+
+class Server(BaseModel):
+    address: Optional[str] = None
+    name: Optional[str] = None
+    status: Optional[str] = None
+    version: Optional[str] = None
+
+
+class ServersResponse(BaseModel):
+    data: Optional[List[Server]] = None
+
+
+class ServerDatabase(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    current_status: Optional[str] = None
+    writer: Optional[bool] = None
+
+
+class ServerDatabasesResponse(BaseModel):
+    data: Optional[List[ServerDatabase]] = None
+
+
+class DeploymentTokenResponse(BaseModel):
+    token: Optional[str] = None
+
+
+class ActivityFeedResponse(BaseModel):
+    data: Optional[List] = None
+
+
 # --- Activity Feed Models (v2beta1) ---
 class ActivityLog(BaseModel):
     id: Optional[str] = None

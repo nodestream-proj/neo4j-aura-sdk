@@ -8,6 +8,7 @@ import pydantic_core
 from pydantic import BaseModel
 
 from .models import (
+    ActivityFeedResponse,
     ActivityLog,
     AuraApiAuthorizationException,
     AuraApiBadRequestException,
@@ -24,6 +25,11 @@ from .models import (
     CustomerManagedKeyRequest,
     CustomerManagedKeyResponse,
     CustomerManagedKeysResponse,
+    DatabasesResponse,
+    DeploymentDetailsResponse,
+    DeploymentResponse,
+    DeploymentsResponse,
+    DeploymentTokenResponse,
     ImportJobEnvelope,
     InstancePatchRequest,
     InstanceRequest,
@@ -34,6 +40,10 @@ from .models import (
     IpFilter,
     IpFilterWithStatus,
     JobIdEnvelope,
+    OrganizationDetailsEnvelope,
+    ProjectsResponse,
+    ServerDatabasesResponse,
+    ServersResponse,
     SnapshotResponse,
     SnapshotsResponse,
     TenantResponse,
@@ -691,6 +701,39 @@ class AuraClient:
         return resp
 
     # --- v2beta1 endpoints from OpenAPI spec ---
+    
+    # Organization & Projects
+    async def get_organization(self, organizationId: str):
+        """Get an organization by its ID (v2beta1).
+        
+        Args:
+            organizationId: the organization id
+            
+        Returns: OrganizationDetailsEnvelope with organization details containing id and name.
+        """
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}",
+            model=OrganizationDetailsEnvelope,
+            api_version="v2beta1",
+        )
+    
+    async def list_organization_projects(self, organizationId: str):
+        """List projects for an organization (v2beta1).
+        
+        Args:
+            organizationId: the organization id
+            
+        Returns: ProjectsResponse with 'data' key containing list of projects.
+        """
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects",
+            model=ProjectsResponse,
+            api_version="v2beta1",
+        )
+    
+    # IP Filters
     async def list_organization_ip_filters(self, organizationId: str):
         """List IP filters for an organization (v2beta1). Returns a list of IpFilter models."""
         self._ensure_api_is_v2()
@@ -771,12 +814,10 @@ class AuraClient:
         self._ensure_api_is_v2()
         body = await self._get(
             f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/ip-filters",
-            model=None,
+            model=IpFilterWithStatus,
             api_version="v2beta1",
         )
-        if not body:
-            return None
-        return IpFilterWithStatus(**body)
+        return body
 
     # Import jobs
     async def create_import_job(
@@ -831,6 +872,7 @@ class AuraClient:
         self._ensure_api_is_v2()
         return await self._get(
             f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments",
+            model=DeploymentsResponse,
             api_version="v2beta1",
         )
 
@@ -842,6 +884,7 @@ class AuraClient:
         return await self._post(
             f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments",
             body=details,
+            model=DeploymentResponse,
             api_version="v2beta1",
         )
 
@@ -852,6 +895,7 @@ class AuraClient:
         self._ensure_api_is_v2()
         return await self._get(
             f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}",
+            model=DeploymentDetailsResponse,
             api_version="v2beta1",
         )
 
@@ -872,6 +916,7 @@ class AuraClient:
         self._ensure_api_is_v2()
         return await self._get(
             f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/databases",
+            model=DatabasesResponse,
             api_version="v2beta1",
         )
 
@@ -882,6 +927,7 @@ class AuraClient:
         self._ensure_api_is_v2()
         return await self._get(
             f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/servers",
+            model=ServersResponse,
             api_version="v2beta1",
         )
 
@@ -892,6 +938,7 @@ class AuraClient:
         self._ensure_api_is_v2()
         return await self._get(
             f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/servers/{serverId}/databases",
+            model=ServerDatabasesResponse,
             api_version="v2beta1",
         )
 
@@ -902,6 +949,7 @@ class AuraClient:
         self._ensure_api_is_v2()
         return await self._post(
             f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/token",
+            model=DeploymentTokenResponse,
             api_version="v2beta1",
         )
 
@@ -913,6 +961,7 @@ class AuraClient:
         return await self._patch(
             f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/token",
             body=JobIdEnvelope(),
+            model=DeploymentTokenResponse,
             api_version="v2beta1",
         )
 
@@ -945,7 +994,7 @@ class AuraClient:
             page_limit: number of items per page (optional)
             page_token: pagination token (optional, cannot be combined with other query params)
 
-        Returns: dict with 'data' key containing list of ActivityLog objects.
+        Returns: ActivityFeedResponse with 'data' key containing list of ActivityLog objects.
         """
         self._ensure_api_is_v2()
         path = f"organizations/{organizationId}/activity-feed"
@@ -963,9 +1012,9 @@ class AuraClient:
             query_string = "&".join(f"{k}={v}" for k, v in params.items())
             path += f"?{query_string}"
 
-        result = await self._get(path, model=None, api_version="v2beta1")
-        if result and "data" in result:
-            result["data"] = [ActivityLog(**item) for item in result["data"]]
+        result = await self._get(path, model=ActivityFeedResponse, api_version="v2beta1")
+        if result and result.data:
+            result.data = [ActivityLog(**item) for item in result.data]
         return result
 
     async def get_project_activity_feed(
@@ -987,7 +1036,7 @@ class AuraClient:
             page_limit: number of items per page (optional)
             page_token: pagination token (optional, cannot be combined with other query params)
 
-        Returns: dict with 'data' key containing list of ActivityLog objects.
+        Returns: ActivityFeedResponse with 'data' key containing list of ActivityLog objects.
         """
         self._ensure_api_is_v2()
         path = f"organizations/{organizationId}/projects/{projectId}/activity-feed"
@@ -1005,7 +1054,7 @@ class AuraClient:
             query_string = "&".join(f"{k}={v}" for k, v in params.items())
             path += f"?{query_string}"
 
-        result = await self._get(path, model=None, api_version="v2beta1")
-        if result and "data" in result:
-            result["data"] = [ActivityLog(**item) for item in result["data"]]
+        result = await self._get(path, model=ActivityFeedResponse, api_version="v2beta1")
+        if result and result.data:
+            result.data = [ActivityLog(**item) for item in result.data]
         return result
