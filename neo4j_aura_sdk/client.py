@@ -701,14 +701,14 @@ class AuraClient:
         return resp
 
     # --- v2beta1 endpoints from OpenAPI spec ---
-    
+
     # Organization & Projects
     async def get_organization(self, organizationId: str):
         """Get an organization by its ID (v2beta1).
-        
+
         Args:
             organizationId: the organization id
-            
+
         Returns: OrganizationDetailsEnvelope with organization details containing id and name.
         """
         self._ensure_api_is_v2()
@@ -717,13 +717,13 @@ class AuraClient:
             model=OrganizationDetailsEnvelope,
             api_version="v2beta1",
         )
-    
+
     async def list_organization_projects(self, organizationId: str):
         """List projects for an organization (v2beta1).
-        
+
         Args:
             organizationId: the organization id
-            
+
         Returns: ProjectsResponse with 'data' key containing list of projects.
         """
         self._ensure_api_is_v2()
@@ -732,7 +732,7 @@ class AuraClient:
             model=ProjectsResponse,
             api_version="v2beta1",
         )
-    
+
     # IP Filters
     async def list_organization_ip_filters(self, organizationId: str):
         """List IP filters for an organization (v2beta1). Returns a list of IpFilter models."""
@@ -1012,7 +1012,9 @@ class AuraClient:
             query_string = "&".join(f"{k}={v}" for k, v in params.items())
             path += f"?{query_string}"
 
-        result = await self._get(path, model=ActivityFeedResponse, api_version="v2beta1")
+        result = await self._get(
+            path, model=ActivityFeedResponse, api_version="v2beta1"
+        )
         if result and result.data:
             result.data = [ActivityLog(**item) for item in result.data]
         return result
@@ -1054,7 +1056,9 @@ class AuraClient:
             query_string = "&".join(f"{k}={v}" for k, v in params.items())
             path += f"?{query_string}"
 
-        result = await self._get(path, model=ActivityFeedResponse, api_version="v2beta1")
+        result = await self._get(
+            path, model=ActivityFeedResponse, api_version="v2beta1"
+        )
         if result and result.data:
             result.data = [ActivityLog(**item) for item in result.data]
         return result

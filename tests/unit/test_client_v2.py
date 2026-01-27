@@ -24,6 +24,7 @@ async def test_v2_guard_raises():
 
 # === Organization & Projects Tests ===
 
+
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_organization():
@@ -31,12 +32,12 @@ async def test_get_organization():
         status_code=200,
         json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
     )
-    
+
     respx.get(f"{baseUrl}v2beta1/organizations/{org_id}").respond(
         status_code=200,
         json={"data": {"id": org_id, "name": "My Organization"}},
     )
-    
+
     async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
         resp = await client.get_organization(org_id)
         assert resp.data["id"] == org_id
@@ -50,12 +51,12 @@ async def test_list_organization_projects():
         status_code=200,
         json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
     )
-    
+
     respx.get(f"{baseUrl}v2beta1/organizations/{org_id}/projects").respond(
         status_code=200,
         json={"data": [{"id": proj_id, "name": "My Project"}]},
     )
-    
+
     async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
         resp = await client.list_organization_projects(org_id)
         assert resp.data[0]["id"] == proj_id
@@ -63,6 +64,7 @@ async def test_list_organization_projects():
 
 
 # === IP Filter Tests ===
+
 
 @respx.mock
 @pytest.mark.asyncio
@@ -238,6 +240,7 @@ async def test_get_instance_ip_filter_status():
 
 # === Import Job Tests ===
 
+
 @respx.mock
 @pytest.mark.asyncio
 async def test_create_import_job_v2():
@@ -246,9 +249,9 @@ async def test_create_import_job_v2():
         json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
     )
 
-    respx.post(f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/import/jobs").respond(
-        status_code=200, json={"data": {"id": "job-1"}}
-    )
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/import/jobs"
+    ).respond(status_code=200, json={"data": {"id": "job-1"}})
 
     async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
         req = models.CreateImportJobRequest(importModelId="model-1")
@@ -264,7 +267,9 @@ async def test_get_import_job():
         json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
     )
 
-    respx.get(f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/import/jobs/job-1").respond(
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/import/jobs/job-1"
+    ).respond(
         status_code=200,
         json={
             "data": {
@@ -302,7 +307,9 @@ async def test_get_import_job_with_progress():
                     "state": "Running",
                     "percentage_complete": 50.0,
                     "progress": {
-                        "nodes": [{"id": "n:1", "labels": ["Node1"], "processed_rows": 100}],
+                        "nodes": [
+                            {"id": "n:1", "labels": ["Node1"], "processed_rows": 100}
+                        ],
                         "relationships": [],
                     },
                 },
@@ -333,6 +340,7 @@ async def test_cancel_import_job():
 
 
 # === Deployment Tests ===
+
 
 @respx.mock
 @pytest.mark.asyncio
@@ -526,9 +534,7 @@ async def test_create_deployment_token():
 
     respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments/{deployment_id}/token"
-    ).respond(
-        status_code=201, json={"token": "deployment-token-abc123"}
-    )
+    ).respond(status_code=201, json={"token": "deployment-token-abc123"})
 
     async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
         resp = await client.create_deployment_token(org_id, proj_id, deployment_id)
@@ -570,6 +576,7 @@ async def test_delete_deployment_token():
 
 
 # === Activity Feed Tests ===
+
 
 @respx.mock
 @pytest.mark.asyncio

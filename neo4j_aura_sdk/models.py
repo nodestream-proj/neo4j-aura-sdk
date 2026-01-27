@@ -500,33 +500,12 @@ class DeploymentDetailsResponse(BaseModel):
     data: Optional[Deployment] = None
 
 
-class Database(BaseModel):
-    node_count: Optional[int] = None
-    relationship_count: Optional[int] = None
-    default: Optional[bool] = None
-    access: Optional[str] = None
-
-
 class DatabasesResponse(BaseModel):
     data: Optional[List[Database]] = None
 
 
-class Server(BaseModel):
-    address: Optional[str] = None
-    name: Optional[str] = None
-    status: Optional[str] = None
-    version: Optional[str] = None
-
-
 class ServersResponse(BaseModel):
     data: Optional[List[Server]] = None
-
-
-class ServerDatabase(BaseModel):
-    name: Optional[str] = None
-    role: Optional[str] = None
-    current_status: Optional[str] = None
-    writer: Optional[bool] = None
 
 
 class ServerDatabasesResponse(BaseModel):
