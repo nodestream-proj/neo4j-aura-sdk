@@ -40,6 +40,7 @@ from .models import (
     IpFilter,
     IpFilterWithStatus,
     JobIdEnvelope,
+    LedgerResponse,
     OrganizationDetailsEnvelope,
     ProjectsResponse,
     ServerDatabasesResponse,
@@ -48,6 +49,7 @@ from .models import (
     SnapshotsResponse,
     TenantResponse,
     TenantsResponse,
+    UsageResponse,
 )
 
 
@@ -730,6 +732,41 @@ class AuraClient:
         return await self._get(
             f"organizations/{organizationId}/projects",
             model=ProjectsResponse,
+            api_version="v2beta1",
+        )
+
+    # Billing
+    async def get_billing_usage(self, organizationId: str, start: str, end: str):
+        """Get billed usage for an organization (v2beta1).
+
+        Args:
+            organizationId: the organization id
+            start: RFC3339 timestamp (e.g., '2024-01-02T00:00:00Z')
+            end: RFC3339 timestamp (e.g., '2024-01-31T23:59:59Z')
+
+        Returns: UsageResponse with 'data' containing list of UsageData objects and optional 'links' for pagination.
+        """
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/billing/usage?start={start}&end={end}",
+            model=UsageResponse,
+            api_version="v2beta1",
+        )
+
+    async def get_billing_ledger(self, organizationId: str, start: str, end: str):
+        """Get credit ledger for an organization (v2beta1).
+
+        Args:
+            organizationId: the organization id
+            start: RFC3339 timestamp (e.g., '2024-01-02T00:00:00Z')
+            end: RFC3339 timestamp (e.g., '2024-01-31T23:59:59Z')
+
+        Returns: LedgerResponse with 'data' containing list of LedgerData objects and optional 'links' for pagination.
+        """
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/billing/ledger?start={start}&end={end}",
+            model=LedgerResponse,
             api_version="v2beta1",
         )
 
