@@ -1,0 +1,2 @@
+Run the download_specs script and implement any missing endpoints using proper models if applicable.
+Update unit tests to cover new endpoints and run all of the linting checks to ensure proper formatting.
