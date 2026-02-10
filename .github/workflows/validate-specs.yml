@@ -1,0 +1,74 @@
+name: Validate OpenAPI specs
+
+on:
+  schedule:
+    - cron: '0 6 * * 0'
+  workflow_dispatch: {}
+  push:
+    branches:
+      - main
+
+jobs:
+  validate:
+    name: Run spec validator
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install runtime dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install httpx pyyaml
+
+      - name: Run `validate_specs.py`
+        id: run_validator
+        continue-on-error: true
+        run: |
+          python scripts/validate_specs.py | tee validation_output.txt
+
+      - name: Upload validation output (on failure)
+        if: steps.run_validator.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-output
+          path: validation_output.txt
+
+      - name: Create GitHub issue if specs changed
+        if: steps.run_validator.outcome == 'failure'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            let body = fs.readFileSync('validation_output.txt', 'utf8');
+            if (body.length > 60000) body = body.slice(0,60000) + '\n\n[Output truncated]';
+            const title = 'OpenAPI specs changed — review required';
+            const labels = ['specs','automation'];
+
+            // Check for existing open issues with the same labels and title
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: labels.join(',')
+            });
+
+            const existing = issues.find(i => i.title === title);
+            if (existing) {
+              console.log(`Skipping issue creation; existing open issue #${existing.number}`);
+            } else {
+              const issueBody = `The validate_specs check detected changes or issues in the OpenAPI specs:\n\n\`\`\`\n${body}\n\`\`\`\n\nRun the workflow for full output or download the attached artifact.`;
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body: issueBody,
+                labels
+              });
+            }

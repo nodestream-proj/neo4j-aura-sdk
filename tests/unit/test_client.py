@@ -309,3 +309,55 @@ async def test_exceptions():
             assert not resp
         except models.AuraApiException as e:
             assert len(e.errors) == 1
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_patch_instance():
+    route = respx.patch(f"{apiUrl}instances/{iid}")
+
+    @route
+    def respond(request):
+        body = copy.deepcopy(jsonResp["createInstance"])
+        reqBody = json.load(request)
+        # Patch all supported fields
+        for field in [
+            "name",
+            "memory",
+            "storage",
+            "vector_optimized",
+            "graph_analytics_plugin",
+            "secondaries_count",
+            "cdc_enrichment_mode",
+        ]:
+            if field in reqBody:
+                body["data"][field] = reqBody[field]
+        return httpx.Response(200, json=body)
+
+    async with AuraClient(clientId, clientSecret) as client:
+        from neo4j_aura_sdk.models import InstancePatchRequest
+
+        # Patch name and memory
+        patch = InstancePatchRequest(name="Patched Name", memory="8GB")
+        resp = await client.patch_instance(iid, patch)
+        assert resp.data.name == "Patched Name"
+        assert resp.data.memory == "8GB"
+
+        # Patch all fields
+        patch = InstancePatchRequest(
+            name="All Patched",
+            memory="16GB",
+            storage="32GB",
+            vector_optimized=True,
+            graph_analytics_plugin=True,
+            secondaries_count=2,
+            cdc_enrichment_mode="FULL",
+        )
+        resp = await client.patch_instance(iid, patch)
+        assert resp.data.name == "All Patched"
+        assert resp.data.memory == "16GB"
+        assert resp.data.storage == "32GB"
+        assert resp.data.vector_optimized is True
+        assert resp.data.graph_analytics_plugin is True
+        assert resp.data.secondaries_count == 2
+        assert resp.data.cdc_enrichment_mode == "FULL"

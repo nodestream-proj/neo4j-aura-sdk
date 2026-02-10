@@ -1,0 +1,1479 @@
+openapi: 3.0.0
+info:
+  title: Aura API
+  version: v2beta1
+  description: |-
+    This is the v2beta1 release of the Aura API.
+
+    For more information on how to use the API, see the
+    [Aura API documentation](https://neo4j.com/docs/aura/platform/api/overview/).
+
+    [Provide feedback](https://docs.google.com/forms/d/e/1FAIpQLSfNZMyQRnI_ZzK8IJ2E266DP_-zLDBWzk1OaUkPem16V-ekZQ/viewform)
+    on the Aura API.
+  termsOfService: "https://console.neo4j.io/#terms"
+
+tags:
+  - name: projects
+    description: Relates to Aura Projects.
+  - name: organizations
+    description: Relates to Aura Organizations.
+  - name: instances
+    description: Relates to Aura Instances.
+  - name: ip-filters
+    description: Relates to Aura IP Filtering Rules.
+  - name: import-jobs
+    description: Relates to Import Jobs.
+  - name: deployments
+    description: Relates to Fleet Manager Deployments
+  - name: activity-feed
+    description: Relates to Activity Feed.
+
+servers:
+  - url: "https://api.neo4j.io/v2beta1"
+    description: Aura API v2beta1
+
+paths:
+  "/organizations/{organizationId}":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+    get:
+      summary: Get an organization by its ID
+      tags:
+        - organizations
+      operationId: show-organization
+      description: Returns information about an Aura Organization.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/OrganizationDetails"
+
+              examples:
+                Get org info:
+                  value:
+                    data:
+                      id: c4ea09e5-44b2-418e-9aae-0c98c37d1f38
+                      name: MetaCortex
+
+  "/organizations/{organizationId}/projects":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+    get:
+      summary: List projects
+      tags:
+        - projects
+      operationId: show-organization
+      description: Returns a list of projects for a given Aura organization
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProjectDetails"
+
+              examples:
+                List projects:
+                  value:
+                    data:
+                      - name: Operation Dark Storm
+                        id: 9aa289f6-1ccf-57c8-bc90-a0c3cecc82ac
+
+  "/organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/ip-filters":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+      - $ref: "#/components/parameters/instanceId"
+    get:
+      summary: Returns a list of IP filters for the organization
+      tags:
+        - instances
+      operationId: list-ip-filters
+      description: |-
+        Returns the IP filter with its status applied to an instance, if present.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/IpFilter"
+                  - type: object
+                    properties:
+                      status:
+                        type: string
+                        description: The status of the IP filter on the instance
+                        enum:
+                          - UNKNOWN
+                          - SUBMITTED
+                          - ACTIVE
+                          - DELETED
+                          - ERROR
+
+              examples:
+                IP filter with Status:
+                  value:
+                    id: 12345678
+                    name: My IP filter
+                    organization_id: "example-org-id"
+                    allow_list:
+                      - address: "192.168.1.1"
+                        prefix_len: 24
+                        description: Office Network
+                    filtering_disabled: false
+                    filtered_entities:
+                      instances: ["some-instance-id"]
+                      projects: []
+                      organizations: []
+                    status: ACTIVE
+
+  "/organizations/{organizationId}/ip-filters":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+    get:
+      summary: Returns a list of IP filters for the organization
+      tags:
+        - ip-filters
+      operationId: list-ip-filters
+      description: |-
+        Returns a list of IP filters of the organization.
+
+        For an IP filter's status on individual databases please see the 
+        ``/organizations/{organizationId}/projects/{projectId}/instances/{instanceId}ip-filters``
+        endpoint.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IpFilter"
+              examples:
+                List of IP filters:
+                  value:
+                    - id: 12345678
+                      name: My IP filter
+                      organization_id: "example-org-id"
+                      allow_list:
+                        - address: "192.168.1.1"
+                          prefix_len: 24
+                          description: Office Network
+                      filtering_disabled: false
+                      filtered_entities:
+                        instances: ["some-instance-id"]
+                        projects: []
+                        organizations: []
+                    - id: 87654321
+                      name: My Other IP filter
+                      organization_id: "example-org-id"
+                      allow_list:
+                        - address: "192.168.1.1"
+                          prefix_len: 24
+                          description: Home Network
+                      filtering_disabled: false
+                      filtered_entities:
+                        instances: ["other-id-1", "other-id-2"]
+                        projects: ["project-id"]
+                        organizations: []
+    post:
+      summary: Creates a new IP filter for the organization
+      tags:
+        - ip-filters
+      operationId: create-ip-filter
+      description: |-
+        Create a new IP filter.
+      requestBody:
+        description: The IP filter to create.
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/IpFilter"
+                - type: object
+                  required:
+                    - name
+                    - organization_id
+                    - allow_list
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IpFilter"
+              examples:
+                Created IP filter:
+                  value:
+                    id: 12345678
+                    name: My IP filter
+                    organization_id: "example-org-id"
+                    allow_list:
+                      - address: "192.168.1.1"
+                        prefix_len: 24
+                        description: Office Network
+                    filtering_disabled: false
+                    filtered_entities:
+                      instances: ["some-instance-id"]
+                      projects: []
+
+  "/organizations/{organizationId}/ip-filters/{ipFilterId}":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/ipFilterId"
+    get:
+      summary: Returns a specific IP filter of the organization
+      tags:
+        - ip-filters
+      operationId: get-ip-filter
+      description: |-
+        Returns a specific IP filter by its ID.
+
+        For an IP filter's status on individual instances see the 
+        ``/organizations/{organizationId}/projects/{projectId}/instances/{instanceId}ip-filters``
+        endpoint.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IpFilter"
+              examples:
+                Specific IP filters:
+                  value:
+                    id: 12345678
+                    name: My IP filter
+                    organization_id: "example-org-id"
+                    allow_list:
+                      - address: "192.168.1.1"
+                        prefix_len: 24
+                        description: Office Network
+                    filtering_disabled: false
+                    filtered_entities:
+                      instances: ["some-instance-id"]
+                      projects: []
+                      organizations: []
+    patch:
+      summary: Updates an existing IP filter
+      tags:
+        - ip-filters
+      operationId: update-ip-filter
+      requestBody:
+        description: The IP filter to update.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IpFilter"
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IpFilter"
+              examples:
+                Updated IP filter:
+                  value:
+                    id: 12345678
+                    name: My IP filter
+                    organization_id: "example-org-id"
+                    allow_list:
+                      - address: "192.168.1.1"
+                        prefix_len: 24
+                        description: Office Network
+                    filtering_disabled: false
+                    filtered_entities:
+                      instances: ["some-instance-id"]
+                      projects: []
+    delete:
+      summary: Deletes an existing IP filter
+      tags:
+        - ip-filters
+      operationId: delete-ip-filter
+      responses:
+        "204":
+          description: No Content
+          content: {}
+
+  "/organizations/{organizationId}/projects/{projectId}/import/jobs":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+    post:
+      summary: Create a new import job
+      tags:
+        - import-jobs
+      operationId: create-import-job
+      description: |-
+        Create a new import job by the specified import model ID, Aura instance ID and optional Aura credentials.
+        The model ID can be found in the URL as such `console-preview.neo4j.io/tools/import/model/<model ID>`.
+      requestBody:
+        description: The import job creation request.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateImportJobRequest"
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobIdEnvelope"
+              examples:
+                Created import job:
+                  value:
+                    data:
+                      id: "87d485b4-73fc-4a7f-bb03-720f4672947e"
+
+  "/organizations/{organizationId}/projects/{projectId}/import/jobs/{jobId}":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+      - $ref: "#/components/parameters/jobId"
+    get:
+      summary: Get job by ID
+      tags:
+        - import-jobs
+      operationId: get-import-job
+      description: |-
+        Retrieves a single job details by its ID.
+      parameters:
+        - name: progress
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: |-
+            Whether to include progress details for nodes and relationships.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportJobEnvelope"
+              examples:
+                Without progress details:
+                  value:
+                    data:
+                      id: "87d485b4-73fc-4a7f-bb03-720f4672947e"
+                      import_type: "cloud"
+                      info:
+                        state: "Completed"
+                        start_time: "2025-08-15T13:12:51Z"
+                        completion_time: "2025-08-15T13:15:19Z"
+                        exit_status:
+                          state: "Cancelled"
+                          message: "Cancelled"
+                        cancellation_requested_time: "2025-08-15T13:15:19.655209Z"
+                        submitted_time: "2025-08-15T13:12:50.499797Z"
+                        last_update_time: "2025-08-18T12:25:53.469873Z"
+                        percentage_complete: 95.23
+                      data_source:
+                        id: "177216b3-49b9-4e24-a414-a9ecbb448c53"
+                        type: "postgresql"
+                        name: "AWS_POSTGRES_FLIGHTS"
+                      aura_target:
+                        db_id: "07e49cf5"
+                        project_id: "f607bebe-0cc0-4166-b60c-b4eed69ee7ee"
+                      user_id: "f607bebe-0cc0-4166-b60c-b4eed69ee7ee"
+                With progress details:
+                  value:
+                    data:
+                      id: "87d485b4-73fc-4a7f-bb03-720f4672947e"
+                      import_type: "cloud"
+                      info:
+                        state: "Completed"
+                        start_time: "2025-08-15T13:12:51Z"
+                        completion_time: "2025-08-15T13:15:19Z"
+                        exit_status:
+                          state: "Cancelled"
+                          message: "Cancelled"
+                        cancellation_requested_time: "2025-08-15T13:15:19.655209Z"
+                        submitted_time: "2025-08-15T13:12:50.499797Z"
+                        last_update_time: "2025-08-18T12:25:53.469873Z"
+                        percentage_complete: 95.23
+                        progress:
+                          nodes:
+                            - id: "n:1"
+                              labels: ["AircraftData"]
+                              total_rows: 9
+                              processed_rows: 9
+                              created_nodes: 9
+                              created_constraints: 1
+                              created_indexes: 0
+                          relationships:
+                            - id: "r:8"
+                              type: "TICKET_BELONGS_TO_BOOKING"
+                              total_rows: 366733
+                              processed_rows: 255000
+                              created_relationships: 255000
+                              created_constraints: 0
+                              created_indexes: 0
+                      data_source:
+                        id: "177216b3-49b9-4e24-a414-a9ecbb448c53"
+                        type: "postgresql"
+                        name: "AWS_POSTGRES_FLIGHTS"
+                      aura_target:
+                        db_id: "07e49cf5"
+                        project_id: "f607bebe-0cc0-4166-b60c-b4eed69ee7ee"
+                      user_id: "f607bebe-0cc0-4166-b60c-b4eed69ee7ee"
+
+  "/organizations/{organizationId}/projects/{projectId}/import/jobs/{jobId}/cancellation":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+      - $ref: "#/components/parameters/jobId"
+    post:
+      summary: Cancel an import job
+      tags:
+        - import-jobs
+      operationId: cancel-import-job
+      description: |-
+        Cancel an existing import job.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobIdEnvelope"
+              examples:
+                Cancelled import job:
+                  value:
+                    data:
+                      id: "87d485b4-73fc-4a7f-bb03-720f4672947e"
+
+  "/organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+    get:
+      summary: Returns a list of deployments
+      tags:
+        - deployments
+      operationId: get-deployments
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Deployment"
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+      description: This endpoint returns a list containing a summary of each of your Fleet Manager deployments. To find out more about a specific deployment, retrieve the details using the GET /deployments/{deploymentId} endpoint.
+    post:
+      summary: Create a new deployment
+      tags:
+        - deployments
+      operationId: create-deployment
+      description: |-
+        Create a new Fleet Manager deployment.
+      requestBody:
+        description: The deployment to create.
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/CreateDeploymentRequest"
+                - type: object
+                  required:
+                    - name
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The ID of the created deployment
+        "400":
+          description: Bad request. Can be caused by a name that is too long. The name must be a maximum of 30 characters.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+
+  "/organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+      - $ref: "#/components/parameters/deploymentId"
+    get:
+      summary: Returns the given deployment
+      tags:
+        - deployments
+      operationId: get-deployment
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/DetailedDeployment"
+                  - type: object
+        "400":
+          description: Bad request. Can be caused by a malformed deployment ID.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the given deployment.
+      description: This endpoint returns detailed information about the given Fleet Manager deployment.
+    delete:
+      summary: Unregister a deployment
+      tags:
+        - deployments
+      operationId: delete-deployment
+      description: |-
+        Unregister a Fleet Manager deployment.
+      responses:
+        "204":
+          description: Unregistered
+        "400":
+          description: Bad request. Can be caused by a malformed deployment ID.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the given deployment.
+
+  "/organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/databases":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+      - $ref: "#/components/parameters/deploymentId"
+    get:
+      summary: Returns databases for the given deployment
+      tags:
+        - deployments
+      operationId: get-deployment-databases
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Database"
+        "400":
+          description: Bad request. Can be caused by a malformed deployment ID.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the given deployment.
+      description: This endpoint returns details for the logical databases on the given Fleet Manager deployment.
+
+  "/organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/servers":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+      - $ref: "#/components/parameters/deploymentId"
+    get:
+      summary: Returns servers for the given deployment
+      tags:
+        - deployments
+      operationId: get-deployment-servers
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Server"
+        "400":
+          description: Bad request. Can be caused by a malformed deployment ID.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the given deployment.
+      description: This endpoint returns details for the servers on the given Fleet Manager deployment.
+
+  "/organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/servers/{serverId}/databases":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+      - $ref: "#/components/parameters/deploymentId"
+      - $ref: "#/components/parameters/serverId"
+    get:
+      summary: Returns server databases for the given deployment
+      tags:
+        - deployments
+      operationId: get-deployment-server-databases
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ServerDatabase"
+        "400":
+          description: Bad request. Can be caused by a malformed deployment ID.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the given deployment.
+      description: This endpoint returns details for the physical databases on the server on the given Fleet Manager deployment.
+
+  "/organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments/{deploymentId}/token":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+      - $ref: "#/components/parameters/deploymentId"
+    post:
+      summary: Create a deployment token
+      tags:
+        - deployments
+      operationId: create-deployment-token
+      description: |-
+        Create a Fleet Manager deployment token.
+      responses:
+        "201":
+          description: Token created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: |-
+                      Token to register the deployment with Fleet Manager.
+
+                      This token should be applied to the deployment through 'call.fleetManagement.registerToken("token")';
+        "400":
+          description: Bad request. Can be caused by the deployment already having a token registered to it or a malformed deployment ID.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the given deployment.
+    patch:
+      summary: Update a deployment token
+      tags:
+        - deployments
+      operationId: update-deployment-token
+      description: |-
+        Create a new Fleet Manager deployment token for a deployment that is already registered.
+      responses:
+        "200":
+          description: New token created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: |-
+                      The new token for the given deployment.
+
+                      This token should be applied to the deployment through 'call.fleetManagement.registerToken("token")';
+        "400":
+          description: Bad request. Can be caused by a malformed deployment ID.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the given deployment.
+    delete:
+      summary: Delete a deployment token
+      tags:
+        - deployments
+      operationId: delete-token
+      description: |-
+        Delete a Fleet Manager deployment token.
+      responses:
+        "204":
+          description: Token deleted
+        "400":
+          description: Bad request. Can be caused by a malformed deployment ID.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the given deployment.
+
+  "/organizations/{organizationId}/activity-feed":
+    parameters:
+      - $ref: "#/components/parameters/start"
+      - $ref: "#/components/parameters/end"
+      - $ref: "#/components/parameters/pageLimit"
+      - $ref: "#/components/parameters/pageToken"
+    get:
+      summary: Get activity feed for the given organization.
+      tags:
+        - activity-feed
+      operationId: get-organization-activity-feed
+      description: |-
+        Get activity feed for the given organization.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ActivityLog"
+        "400":
+          description: Bad request.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the activity feed.
+
+  "/organizations/{organizationId}/projects/{projectId}/activity-feed":
+    parameters:
+      - $ref: "#/components/parameters/start"
+      - $ref: "#/components/parameters/end"
+      - $ref: "#/components/parameters/pageLimit"
+      - $ref: "#/components/parameters/pageToken"
+    get:
+      summary: Get activity feed for the given project.
+      tags:
+        - activity-feed
+      operationId: get-project-activity-feed
+      description: |-
+        Get activity feed for the given project.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ActivityLog"
+        "400":
+          description: Bad request.
+        "401":
+          description: Unauthorized. Cannot access the given organization or project.
+        "403":
+          description: Forbidden. Cannot access the activity feed.
+
+components:
+  schemas:
+    OrganizationDetails:
+      type: object
+      description: Holds details about an Aura Organization
+      properties:
+        id:
+          type: string
+          description: The UUID of the Aura organization
+        name:
+          type: string
+          description: The name of the company
+
+    ProjectDetails:
+      type: object
+      description: Holds details about a project
+      properties:
+        id:
+          type: string
+          description: The UUID of the project
+        name:
+          type: string
+          description: The name of the project
+
+    IpFilter:
+      type: object
+      description: Describes an IP filter
+      properties:
+        id:
+          type: string
+          description: The id of the IP filter
+          readOnly: true
+        name:
+          type: string
+          description: The name of the IP filter
+        description:
+          type: string
+          description: The name of the project
+        organization_id:
+          type: string
+          description: The id of the organization that owns the IP filter
+        allow_list:
+          type: array
+          description: A list of CIDR that are allowed by the filter
+          items:
+            type: object
+            required:
+              - address
+              - prefix_len
+            properties:
+              address:
+                type: string
+                description: The CIDR IP address
+              prefix_len:
+                type: integer
+                description: The prefix length of the CIDR
+              description:
+                type: string
+                description: A human-friendly description of the CIDR
+        filtering_disabled:
+          type: boolean
+          description: Indicates if the IP filter is disabled
+        filtered_entities:
+          type: object
+          description: The entities that are currently filtered by this IP filter rule
+          properties:
+            instances:
+              type: array
+              description: A list containing a summary of Aura instances filtered by this IP filter rule
+              items:
+                type: string
+                description: The id of the instance configuration that is filtered by this IP filter rule
+            projects:
+              type: array
+              description: A list of projects that are filtered by this IP filter rule
+              items:
+                type: string
+                description: The id of the project that is filtered by this IP filter rule
+            organizations:
+              type: array
+              description: A list of organizations that are filtered by this IP filter rule
+              items:
+                type: string
+                description: The id of the organization that is filtered by this IP filter rule
+        updated_at:
+          type: string
+          format: date-time
+          description: The date and time when the IP filter was last updated
+          readOnly: true
+
+    CreateImportJobRequest:
+      type: object
+      required:
+        - importModelId
+      properties:
+        importModelId:
+          type: string
+          description: The unique identifier of an import model.
+        auraCredentials:
+          type: object
+          description: Aura credentials for specifying target database.
+          required:
+            - dbId
+          properties:
+            dbId:
+              type: string
+              description: Unique identifier of Aura DB ID.
+            user:
+              type: string
+              description: Optional. Only for Free or VDC DB instances.
+            password:
+              type: string
+              description: Optional. Only for Free or VDC DB instances.
+
+    ImportJobEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/ImportJob"
+
+    JobIdEnvelope:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+
+    ImportJob:
+      type: object
+      properties:
+        id:
+          type: string
+        import_type:
+          type: string
+          enum:
+            - cloud
+            - initial
+        info:
+          $ref: "#/components/schemas/ImportJobInfo"
+        data_source:
+          type: object
+          properties:
+            id:
+              type: string
+            type:
+              type: string
+            name:
+              type: string
+        aura_target:
+          type: object
+          properties:
+            db_id:
+              type: string
+            project_id:
+              type: string
+        user_id:
+          type: string
+
+    ImportJobInfo:
+      type: object
+      properties:
+        state:
+          type: string
+          enum:
+            - SecretCreated
+            - ModelConfigMapOwnerUpdated
+            - Queued
+            - Running
+            - Completed
+        start_time:
+          type: string
+          format: date-time
+        completion_time:
+          type: string
+          format: date-time
+        exit_status:
+          $ref: "#/components/schemas/ImportExitStatus"
+        cancellation_requested_time:
+          type: string
+          format: date-time
+        submitted_time:
+          type: string
+          format: date-time
+        last_update_time:
+          type: string
+          format: date-time
+        percentage_complete:
+          type: number
+          format: float
+        progress:
+          $ref: "#/components/schemas/ImportJobProgress"
+
+    ImportExitStatus:
+      type: object
+      properties:
+        state:
+          type: string
+          enum:
+            - Success
+            - Failure
+            - Cancelled
+        message:
+          type: string
+
+    ImportJobProgress:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/NodeProgress"
+        relationships:
+          type: array
+          items:
+            $ref: "#/components/schemas/RelationshipProgress"
+
+    NodeProgress:
+      type: object
+      properties:
+        id:
+          type: string
+        labels:
+          type: array
+          items:
+            type: string
+        total_rows:
+          type: integer
+        processed_rows:
+          type: integer
+        created_nodes:
+          type: integer
+        created_constraints:
+          type: integer
+        created_indexes:
+          type: integer
+
+    RelationshipProgress:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        total_rows:
+          type: integer
+        processed_rows:
+          type: integer
+        created_relationships:
+          type: integer
+        created_constraints:
+          type: integer
+        created_indexes:
+          type: integer
+
+    Deployment:
+      type: object
+      description: Describes a Fleet Manager deployment
+      properties:
+        id:
+          type: string
+          description: The ID of the deployment
+          readOnly: true
+        name:
+          type: string
+          description: The name of the deployment
+        status:
+          type: string
+          description: The status of the deployment
+          enum:
+            - running
+            - degraded
+            - offline
+            - unmonitored
+        connection_url:
+          type: string
+          description: The connection URL of the deployment
+        created_by:
+          type: string
+          description: The ID of the user who created the deployment
+
+    DetailedDeployment:
+      type: object
+      description: Describes a Fleet Manager deployment with more details
+      properties:
+        id:
+          type: string
+          description: The ID of the deployment
+          readOnly: true
+        name:
+          type: string
+          description: The name of the deployment
+        connection_url:
+          type: string
+          description: The connection URL of the deployment
+        created_by:
+          type: string
+          description: The ID of the user who created the deployment
+        dbms:
+          type: object
+          description: The DBMS of the deployment
+          properties:
+            edition:
+              type: string
+              description: The edition of the DBMS
+            packaging:
+              type: string
+              description: The packaging used by the DBMS
+            metric_collection_enabled:
+              type: boolean
+              description: Defines if metrics are collected for the DBMS
+        token:
+          type: object
+          properties:
+            claimed_time:
+              type: string
+              format: date-time
+              description: The time when the token was claimed by a DBMS
+            created_by:
+              type: string
+              description: The ID of the user that created the token
+            creation_time:
+              type: string
+              format: date-time
+              description: The time the token was created
+            release_time:
+              type: string
+              format: date-time
+              description: The time the token was released
+            last_used_time:
+              type: string
+              format: date-time
+              description: The time the token was last used
+            expiry_time:
+              type: string
+              format: date-time
+              description: The time when the token expires
+            auto_rotate:
+              type: boolean
+              description: Defines if the token will auto renew on expiry
+          description: The token registered to the deployment
+
+    Database:
+      type: object
+      description: A DBMS database for a deployment
+      properties:
+        node_count:
+          type: integer
+          description: The node count in the database
+        relationship_count:
+          type: integer
+          description: The relationships count in the database
+        aliases:
+          type: array
+          items:
+            type: string
+          description: Aliases in the database
+        access:
+          type: string
+          description: Database access
+        default:
+          type: boolean
+          description: If this is the default database in the cluster
+        requested_status:
+          type: string
+          description: Requested database status
+        current_primaries_count:
+          type: string
+          description: The current count of primary databases
+        current_secondaries_count:
+          type: string
+          description: The current count of secondary databases
+        requested_primaries_count:
+          type: string
+          description: The requested amount of primary databases
+        requested_secondaries_count:
+          type: string
+          description: The requested amount of secondary databases
+        creation_time:
+          type: string
+          format: date-time
+          description: The time when the database was created
+        last_start_time:
+          type: string
+          format: date-time
+          description: The time when the database was last started
+        store:
+          type: string
+          description: The store type for the database
+
+    Server:
+      type: object
+      description: A DBMS server for a deployment
+      properties:
+        address:
+          type: string
+          description: The address of the server
+        name:
+          type: string
+          description: The name of the server
+        state:
+          type: string
+          description: The state of the server
+        mode_constraints:
+          type: string
+          description: The mode constraint of the server
+        version:
+          type: string
+          description: The version of the server
+        status:
+          type: string
+          description: The status of the server
+        last_ping:
+          type: string
+          format: date-time
+          description: The time when the server last pinged fleet-manager-api
+        plugin_version:
+          type: string
+          description: The version of the plugin running on the server
+        os_name:
+          type: string
+          description: The OS name of the server
+        os_version:
+          type: string
+          description: The OS version of the server
+        jvm_version:
+          type: string
+          description: The JVM version of the server
+        jvm_vendor:
+          type: string
+          description: The JVM vendor of the server
+        license:
+          type: object
+          description: The license on the server
+          properties:
+            type:
+              type: string
+              description: The type of the license
+              enum:
+                - FREE
+                - COMMERCIAL
+                - EVALUATION
+                - UNSUPPORTED
+                - INCONSISTENT
+            state:
+              type: string
+              description: The state of the license
+              enum:
+                - VALID
+                - EXPIRED
+                - NOT_ACCEPTED
+                - INVALID
+                - UNKNOWN
+                - INCONSISTENT
+            days_left_on_trial:
+              type: integer
+              description: The amount of days left on the trial
+            total_trial_days:
+              type: integer
+              description: The total amount of days on the trial
+        plugins:
+          type: array
+          description: The plugins installed on the server
+          items:
+            type: object
+            properties:
+              filename:
+                type: string
+                description: The filename of the plugin
+              name:
+                type: string
+                description: The name of the plugin
+              version:
+                type: string
+                description: The version of the plugin
+
+    ServerDatabase:
+      type: object
+      description: A DBMS server database for a deployment
+      properties:
+        name:
+          type: string
+          description: The name of the database
+        role:
+          type: string
+          description: The role of the database
+        type:
+          type: string
+          description: The type of the database
+        current_status:
+          type: string
+          description: The current status of the database
+        status_message:
+          type: string
+          description: The current status message of the database
+        writer:
+          type: boolean
+          description: Defines if this database is a writer in the cluster
+        last_committed_txn:
+          type: integer
+          description: The number of the last committed transaction
+        replication_lag:
+          type: integer
+          description: The replication lag on the database
+        graph_shards:
+          type: array
+          description: The graph shards of the database
+          items:
+            type: string
+        property_shards:
+          type: array
+          description: The property shards of the database
+          items:
+            type: string
+
+    CreateDeploymentRequest:
+      type: object
+      description: The request body for creating a deployment
+      properties:
+        name:
+          type: string
+          description: The name for the deployment
+        connection_url:
+          type: string
+          description: Optional connection url for the deployment
+
+    ActivityLog:
+      type: object
+      description: Activity log
+      properties:
+        id:
+          type: string
+          description: Activity log ID
+        timestamp:
+          type: integer
+          description: The timestamp for when the activity was stored in the system
+        logged_at:
+          type: string
+          format: date-time
+          description: The time when the activity happened
+        status:
+          type: string
+          description: The activity status
+        org_id:
+          type: string
+          format: uuid
+          description: The organization ID the activity belongs to
+        project_id:
+          type: string
+          format: uuid
+          description: The project ID the activity belongs to
+        project_name:
+          type: string
+          description: The project name the activity belongs to
+        user_id:
+          type: string
+          format: uuid
+          description: The user responsible of the activity
+        email:
+          type: string
+          description: The user's email
+        action_id:
+          type: string
+          description: The action ID
+        action_name:
+          type: string
+          description: A human readable name for the activity
+        description:
+          type: string
+          description: The description of the activity
+        ip_address:
+          type: string
+          description: The user IP address
+        payload:
+          type: string
+          description: The payload for the activity with detailed information
+
+  securitySchemes:
+    oauthToken:
+      type: oauth2
+      flows:
+        clientCredentials:
+          scopes: {}
+          tokenUrl: "https://api.neo4j.io/oauth/token"
+      description: ""
+
+  parameters:
+    instanceId:
+      name: instanceId
+      in: path
+      schema:
+        type: string
+      description: Instance ID
+      required: true
+    projectId:
+      name: projectId
+      in: path
+      schema:
+        type: string
+      description: Project ID
+      required: true
+    organizationId:
+      name: organizationId
+      in: path
+      schema:
+        type: string
+      description: Organization ID
+      required: true
+    ipFilterId:
+      name: ipFilterId
+      in: path
+      schema:
+        type: string
+      description: IP filter ID
+      required: true
+    jobId:
+      name: jobId
+      in: path
+      schema:
+        type: string
+      description: Import job ID
+      required: true
+    deploymentId:
+      name: deploymentId
+      in: path
+      schema:
+        type: string
+      description: Deployment ID
+      required: true
+    serverId:
+      name: serverId
+      in: path
+      schema:
+        type: string
+      description: Deployment server ID
+      required: true
+    start:
+      name: start
+      in: query
+      schema:
+        type: string
+        format: date-time
+      required: false
+      description: Filter activity feed by start time
+    end:
+      name: end
+      in: query
+      schema:
+        type: string
+        format: date-time
+      required: false
+      description: Filter activity feed by end time
+    pageLimit:
+      name: page_limit
+      in: query
+      schema:
+        type: integer
+      required: false
+      description: Set the number of items per page
+    pageToken:
+      name: page_token
+      in: query
+      schema:
+        type: string
+      required: false
+      description: Page token to use for pagination. This cannot be combined with the other query parameters.
+
+  headers:
+    X-Request-Id:
+      description: |-
+        This response header is returned with all authenticated API requests.
+
+        The header is set with a unique request id that tracks every Aura API request across our internal components.
+
+        This Id would be particularly useful to quote for any troubleshooting when contacting Aura Support.
+      schema:
+        type: string
+        example: "8a35fa95b983aeff3e70394832706f45/12383853214941892751"
+
+  examples: {}
+
+security:
+  - oauthToken: []

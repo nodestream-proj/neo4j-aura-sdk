@@ -42,3 +42,15 @@ test-unit: venv
 .PHONY: test-e2e
 test-e2e: venv
 	poetry run pytest -m "e2e"
+
+.PHONY: validate-specs
+validate-specs: venv
+	poetry run python scripts/validate_specs.py
+
+.PHONY: download-specs
+download-specs: venv
+	poetry run python scripts/download_specs.py
+
+.PHONY: download-specs-force
+download-specs-force: venv
+	poetry run python scripts/download_specs.py --force
