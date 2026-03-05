@@ -6,7 +6,7 @@ info:
     This is the v2beta1 release of the Aura API.
 
     For more information on how to use the API, see the
-    [Aura API documentation](https://neo4j.com/docs/aura/platform/api/overview/).
+    [Aura API documentation](https://neo4j.com/docs/aura/api/overview/).
 
     [Provide feedback](https://docs.google.com/forms/d/e/1FAIpQLSfNZMyQRnI_ZzK8IJ2E266DP_-zLDBWzk1OaUkPem16V-ekZQ/viewform)
     on the Aura API.
@@ -69,7 +69,7 @@ paths:
       summary: List projects
       tags:
         - projects
-      operationId: show-organization
+      operationId: list-projects
       description: Returns a list of projects for a given Aura organization
       responses:
         "200":
@@ -100,7 +100,7 @@ paths:
       summary: Returns a list of IP filters for the organization
       tags:
         - instances
-      operationId: list-ip-filters
+      operationId: get-instance-ip-filters
       description: |-
         Returns the IP filter with its status applied to an instance, if present.
       responses:
@@ -1563,10 +1563,12 @@ components:
         billable_size_unit:
           type: string
           example: GB
+          description: Unit of the resource size (e.g., GB). This field is omitted when the resource size is not available.
         billable_size:
           type: integer
           format: int64
           example: 32
+          description: Size of the billable resource. This field is omitted when the size is zero or not available.
         consumed_quantity:
           type: number
           format: double
