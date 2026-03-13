@@ -735,6 +735,18 @@ class AuraClient:
             api_version="v2beta1",
         )
 
+    async def list_organizations(self):
+        """List all organizations (v2beta1).
+
+        Returns: OrganizationDetailsEnvelope with a list of organizations.
+        """
+        self._ensure_api_is_v2()
+        return await self._get(
+            "organizations",
+            model=OrganizationDetailsEnvelope,
+            api_version="v2beta1",
+        )
+
     # Billing
     async def get_billing_usage(self, organizationId: str, start: str, end: str):
         """Get billed usage for an organization (v2beta1).

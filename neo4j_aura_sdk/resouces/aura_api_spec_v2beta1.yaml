@@ -35,6 +35,34 @@ servers:
     description: Aura API v2beta1
 
 paths:
+  "/organizations":
+    get:
+      summary: Get a list of organizations
+      tags:
+        - organizations
+      operationId: list-organizations
+      description: Returns a list of Aura Organizations.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/OrganizationDetails"
+
+              examples:
+                Get organizations:
+                  value:
+                    data:
+                      - id: c4ea09e5-44b2-418e-9aae-0c98c37d1f38
+                        name: MetaCortex
+                      - id: faaa3547-eaf8-405e-812e-e0bba04a1834
+                        name: Zion
   "/organizations/{organizationId}":
     parameters:
       - $ref: "#/components/parameters/organizationId"
@@ -376,7 +404,7 @@ paths:
                   value:
                     data:
                       id: "87d485b4-73fc-4a7f-bb03-720f4672947e"
-                      import_type: "cloud"
+                      import_type: "online"
                       info:
                         state: "Completed"
                         start_time: "2025-08-15T13:12:51Z"
@@ -400,7 +428,7 @@ paths:
                   value:
                     data:
                       id: "87d485b4-73fc-4a7f-bb03-720f4672947e"
-                      import_type: "cloud"
+                      import_type: "online"
                       info:
                         state: "Completed"
                         start_time: "2025-08-15T13:12:51Z"
@@ -1054,6 +1082,13 @@ components:
             password:
               type: string
               description: Optional. Only for Free or VDC DB instances.
+        importConfig:
+          type: object
+          description: Additional import job configuration
+          properties:
+            importType:
+              type: string
+              description: "Optional. The type of import job to create. Warning: bulk imports overwrite all existing data in the database."
 
     ImportJobEnvelope:
       type: object

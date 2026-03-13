@@ -3,6 +3,34 @@ import respx
 
 from neo4j_aura_sdk import AuraClient, models
 
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_list_organizations():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    respx.get(f"{baseUrl}v2beta1/organizations").respond(
+        status_code=200,
+        json={
+            "data": [
+                {"id": "org1", "name": "MetaCortex"},
+                {"id": "org2", "name": "Zion"},
+            ]
+        },
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.list_organizations()
+        assert isinstance(resp.data, list)
+        assert resp.data[0]["id"] == "org1"
+        assert resp.data[0]["name"] == "MetaCortex"
+        assert resp.data[1]["id"] == "org2"
+        assert resp.data[1]["name"] == "Zion"
+
+
 clientId = "mockId"
 clientSecret = "mockSecret"
 baseUrl = "https://api.neo4j.io/"

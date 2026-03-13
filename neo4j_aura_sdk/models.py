@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel
 
@@ -462,7 +462,15 @@ class CreateDeploymentRequest(BaseModel):
 
 # --- Organization & Project Response Models (v2beta1) ---
 class OrganizationDetailsEnvelope(BaseModel):
-    data: Optional[dict] = None
+    data: Optional[Union[List[Dict], Dict]] = None
+
+    @staticmethod
+    def validate_data(v):
+        if isinstance(v, dict):
+            return v
+        elif isinstance(v, list):
+            return v
+        return None
 
 
 class ProjectsResponse(BaseModel):
