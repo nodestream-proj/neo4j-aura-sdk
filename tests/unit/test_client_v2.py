@@ -3,7 +3,6 @@ import respx
 
 from neo4j_aura_sdk import AuraClient, models
 
-
 clientId = "mockId"
 clientSecret = "mockSecret"
 baseUrl = "https://api.neo4j.io/"
