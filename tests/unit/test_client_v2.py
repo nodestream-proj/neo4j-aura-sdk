@@ -4,6 +4,16 @@ import respx
 from neo4j_aura_sdk import AuraClient, models
 
 
+clientId = "mockId"
+clientSecret = "mockSecret"
+baseUrl = "https://api.neo4j.io/"
+org_id = "org1"
+proj_id = "proj1"
+inst_id = "inst1"
+deployment_id = "deploy1"
+server_id = "server1"
+
+
 @respx.mock
 @pytest.mark.asyncio
 async def test_list_organizations():
@@ -29,16 +39,6 @@ async def test_list_organizations():
         assert resp.data[0]["name"] == "MetaCortex"
         assert resp.data[1]["id"] == "org2"
         assert resp.data[1]["name"] == "Zion"
-
-
-clientId = "mockId"
-clientSecret = "mockSecret"
-baseUrl = "https://api.neo4j.io/"
-org_id = "org1"
-proj_id = "proj1"
-inst_id = "inst1"
-deployment_id = "deploy1"
-server_id = "server1"
 
 
 @respx.mock

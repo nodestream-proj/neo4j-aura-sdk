@@ -464,14 +464,6 @@ class CreateDeploymentRequest(BaseModel):
 class OrganizationDetailsEnvelope(BaseModel):
     data: Optional[Union[List[Dict], Dict]] = None
 
-    @staticmethod
-    def validate_data(v):
-        if isinstance(v, dict):
-            return v
-        elif isinstance(v, list):
-            return v
-        return None
-
 
 class ProjectsResponse(BaseModel):
     data: Optional[List[dict]] = None

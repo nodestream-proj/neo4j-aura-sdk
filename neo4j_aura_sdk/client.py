@@ -345,14 +345,18 @@ class AuraClient:
         path: str,
         model: Type[BaseModel] | None = None,
         api_version: str | None = None,
+        params: dict | None = None,
     ):
         """Perform a GET request to the API.
 
         - path: relative path (without leading slash)
         - model: optional Pydantic model to parse the response into (or None for raw JSON)
         - api_version: optional API version override (defaults to client's configured version)
+        - params: optional dict of query parameters
         """
-        return await self._request("GET", path, model=model, api_version=api_version)
+        return await self._request(
+            "GET", path, model=model, api_version=api_version, params=params
+        )
 
     async def _post(
         self,
@@ -399,6 +403,7 @@ class AuraClient:
         body: BaseModel | None = None,
         default: BaseModel | None = None,
         api_version: str | None = None,
+        params: dict | None = None,
     ):
         """Generic request helper that supports API versioning and optional model parsing.
 
@@ -408,6 +413,7 @@ class AuraClient:
         - body: optional Pydantic model to send as JSON body
         - default: value to return if response has no JSON (useful for 204 responses)
         - api_version: API version segment to use (defaults to 'v1')
+        - params: optional dict of query parameters
         """
         token = await self._get_token()
         headers = {"Authorization": f"Bearer {token}"}
@@ -423,7 +429,7 @@ class AuraClient:
             content = body.model_dump_json()
 
         response = await self._client.request(
-            method, url, headers=headers, content=content
+            method, url, headers=headers, content=content, params=params
         )
         self._checkResponseStatus(response)
 
@@ -473,9 +479,6 @@ class AuraClient:
         return await self._get(f"tenants/{tenantId}", model=TenantResponse)
 
     async def instances(self, tenantId: str = ""):
-        path = "instances"
-        if tenantId:
-            path += f"?tenantId={tenantId}"
         """List instances. By default lists all instances; if tenantId is provided,
         lists instances for that tenant (v1).
 
@@ -484,7 +487,13 @@ class AuraClient:
 
         Returns: InstancesResponse parsed from `/v1/instances`.
         """
-        return await self._get(path, model=InstancesResponse)
+        path = "instances"
+        params = {}
+        if tenantId:
+            params["tenantId"] = tenantId
+        return await self._get(
+            path, model=InstancesResponse, params=params if params else None
+        )
 
     async def instance(self, instanceId: str):
         """Get a single instance by id (v1).
@@ -657,9 +666,12 @@ class AuraClient:
         Returns: SnapshotsResponse.
         """
         path = f"instances/{instanceId}/snapshots"
+        params = {}
         if date:
-            path += f"?date={date}"
-        return await self._get(path, model=SnapshotsResponse)
+            params["date"] = date
+        return await self._get(
+            path, model=SnapshotsResponse, params=params if params else None
+        )
 
     async def snapshot(self, instanceId: str, snapshotId: str):
         """Get a single snapshot by id (v1). Returns SnapshotResponse."""
@@ -670,9 +682,12 @@ class AuraClient:
     async def get_customer_managed_keys(self, tenantId: str = ""):
         """List customer managed keys (v1). Optionally filter by tenantId."""
         path = "customer-managed-keys"
+        params = {}
         if tenantId:
-            path += f"?tenantId={tenantId}"
-        return await self._get(path, model=CustomerManagedKeysResponse)
+            params["tenantId"] = tenantId
+        return await self._get(
+            path, model=CustomerManagedKeysResponse, params=params if params else None
+        )
 
     async def get_customer_managed_key(self, customerManagedKeyId: str):
         """Get a specific customer managed key by id (v1)."""
@@ -748,7 +763,14 @@ class AuraClient:
         )
 
     # Billing
-    async def get_billing_usage(self, organizationId: str, start: str, end: str):
+    async def get_billing_usage(
+        self,
+        organizationId: str,
+        start: str,
+        end: str,
+        page_token: str = None,
+        page_limit: int = None,
+    ):
         """Get billed usage for an organization (v2beta1).
 
         Args:
@@ -759,10 +781,16 @@ class AuraClient:
         Returns: UsageResponse with 'data' containing list of UsageData objects and optional 'links' for pagination.
         """
         self._ensure_api_is_v2()
+        params = {"start": start, "end": end}
+        if page_token:
+            params["page_token"] = page_token
+        if page_limit:
+            params["page_limit"] = page_limit
         return await self._get(
-            f"organizations/{organizationId}/billing/usage?start={start}&end={end}",
+            f"organizations/{organizationId}/billing/usage",
             model=UsageResponse,
             api_version="v2beta1",
+            params=params,
         )
 
     async def get_billing_ledger(self, organizationId: str, start: str, end: str):
@@ -776,10 +804,12 @@ class AuraClient:
         Returns: LedgerResponse with 'data' containing list of LedgerData objects and optional 'links' for pagination.
         """
         self._ensure_api_is_v2()
+        params = {"start": start, "end": end}
         return await self._get(
-            f"organizations/{organizationId}/billing/ledger?start={start}&end={end}",
+            f"organizations/{organizationId}/billing/ledger",
             model=LedgerResponse,
             api_version="v2beta1",
+            params=params,
         )
 
     # IP Filters
@@ -901,9 +931,10 @@ class AuraClient:
         path = (
             f"organizations/{organizationId}/projects/{projectId}/import/jobs/{jobId}"
         )
-        if progress:
-            path += "?progress=true"
-        return await self._get(path, model=ImportJobEnvelope, api_version="v2beta1")
+        params = {"progress": "true"} if progress else None
+        return await self._get(
+            path, model=ImportJobEnvelope, api_version="v2beta1", params=params
+        )
 
     async def cancel_import_job(self, organizationId: str, projectId: str, jobId: str):
         """Cancel an existing import job (v2beta1). Returns JobIdEnvelope on success."""
@@ -1056,13 +1087,11 @@ class AuraClient:
             params["page_limit"] = page_limit
         if page_token:
             params["page_token"] = page_token
-
-        if params:
-            query_string = "&".join(f"{k}={v}" for k, v in params.items())
-            path += f"?{query_string}"
-
         result = await self._get(
-            path, model=ActivityFeedResponse, api_version="v2beta1"
+            path,
+            model=ActivityFeedResponse,
+            api_version="v2beta1",
+            params=params if params else None,
         )
         if result and result.data:
             result.data = [ActivityLog(**item) for item in result.data]
