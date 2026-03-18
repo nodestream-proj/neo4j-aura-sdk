@@ -54,6 +54,27 @@ from .models import (
 
 
 class AuraClient:
+    """An API Client for the Neo4j Aura service.
+
+    This client provides a low-ish level interface to the Neo4j Aura service.
+    It is intended to be used by higher level libraries that provide a more
+    user-friendly interface.
+
+    This client is not thread-safe. If you need to use it in a multi-threaded
+    environment, you should create a new client for each thread.
+
+    Usage:
+
+    ```python
+    from neo4j_aura_sdk import AuraClient
+
+    client_id = "..."
+    client_secret = "..."
+
+    async with AuraClient(client_id, client_secret) as client:
+        # Do stuff with the client
+    ```
+    """
 
     # --- v1beta5-only methods ---
 
@@ -219,28 +240,6 @@ class AuraClient:
             body=patch,
             model=InstanceResponse,
         )
-
-    """An API Client for the Neo4j Aura service.
-
-    This client provides a low-ish level interface to the Neo4j Aura service.
-    It is intended to be used by higher level libraries that provide a more
-    user-friendly interface.
-
-    This client is not thread-safe. If you need to use it in a multi-threaded
-    environment, you should create a new client for each thread.
-
-    Usage:
-
-    ```python
-    from neo4j_aura_sdk import AuraClient
-
-    client_id = "..."
-    client_secret = "..."
-
-    async with AuraClient(client_id, client_secret) as client:
-        # Do stuff with the client
-    ```
-    """
 
     def __init__(
         self,
@@ -520,21 +519,19 @@ class AuraClient:
         return await self._delete(f"instances/{instanceId}", model=InstanceResponse)
 
     async def rename_instance(self, instanceId: str, name: str):
-        class _Rename(BaseModel):
-            name: str
-
         """Rename an instance (v1).
 
         Returns: InstanceResponse for the updated instance.
         """
+
+        class _Rename(BaseModel):
+            name: str
+
         return await self._patch(
             f"instances/{instanceId}", body=_Rename(name=name), model=InstanceResponse
         )
 
     async def resize_instance(self, instanceId: str, memory: str):
-        class _Resize(BaseModel):
-            memory: str
-
         """Resize an instance's memory (v1).
 
         Args:
@@ -542,6 +539,10 @@ class AuraClient:
 
         Returns: InstanceResponse for the resizing operation.
         """
+
+        class _Resize(BaseModel):
+            memory: str
+
         return await self._patch(
             f"instances/{instanceId}",
             body=_Resize(memory=memory),
@@ -549,14 +550,15 @@ class AuraClient:
         )
 
     async def rename_and_resize_instance(self, instanceId: str, name: str, memory: str):
-        class _RenameResize(BaseModel):
-            name: str
-            memory: str
-
         """Rename and resize an instance in a single request (v1).
 
         Returns: InstanceResponse.
         """
+
+        class _RenameResize(BaseModel):
+            name: str
+            memory: str
+
         return await self._patch(
             f"instances/{instanceId}",
             body=_RenameResize(name=name, memory=memory),
@@ -564,13 +566,14 @@ class AuraClient:
         )
 
     async def resize_instance_secondary_count(self, instanceId: str, count: int):
-        class _Resize(BaseModel):
-            secondaries_count: int
-
         """Update the secondary count for an instance (v1).
 
         Returns: InstanceResponse or raises AuraApiBadRequestException on invalid action.
         """
+
+        class _Resize(BaseModel):
+            secondaries_count: int
+
         return await self._patch(
             f"instances/{instanceId}",
             body=_Resize(secondaries_count=count),
@@ -578,9 +581,6 @@ class AuraClient:
         )
 
     async def update_instance_cdc_mode(self, instanceId: str, mode: str):
-        class _Resize(BaseModel):
-            cdc_enrichment_mode: str
-
         """Update an instance's CDC enrichment mode (v1).
 
         Args:
@@ -588,6 +588,10 @@ class AuraClient:
 
         Returns: InstanceResponse or raises AuraApiBadRequestException.
         """
+
+        class _Resize(BaseModel):
+            cdc_enrichment_mode: str
+
         return await self._patch(
             f"instances/{instanceId}",
             body=_Resize(cdc_enrichment_mode=mode),
@@ -595,13 +599,14 @@ class AuraClient:
         )
 
     async def overwrite_instance(self, instanceId: str, sourceId: str):
-        class _Overwrite(BaseModel):
-            source_instance_id: str
-
         """Overwrite an instance from another instance (v1).
 
         Returns: InstanceResponse indicating overwrite status.
         """
+
+        class _Overwrite(BaseModel):
+            source_instance_id: str
+
         return await self._post(
             f"instances/{instanceId}/overwrite",
             body=_Overwrite(source_instance_id=sourceId),
@@ -611,14 +616,15 @@ class AuraClient:
     async def overwrite_instance_with_snapshot(
         self, instanceId: str, sourceId: str, snapshotId: str
     ):
-        class _Overwrite(BaseModel):
-            source_instance_id: str
-            source_snapshot_id: str
-
         """Overwrite an instance from a snapshot of another instance (v1).
 
         Returns: InstanceResponse.
         """
+
+        class _Overwrite(BaseModel):
+            source_instance_id: str
+            source_snapshot_id: str
+
         return await self._post(
             f"instances/{instanceId}/overwrite",
             body=_Overwrite(source_instance_id=sourceId, source_snapshot_id=snapshotId),
@@ -870,12 +876,11 @@ class AuraClient:
         )
 
     async def delete_organization_ip_filter(self, organizationId: str, ipFilterId: str):
-        """Delete an IP filter. Returns None on success (204)."""
-        self._ensure_api_is_v2()
         """Delete an IP filter (v2beta1).
 
         Returns: IpFilter when response includes body, otherwise None for 204 No Content.
         """
+        self._ensure_api_is_v2()
         return await self._delete(
             f"organizations/{organizationId}/ip-filters/{ipFilterId}",
             model=IpFilter,

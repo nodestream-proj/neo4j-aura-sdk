@@ -70,9 +70,9 @@ If you need to access authenticated endpoints, consider:
 
 Specifications are stored at:
 
-- `neo4j_aura_sdk/resouces/aura_api_spec_v1.yaml`
-- `neo4j_aura_sdk/resouces/aura_api_spec_v2beta1.yaml`
-- `neo4j_aura_sdk/resouces/beta/aura_api_spec_v5.yaml`
+- `neo4j_aura_sdk/resources/aura_api_spec_v1.yaml`
+- `neo4j_aura_sdk/resources/aura_api_spec_v2beta1.yaml`
+- `neo4j_aura_sdk/resources/beta/aura_api_spec_v5.yaml`
 
 ## Integration with Client
 
@@ -83,7 +83,7 @@ from neo4j_aura_sdk import AuraClient
 import yaml
 
 # Load spec
-with open("neo4j_aura_sdk/resouces/aura_api_spec_v1.yaml") as f:
+with open("neo4j_aura_sdk/resources/aura_api_spec_v1.yaml") as f:
     spec = yaml.safe_load(f)
 
 # Inspect endpoints
