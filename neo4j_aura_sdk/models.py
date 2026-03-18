@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel
 
@@ -462,7 +462,7 @@ class CreateDeploymentRequest(BaseModel):
 
 # --- Organization & Project Response Models (v2beta1) ---
 class OrganizationDetailsEnvelope(BaseModel):
-    data: Optional[dict] = None
+    data: Optional[Union[List[Dict], Dict]] = None
 
 
 class ProjectsResponse(BaseModel):
@@ -536,3 +536,54 @@ class ActivityLog(BaseModel):
     description: Optional[str] = None
     ip_address: Optional[str] = None
     payload: Optional[str] = None
+
+
+# --- Billing Models (v2beta1) ---
+class UsageData(BaseModel):
+    charge_period_start: Optional[str] = None
+    charge_period_end: Optional[str] = None
+    organization_id: Optional[str] = None
+    billing_account_id: Optional[str] = None
+    project_id: Optional[str] = None
+    project_name: Optional[str] = None
+    resource_type: Optional[str] = None
+    resource_id: Optional[str] = None
+    resource_name: Optional[str] = None
+    tier: Optional[str] = None
+    cloud_service_provider: Optional[str] = None
+    region_id: Optional[str] = None
+    billable_size_unit: Optional[str] = None
+    billable_size: Optional[int] = None
+    consumed_quantity: Optional[float] = None
+    consumed_unit: Optional[str] = None
+    pricing_currency: Optional[str] = None
+    list_cost: Optional[float] = None
+    list_unit_price: Optional[float] = None
+    service_name: Optional[str] = None
+    billing_account_type: Optional[str] = None
+    payment_method: Optional[str] = None
+    invoice_issuer_name: Optional[str] = None
+
+
+class LedgerData(BaseModel):
+    organization_id: Optional[str] = None
+    billing_account_id: Optional[str] = None
+    balance_date: Optional[str] = None
+    remaining_credit_quantity: Optional[float] = None
+    initial_credit_quantity: Optional[float] = None
+
+
+class Links(BaseModel):
+    self: Optional[str] = None
+    next: Optional[str] = None
+    first: Optional[str] = None
+
+
+class UsageResponse(BaseModel):
+    data: Optional[List[UsageData]] = None
+    links: Optional[Links] = None
+
+
+class LedgerResponse(BaseModel):
+    data: Optional[List[LedgerData]] = None
+    links: Optional[Links] = None

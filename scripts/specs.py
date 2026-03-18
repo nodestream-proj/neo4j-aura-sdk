@@ -47,17 +47,17 @@ def fetch_specs_from_swagger() -> Dict[str, Dict]:
             "Aura v1": {
                 "key": "v1",
                 "description": "Core Aura API v1",
-                "local": "neo4j_aura_sdk/resouces/aura_api_spec_v1.yaml",
+                "local": "neo4j_aura_sdk/resources/aura_api_spec_v1.yaml",
             },
             "Aura v2beta1": {
                 "key": "v2beta1",
                 "description": "Aura API v2beta1 (Fleet Manager)",
-                "local": "neo4j_aura_sdk/resouces/aura_api_spec_v2beta1.yaml",
+                "local": "neo4j_aura_sdk/resources/aura_api_spec_v2beta1.yaml",
             },
             "Aura v1beta5": {
                 "key": "v1beta5",
                 "description": "Aura API v1beta5 (GraphQL Data API)",
-                "local": "neo4j_aura_sdk/resouces/beta/aura_api_spec_v5.yaml",
+                "local": "neo4j_aura_sdk/resources/beta/aura_api_spec_v5.yaml",
             },
         }
 
@@ -102,17 +102,17 @@ def _get_fallback_specs() -> Dict[str, Dict]:
     return {
         "v1": {
             "url": f"{BASE_SPEC_URL}/aura_api_spec_v1.yaml",
-            "local": "neo4j_aura_sdk/resouces/aura_api_spec_v1.yaml",
+            "local": "neo4j_aura_sdk/resources/aura_api_spec_v1.yaml",
             "description": "Core Aura API v1",
         },
         "v2beta1": {
             "url": f"{BASE_SPEC_URL}/aura_api_spec_v2beta1.yaml",
-            "local": "neo4j_aura_sdk/resouces/aura_api_spec_v2beta1.yaml",
+            "local": "neo4j_aura_sdk/resources/aura_api_spec_v2beta1.yaml",
             "description": "Aura API v2beta1 (Fleet Manager)",
         },
         "v1beta5": {
             "url": f"{BASE_SPEC_URL}/beta/aura_api_spec_v5.yaml",
-            "local": "neo4j_aura_sdk/resouces/beta/aura_api_spec_v5.yaml",
+            "local": "neo4j_aura_sdk/resources/beta/aura_api_spec_v5.yaml",
             "description": "Aura API v1beta5 (GraphQL Data API)",
         },
     }

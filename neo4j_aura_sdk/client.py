@@ -40,6 +40,7 @@ from .models import (
     IpFilter,
     IpFilterWithStatus,
     JobIdEnvelope,
+    LedgerResponse,
     OrganizationDetailsEnvelope,
     ProjectsResponse,
     ServerDatabasesResponse,
@@ -48,10 +49,32 @@ from .models import (
     SnapshotsResponse,
     TenantResponse,
     TenantsResponse,
+    UsageResponse,
 )
 
 
 class AuraClient:
+    """An API Client for the Neo4j Aura service.
+
+    This client provides a low-ish level interface to the Neo4j Aura service.
+    It is intended to be used by higher level libraries that provide a more
+    user-friendly interface.
+
+    This client is not thread-safe. If you need to use it in a multi-threaded
+    environment, you should create a new client for each thread.
+
+    Usage:
+
+    ```python
+    from neo4j_aura_sdk import AuraClient
+
+    client_id = "..."
+    client_secret = "..."
+
+    async with AuraClient(client_id, client_secret) as client:
+        # Do stuff with the client
+    ```
+    """
 
     # --- v1beta5-only methods ---
 
@@ -218,28 +241,6 @@ class AuraClient:
             model=InstanceResponse,
         )
 
-    """An API Client for the Neo4j Aura service.
-
-    This client provides a low-ish level interface to the Neo4j Aura service.
-    It is intended to be used by higher level libraries that provide a more
-    user-friendly interface.
-
-    This client is not thread-safe. If you need to use it in a multi-threaded
-    environment, you should create a new client for each thread.
-
-    Usage:
-
-    ```python
-    from neo4j_aura_sdk import AuraClient
-
-    client_id = "..."
-    client_secret = "..."
-
-    async with AuraClient(client_id, client_secret) as client:
-        # Do stuff with the client
-    ```
-    """
-
     def __init__(
         self,
         client_id: str,
@@ -343,14 +344,18 @@ class AuraClient:
         path: str,
         model: Type[BaseModel] | None = None,
         api_version: str | None = None,
+        params: dict | None = None,
     ):
         """Perform a GET request to the API.
 
         - path: relative path (without leading slash)
         - model: optional Pydantic model to parse the response into (or None for raw JSON)
         - api_version: optional API version override (defaults to client's configured version)
+        - params: optional dict of query parameters
         """
-        return await self._request("GET", path, model=model, api_version=api_version)
+        return await self._request(
+            "GET", path, model=model, api_version=api_version, params=params
+        )
 
     async def _post(
         self,
@@ -397,6 +402,7 @@ class AuraClient:
         body: BaseModel | None = None,
         default: BaseModel | None = None,
         api_version: str | None = None,
+        params: dict | None = None,
     ):
         """Generic request helper that supports API versioning and optional model parsing.
 
@@ -406,6 +412,7 @@ class AuraClient:
         - body: optional Pydantic model to send as JSON body
         - default: value to return if response has no JSON (useful for 204 responses)
         - api_version: API version segment to use (defaults to 'v1')
+        - params: optional dict of query parameters
         """
         token = await self._get_token()
         headers = {"Authorization": f"Bearer {token}"}
@@ -421,7 +428,7 @@ class AuraClient:
             content = body.model_dump_json()
 
         response = await self._client.request(
-            method, url, headers=headers, content=content
+            method, url, headers=headers, content=content, params=params
         )
         self._checkResponseStatus(response)
 
@@ -471,9 +478,6 @@ class AuraClient:
         return await self._get(f"tenants/{tenantId}", model=TenantResponse)
 
     async def instances(self, tenantId: str = ""):
-        path = "instances"
-        if tenantId:
-            path += f"?tenantId={tenantId}"
         """List instances. By default lists all instances; if tenantId is provided,
         lists instances for that tenant (v1).
 
@@ -482,7 +486,13 @@ class AuraClient:
 
         Returns: InstancesResponse parsed from `/v1/instances`.
         """
-        return await self._get(path, model=InstancesResponse)
+        path = "instances"
+        params = {}
+        if tenantId:
+            params["tenantId"] = tenantId
+        return await self._get(
+            path, model=InstancesResponse, params=params if params else None
+        )
 
     async def instance(self, instanceId: str):
         """Get a single instance by id (v1).
@@ -509,21 +519,19 @@ class AuraClient:
         return await self._delete(f"instances/{instanceId}", model=InstanceResponse)
 
     async def rename_instance(self, instanceId: str, name: str):
-        class _Rename(BaseModel):
-            name: str
-
         """Rename an instance (v1).
 
         Returns: InstanceResponse for the updated instance.
         """
+
+        class _Rename(BaseModel):
+            name: str
+
         return await self._patch(
             f"instances/{instanceId}", body=_Rename(name=name), model=InstanceResponse
         )
 
     async def resize_instance(self, instanceId: str, memory: str):
-        class _Resize(BaseModel):
-            memory: str
-
         """Resize an instance's memory (v1).
 
         Args:
@@ -531,6 +539,10 @@ class AuraClient:
 
         Returns: InstanceResponse for the resizing operation.
         """
+
+        class _Resize(BaseModel):
+            memory: str
+
         return await self._patch(
             f"instances/{instanceId}",
             body=_Resize(memory=memory),
@@ -538,14 +550,15 @@ class AuraClient:
         )
 
     async def rename_and_resize_instance(self, instanceId: str, name: str, memory: str):
-        class _RenameResize(BaseModel):
-            name: str
-            memory: str
-
         """Rename and resize an instance in a single request (v1).
 
         Returns: InstanceResponse.
         """
+
+        class _RenameResize(BaseModel):
+            name: str
+            memory: str
+
         return await self._patch(
             f"instances/{instanceId}",
             body=_RenameResize(name=name, memory=memory),
@@ -553,13 +566,14 @@ class AuraClient:
         )
 
     async def resize_instance_secondary_count(self, instanceId: str, count: int):
-        class _Resize(BaseModel):
-            secondaries_count: int
-
         """Update the secondary count for an instance (v1).
 
         Returns: InstanceResponse or raises AuraApiBadRequestException on invalid action.
         """
+
+        class _Resize(BaseModel):
+            secondaries_count: int
+
         return await self._patch(
             f"instances/{instanceId}",
             body=_Resize(secondaries_count=count),
@@ -567,9 +581,6 @@ class AuraClient:
         )
 
     async def update_instance_cdc_mode(self, instanceId: str, mode: str):
-        class _Resize(BaseModel):
-            cdc_enrichment_mode: str
-
         """Update an instance's CDC enrichment mode (v1).
 
         Args:
@@ -577,6 +588,10 @@ class AuraClient:
 
         Returns: InstanceResponse or raises AuraApiBadRequestException.
         """
+
+        class _Resize(BaseModel):
+            cdc_enrichment_mode: str
+
         return await self._patch(
             f"instances/{instanceId}",
             body=_Resize(cdc_enrichment_mode=mode),
@@ -584,13 +599,14 @@ class AuraClient:
         )
 
     async def overwrite_instance(self, instanceId: str, sourceId: str):
-        class _Overwrite(BaseModel):
-            source_instance_id: str
-
         """Overwrite an instance from another instance (v1).
 
         Returns: InstanceResponse indicating overwrite status.
         """
+
+        class _Overwrite(BaseModel):
+            source_instance_id: str
+
         return await self._post(
             f"instances/{instanceId}/overwrite",
             body=_Overwrite(source_instance_id=sourceId),
@@ -600,14 +616,15 @@ class AuraClient:
     async def overwrite_instance_with_snapshot(
         self, instanceId: str, sourceId: str, snapshotId: str
     ):
-        class _Overwrite(BaseModel):
-            source_instance_id: str
-            source_snapshot_id: str
-
         """Overwrite an instance from a snapshot of another instance (v1).
 
         Returns: InstanceResponse.
         """
+
+        class _Overwrite(BaseModel):
+            source_instance_id: str
+            source_snapshot_id: str
+
         return await self._post(
             f"instances/{instanceId}/overwrite",
             body=_Overwrite(source_instance_id=sourceId, source_snapshot_id=snapshotId),
@@ -655,9 +672,12 @@ class AuraClient:
         Returns: SnapshotsResponse.
         """
         path = f"instances/{instanceId}/snapshots"
+        params = {}
         if date:
-            path += f"?date={date}"
-        return await self._get(path, model=SnapshotsResponse)
+            params["date"] = date
+        return await self._get(
+            path, model=SnapshotsResponse, params=params if params else None
+        )
 
     async def snapshot(self, instanceId: str, snapshotId: str):
         """Get a single snapshot by id (v1). Returns SnapshotResponse."""
@@ -668,9 +688,12 @@ class AuraClient:
     async def get_customer_managed_keys(self, tenantId: str = ""):
         """List customer managed keys (v1). Optionally filter by tenantId."""
         path = "customer-managed-keys"
+        params = {}
         if tenantId:
-            path += f"?tenantId={tenantId}"
-        return await self._get(path, model=CustomerManagedKeysResponse)
+            params["tenantId"] = tenantId
+        return await self._get(
+            path, model=CustomerManagedKeysResponse, params=params if params else None
+        )
 
     async def get_customer_managed_key(self, customerManagedKeyId: str):
         """Get a specific customer managed key by id (v1)."""
@@ -733,6 +756,68 @@ class AuraClient:
             api_version="v2beta1",
         )
 
+    async def list_organizations(self):
+        """List all organizations (v2beta1).
+
+        Returns: OrganizationDetailsEnvelope with a list of organizations.
+        """
+        self._ensure_api_is_v2()
+        return await self._get(
+            "organizations",
+            model=OrganizationDetailsEnvelope,
+            api_version="v2beta1",
+        )
+
+    # Billing
+    async def get_billing_usage(
+        self,
+        organizationId: str,
+        start: str,
+        end: str,
+        page_token: str = None,
+        page_limit: int = None,
+    ):
+        """Get billed usage for an organization (v2beta1).
+
+        Args:
+            organizationId: the organization id
+            start: RFC3339 timestamp (e.g., '2024-01-02T00:00:00Z')
+            end: RFC3339 timestamp (e.g., '2024-01-31T23:59:59Z')
+
+        Returns: UsageResponse with 'data' containing list of UsageData objects and optional 'links' for pagination.
+        """
+        self._ensure_api_is_v2()
+        params = {"start": start, "end": end}
+        if page_token:
+            params["page_token"] = page_token
+        if page_limit:
+            params["page_limit"] = page_limit
+        return await self._get(
+            f"organizations/{organizationId}/billing/usage",
+            model=UsageResponse,
+            api_version="v2beta1",
+            params=params,
+        )
+
+    async def get_billing_ledger(self, organizationId: str, start: str, end: str):
+        """Get credit ledger for an organization (v2beta1).
+
+        Args:
+            organizationId: the organization id
+            start: RFC3339 timestamp (e.g., '2024-01-02T00:00:00Z')
+            end: RFC3339 timestamp (e.g., '2024-01-31T23:59:59Z')
+
+        Returns: LedgerResponse with 'data' containing list of LedgerData objects and optional 'links' for pagination.
+        """
+        self._ensure_api_is_v2()
+        params = {"start": start, "end": end}
+        return await self._get(
+            f"organizations/{organizationId}/billing/ledger",
+            model=LedgerResponse,
+            api_version="v2beta1",
+            params=params,
+        )
+
     # IP Filters
     async def list_organization_ip_filters(self, organizationId: str):
         """List IP filters for an organization (v2beta1). Returns a list of IpFilter models."""
@@ -791,12 +876,11 @@ class AuraClient:
         )
 
     async def delete_organization_ip_filter(self, organizationId: str, ipFilterId: str):
-        """Delete an IP filter. Returns None on success (204)."""
-        self._ensure_api_is_v2()
         """Delete an IP filter (v2beta1).
 
         Returns: IpFilter when response includes body, otherwise None for 204 No Content.
         """
+        self._ensure_api_is_v2()
         return await self._delete(
             f"organizations/{organizationId}/ip-filters/{ipFilterId}",
             model=IpFilter,
@@ -852,9 +936,10 @@ class AuraClient:
         path = (
             f"organizations/{organizationId}/projects/{projectId}/import/jobs/{jobId}"
         )
-        if progress:
-            path += "?progress=true"
-        return await self._get(path, model=ImportJobEnvelope, api_version="v2beta1")
+        params = {"progress": "true"} if progress else None
+        return await self._get(
+            path, model=ImportJobEnvelope, api_version="v2beta1", params=params
+        )
 
     async def cancel_import_job(self, organizationId: str, projectId: str, jobId: str):
         """Cancel an existing import job (v2beta1). Returns JobIdEnvelope on success."""
@@ -1007,13 +1092,11 @@ class AuraClient:
             params["page_limit"] = page_limit
         if page_token:
             params["page_token"] = page_token
-
-        if params:
-            query_string = "&".join(f"{k}={v}" for k, v in params.items())
-            path += f"?{query_string}"
-
         result = await self._get(
-            path, model=ActivityFeedResponse, api_version="v2beta1"
+            path,
+            model=ActivityFeedResponse,
+            api_version="v2beta1",
+            params=params if params else None,
         )
         if result and result.data:
             result.data = [ActivityLog(**item) for item in result.data]

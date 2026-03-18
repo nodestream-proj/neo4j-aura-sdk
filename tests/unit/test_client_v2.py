@@ -15,6 +15,33 @@ server_id = "server1"
 
 @respx.mock
 @pytest.mark.asyncio
+async def test_list_organizations():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    respx.get(f"{baseUrl}v2beta1/organizations").respond(
+        status_code=200,
+        json={
+            "data": [
+                {"id": "org1", "name": "MetaCortex"},
+                {"id": "org2", "name": "Zion"},
+            ]
+        },
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.list_organizations()
+        assert isinstance(resp.data, list)
+        assert resp.data[0]["id"] == "org1"
+        assert resp.data[0]["name"] == "MetaCortex"
+        assert resp.data[1]["id"] == "org2"
+        assert resp.data[1]["name"] == "Zion"
+
+
+@respx.mock
+@pytest.mark.asyncio
 async def test_v2_guard_raises():
     # default client is v1; v2 methods should raise ValueError before any network call
     async with AuraClient(clientId, clientSecret) as client:
@@ -659,3 +686,86 @@ async def test_get_project_activity_feed():
         resp = await client.get_project_activity_feed(org_id, proj_id)
         assert resp.data[0].id == "activity-2"
         assert isinstance(resp.data[0], models.ActivityLog)
+
+
+# === Billing Tests ===
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_get_billing_usage():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    start = "2024-01-01T00:00:00Z"
+    end = "2024-01-31T23:59:59Z"
+
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/billing/usage",
+        params={"start": start, "end": end},
+    ).respond(
+        status_code=200,
+        json={
+            "data": [
+                {
+                    "charge_period_start": "2024-01-01T00:00:00Z",
+                    "charge_period_end": "2024-01-31T23:59:59Z",
+                    "organization_id": org_id,
+                    "project_id": proj_id,
+                    "resource_type": "aura-db",
+                    "consumed_quantity": 100.5,
+                    "list_cost": 250.75,
+                }
+            ],
+            "links": {"self": "/organizations/org1/billing/usage", "next": None},
+        },
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.get_billing_usage(org_id, start, end)
+        assert resp.data[0].organization_id == org_id
+        assert resp.data[0].consumed_quantity == 100.5
+        assert resp.data[0].list_cost == 250.75
+        assert resp.links.self == "/organizations/org1/billing/usage"
+        assert isinstance(resp.data[0], models.UsageData)
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_get_billing_ledger():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    start = "2024-01-01T00:00:00Z"
+    end = "2024-01-31T23:59:59Z"
+
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/billing/ledger",
+        params={"start": start, "end": end},
+    ).respond(
+        status_code=200,
+        json={
+            "data": [
+                {
+                    "organization_id": org_id,
+                    "billing_account_id": "ba-123",
+                    "balance_date": "2024-01-15T00:00:00Z",
+                    "remaining_credit_quantity": 500.0,
+                    "initial_credit_quantity": 1000.0,
+                }
+            ],
+            "links": {"self": "/organizations/org1/billing/ledger"},
+        },
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.get_billing_ledger(org_id, start, end)
+        assert resp.data[0].organization_id == org_id
+        assert resp.data[0].remaining_credit_quantity == 500.0
+        assert resp.data[0].initial_credit_quantity == 1000.0
+        assert resp.links.self == "/organizations/org1/billing/ledger"
+        assert isinstance(resp.data[0], models.LedgerData)

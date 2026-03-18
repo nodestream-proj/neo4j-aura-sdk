@@ -5,7 +5,7 @@ info:
   description: |-
     This is the v1beta5 release of the Aura API that allows you to programmatically provision and manage your Aura instances. 
 
-    For more information on how to use the API, see the [Aura API documentation](https://neo4j.com/docs/aura/platform/api/overview/).
+    For more information on how to use the API, see the [Aura API documentation](https://neo4j.com/docs/aura/api/overview/).
 
     [Provide feedback](https://docs.google.com/forms/d/e/1FAIpQLSfNZMyQRnI_ZzK8IJ2E266DP_-zLDBWzk1OaUkPem16V-ekZQ/viewform) on the Aura API.
   termsOfService: 'https://console.neo4j.io/#terms'

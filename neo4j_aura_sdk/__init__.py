@@ -1,3 +1,37 @@
 from .client import AuraClient
+from .models import (
+    AuraApiAuthorizationException,
+    AuraApiBadRequestException,
+    AuraApiException,
+    AuraApiInternalException,
+    AuraApiNotFoundException,
+    AuraApiRateLimitExceededException,
+    AuraError,
+    InstancePatchRequest,
+    InstanceRequest,
+    InstanceResponse,
+    InstancesResponse,
+    SnapshotResponse,
+    SnapshotsResponse,
+    TenantResponse,
+    TenantsResponse,
+)
 
-__all__ = ("AuraClient",)
+__all__ = (
+    "AuraClient",
+    "AuraApiException",
+    "AuraApiAuthorizationException",
+    "AuraApiBadRequestException",
+    "AuraApiInternalException",
+    "AuraApiNotFoundException",
+    "AuraApiRateLimitExceededException",
+    "AuraError",
+    "InstancePatchRequest",
+    "InstanceRequest",
+    "InstanceResponse",
+    "InstancesResponse",
+    "SnapshotResponse",
+    "SnapshotsResponse",
+    "TenantResponse",
+    "TenantsResponse",
+)

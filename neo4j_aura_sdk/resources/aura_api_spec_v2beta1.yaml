@@ -6,7 +6,7 @@ info:
     This is the v2beta1 release of the Aura API.
 
     For more information on how to use the API, see the
-    [Aura API documentation](https://neo4j.com/docs/aura/platform/api/overview/).
+    [Aura API documentation](https://neo4j.com/docs/aura/api/overview/).
 
     [Provide feedback](https://docs.google.com/forms/d/e/1FAIpQLSfNZMyQRnI_ZzK8IJ2E266DP_-zLDBWzk1OaUkPem16V-ekZQ/viewform)
     on the Aura API.
@@ -27,12 +27,42 @@ tags:
     description: Relates to Fleet Manager Deployments
   - name: activity-feed
     description: Relates to Activity Feed.
+  - name: billing
+    description: Relates to Billing.
 
 servers:
   - url: "https://api.neo4j.io/v2beta1"
     description: Aura API v2beta1
 
 paths:
+  "/organizations":
+    get:
+      summary: Get a list of organizations
+      tags:
+        - organizations
+      operationId: list-organizations
+      description: Returns a list of Aura Organizations.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/OrganizationDetails"
+
+              examples:
+                Get organizations:
+                  value:
+                    data:
+                      - id: c4ea09e5-44b2-418e-9aae-0c98c37d1f38
+                        name: MetaCortex
+                      - id: faaa3547-eaf8-405e-812e-e0bba04a1834
+                        name: Zion
   "/organizations/{organizationId}":
     parameters:
       - $ref: "#/components/parameters/organizationId"
@@ -67,7 +97,7 @@ paths:
       summary: List projects
       tags:
         - projects
-      operationId: show-organization
+      operationId: list-projects
       description: Returns a list of projects for a given Aura organization
       responses:
         "200":
@@ -98,7 +128,7 @@ paths:
       summary: Returns a list of IP filters for the organization
       tags:
         - instances
-      operationId: list-ip-filters
+      operationId: get-instance-ip-filters
       description: |-
         Returns the IP filter with its status applied to an instance, if present.
       responses:
@@ -374,7 +404,7 @@ paths:
                   value:
                     data:
                       id: "87d485b4-73fc-4a7f-bb03-720f4672947e"
-                      import_type: "cloud"
+                      import_type: "online"
                       info:
                         state: "Completed"
                         start_time: "2025-08-15T13:12:51Z"
@@ -398,7 +428,7 @@ paths:
                   value:
                     data:
                       id: "87d485b4-73fc-4a7f-bb03-720f4672947e"
-                      import_type: "cloud"
+                      import_type: "online"
                       info:
                         state: "Completed"
                         start_time: "2025-08-15T13:12:51Z"
@@ -793,8 +823,154 @@ paths:
         "403":
           description: Forbidden. Cannot access the activity feed.
 
+  "/organizations/{organizationId}/billing/usage":
+    get:
+      summary: Get billed usage for an organization
+      description: |
+        Returns usage rows for a given organization and time range.
+        The `start` and `end` parameters are required and must be RFC3339 timestamps (e.g., `2024-01-02T00:00:00Z`).
+      operationId: getUsage
+      tags:
+        - billing
+      parameters:
+        - $ref: "#/components/parameters/organizationId"
+        - name: start
+          in: query
+          required: true
+          description: >
+            Start of the range (inclusive) as an RFC3339 timestamp.
+          schema:
+            type: string
+            format: date-time
+            example: 2024-01-02T00:00:00Z
+        - name: end
+          in: query
+          required: true
+          description: >
+            End of the range (exclusive) as an RFC3339 timestamp.
+          schema:
+            type: string
+            format: date-time
+            example: 2024-01-03T00:00:00Z
+        - name: page_token
+          in: query
+          required: false
+          description: Token to retrieve the next page of results.
+          schema:
+            type: string
+            example: "next-page-token"
+        - name: page_limit
+          in: query
+          required: false
+          description: Maximum number of items to return in a single page.
+          schema:
+            type: integer
+            format: int32
+            default: 100
+            minimum: 1
+            maximum: 1000
+            example: 100
+      responses:
+        "200":
+          description: Usage data returned successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UsageData"
+                  links:
+                    $ref: "#/components/schemas/Links"
+        "400":
+          description: Bad request (missing or invalid parameters)
+        "500":
+          description: Internal server error (usage load failed)
+
+  "/organizations/{organizationId}/billing/ledger":
+    get:
+      summary: Get credit ledger for an organization
+      description: |
+        Returns credit ledger rows for a given organization and time range.
+        The `start` and `end` parameters are required and must be RFC3339 timestamps (e.g., `2024-01-02T00:00:00Z`).
+      operationId: getLedger
+      tags:
+        - billing
+      parameters:
+        - $ref: "#/components/parameters/organizationId"
+        - name: start
+          in: query
+          required: true
+          description: >
+            Start of the range (inclusive) as an RFC3339 timestamp.
+          schema:
+            type: string
+            format: date-time
+            example: 2024-01-02T00:00:00Z
+        - name: end
+          in: query
+          required: true
+          description: >
+            End of the range (exclusive) as an RFC3339 timestamp.
+          schema:
+            type: string
+            format: date-time
+            example: 2024-01-03T00:00:00Z
+        - name: page_token
+          in: query
+          required: false
+          description: Token to retrieve the next page of results.
+          schema:
+            type: string
+            example: "next-page-token"
+        - name: page_limit
+          in: query
+          required: false
+          description: Maximum number of items to return in a single page.
+          schema:
+            type: integer
+            format: int32
+            default: 100
+            minimum: 1
+            maximum: 1000
+            example: 100
+      responses:
+        "200":
+          description: Ledger data returned successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/LedgerData"
+                  links:
+                    $ref: "#/components/schemas/Links"
+        "400":
+          description: Bad request (missing or invalid parameters)
+        "500":
+          description: Internal server error (ledger load failed)
+
 components:
   schemas:
+    Links:
+      type: object
+      properties:
+        self:
+          type: string
+          format: uri
+        next:
+          type: string
+          format: uri
+          nullable: true
+        first:
+          type: string
+          format: uri
+
     OrganizationDetails:
       type: object
       description: Holds details about an Aura Organization
@@ -906,6 +1082,13 @@ components:
             password:
               type: string
               description: Optional. Only for Free or VDC DB instances.
+        importConfig:
+          type: object
+          description: Additional import job configuration
+          properties:
+            importType:
+              type: string
+              description: "Optional. The type of import job to create. Warning: bulk imports overwrite all existing data in the database."
 
     ImportJobEnvelope:
       type: object
@@ -1319,7 +1502,6 @@ components:
         connection_url:
           type: string
           description: Optional connection url for the deployment
-
     ActivityLog:
       type: object
       description: Activity log
@@ -1370,6 +1552,111 @@ components:
         payload:
           type: string
           description: The payload for the activity with detailed information
+
+    UsageData:
+      type: object
+      description: Represents usage data for billing purposes, including resource consumption and pricing details
+      properties:
+        charge_period_start:
+          type: string
+          format: date-time
+          example: 2024-01-02T00:00:00Z
+        charge_period_end:
+          type: string
+          format: date-time
+          example: 2024-01-03T00:00:00Z
+        organization_id:
+          type: string
+          example: 8ba9ffc7-c86c-4f88-9370-af9852583158
+        billing_account_id:
+          type: string
+          example: 8c63f675-ed21-4af0-ac4e-66ce2b3c2c7b
+        project_id:
+          type: string
+          example: 550e8400-e29b-41d4-a716-446655440000
+        project_name:
+          type: string
+          example: My Project
+        resource_type:
+          type: string
+          example: Instance
+        resource_id:
+          type: string
+          example: 8ba9ffc7
+        resource_name:
+          type: string
+          example: My Database Name
+        tier:
+          type: string
+          example: business_critical
+        cloud_service_provider:
+          type: string
+          example: gcp
+        region_id:
+          type: string
+          example: us-east1
+        billable_size_unit:
+          type: string
+          example: GB
+          description: Unit of the resource size (e.g., GB). This field is omitted when the resource size is not available.
+        billable_size:
+          type: integer
+          format: int64
+          example: 32
+          description: Size of the billable resource. This field is omitted when the size is zero or not available.
+        consumed_quantity:
+          type: number
+          format: double
+          example: 20
+        consumed_unit:
+          type: string
+          example: GB-hours
+        pricing_currency:
+          type: string
+          example: credits
+        list_cost:
+          type: number
+          format: double
+          example: 4
+        list_unit_price:
+          type: number
+          format: double
+          example: 0.2
+        service_name:
+          type: string
+          example: Primary DB
+        billing_account_type:
+          type: string
+          example: payg
+        payment_method:
+          type: string
+          example: creditcard
+        invoice_issuer_name:
+          type: string
+          example: direct
+
+    LedgerData:
+      type: object
+      description: Represents credit ledger data for an organization, including balance and credit information
+      properties:
+        organization_id:
+          type: string
+          example: 3ca1e9b8-4c8d-4b21-b5a3-bc4f73d91642
+        billing_account_id:
+          type: string
+          example: 7f3e9a2b-d73f-4e91-856a-8d2c1f6e4a9c
+        balance_date:
+          type: string
+          format: date-time
+          example: 2024-01-02T00:00:00Z
+        remaining_credit_quantity:
+          type: number
+          format: double
+          example: 9342
+        initial_credit_quantity:
+          type: number
+          format: double
+          example: 10000
 
   securitySchemes:
     oauthToken:
