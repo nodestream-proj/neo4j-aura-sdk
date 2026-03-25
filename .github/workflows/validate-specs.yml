@@ -17,10 +17,10 @@ jobs:
       issues: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -37,14 +37,14 @@ jobs:
 
       - name: Upload validation output (on failure)
         if: steps.run_validator.outcome == 'failure'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: validation-output
           path: validation_output.txt
 
       - name: Create GitHub issue if specs changed
         if: steps.run_validator.outcome == 'failure'
-        uses: actions/github-script@v6
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
