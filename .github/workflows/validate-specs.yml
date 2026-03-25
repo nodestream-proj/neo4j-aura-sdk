@@ -33,6 +33,7 @@ jobs:
         id: run_validator
         continue-on-error: true
         run: |
+          set -o pipefail
           python scripts/validate_specs.py | tee validation_output.txt
 
       - name: Upload validation output (on failure)
