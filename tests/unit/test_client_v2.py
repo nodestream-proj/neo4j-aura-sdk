@@ -11,6 +11,7 @@ proj_id = "proj1"
 inst_id = "inst1"
 deployment_id = "deploy1"
 server_id = "server1"
+agent_id = "agent1"
 
 
 @respx.mock
@@ -688,6 +689,38 @@ async def test_get_project_activity_feed():
         assert isinstance(resp.data[0], models.ActivityLog)
 
 
+@respx.mock
+@pytest.mark.asyncio
+async def test_get_project_activity_feed_with_filters():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/activity-feed",
+        params={
+            "start": "2025-02-01T00:00:00Z",
+            "end": "2025-02-28T23:59:59Z",
+            "page_limit": 50,
+        },
+    ).respond(
+        status_code=200,
+        json={"data": [{"id": "activity-3", "action_name": "DELETE_INSTANCE"}]},
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.get_project_activity_feed(
+            org_id,
+            proj_id,
+            start="2025-02-01T00:00:00Z",
+            end="2025-02-28T23:59:59Z",
+            page_limit=50,
+        )
+        assert len(resp.data) == 1
+        assert resp.data[0].id == "activity-3"
+
+
 # === Billing Tests ===
 
 
@@ -769,3 +802,229 @@ async def test_get_billing_ledger():
         assert resp.data[0].initial_credit_quantity == 1000.0
         assert resp.links.self == "/organizations/org1/billing/ledger"
         assert isinstance(resp.data[0], models.LedgerData)
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_get_billing_ledger_with_pagination_params():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    start = "2024-02-01T00:00:00Z"
+    end = "2024-02-29T23:59:59Z"
+
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/billing/ledger",
+        params={
+            "start": start,
+            "end": end,
+            "page_token": "next-token",
+            "page_limit": 10,
+        },
+    ).respond(
+        status_code=200,
+        json={"data": [], "links": {"self": "/organizations/org1/billing/ledger"}},
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.get_billing_ledger(
+            org_id, start, end, page_token="next-token", page_limit=10
+        )
+        assert resp.links.self == "/organizations/org1/billing/ledger"
+
+
+# === Agents Tests ===
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_list_agents():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents"
+    ).respond(
+        status_code=200,
+        json=[
+            {
+                "name": "My Agent",
+                "description": "An agent that queries the database",
+                "dbid": "a1b2c3d4",
+                "is_private": False,
+                "is_mcp_enabled": False,
+                "tools": [
+                    {
+                        "name": "query-tool",
+                        "type": "text2cypher",
+                        "description": "Converts natural language to Cypher queries",
+                        "enabled": True,
+                    }
+                ],
+                "enabled": True,
+            }
+        ],
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.list_agents(org_id, proj_id)
+        assert len(resp) == 1
+        assert isinstance(resp[0], models.ListAgentResponse)
+        assert resp[0].name == "My Agent"
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_create_agent():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents"
+    ).respond(
+        status_code=201,
+        json={
+            "id": agent_id,
+            "project_id": proj_id,
+            "organization_id": org_id,
+            "name": "My Agent",
+            "description": "An agent that queries the database",
+            "dbid": "a1b2c3d4",
+            "tools": [{"name": "query-tool", "type": "text2cypher", "enabled": True}],
+            "is_private": False,
+            "enabled": True,
+        },
+    )
+
+    req = models.CreateAgentRequest(
+        name="My Agent",
+        description="An agent that queries the database",
+        dbid="a1b2c3d4",
+        is_private=False,
+        tools=[models.AgentTool(name="query-tool", type="text2cypher", enabled=True)],
+    )
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.create_agent(org_id, proj_id, req)
+        assert isinstance(resp, models.AgentDetails)
+        assert resp.id == agent_id
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_get_agent():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/{agent_id}"
+    ).respond(
+        status_code=200,
+        json={
+            "id": agent_id,
+            "name": "My Agent",
+            "description": "An agent that queries the database",
+            "dbid": "a1b2c3d4",
+            "is_private": False,
+            "tools": [{"name": "query-tool", "type": "text2cypher", "enabled": True}],
+            "enabled": True,
+        },
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.get_agent(org_id, proj_id, agent_id)
+        assert isinstance(resp, models.GetAgentResponse)
+        assert resp.id == agent_id
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_update_agent():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    respx.put(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/{agent_id}"
+    ).respond(
+        status_code=200,
+        json={
+            "id": agent_id,
+            "project_id": proj_id,
+            "organization_id": org_id,
+            "name": "My Updated Agent",
+            "description": "Updated description",
+            "dbid": "a1b2c3d4",
+            "tools": [{"name": "query-tool", "type": "text2cypher", "enabled": True}],
+            "is_private": False,
+            "enabled": True,
+        },
+    )
+
+    req = models.CreateAgentRequest(
+        name="My Updated Agent",
+        description="Updated description",
+        dbid="a1b2c3d4",
+        is_private=False,
+        tools=[models.AgentTool(name="query-tool", type="text2cypher", enabled=True)],
+    )
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.update_agent(org_id, proj_id, agent_id, req)
+        assert isinstance(resp, models.AgentDetails)
+        assert resp.name == "My Updated Agent"
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_delete_agent():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    respx.delete(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/{agent_id}"
+    ).respond(status_code=202, json={})
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.delete_agent(org_id, proj_id, agent_id)
+        assert resp == {}
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_invoke_agent():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/{agent_id}/invoke"
+    ).respond(
+        status_code=200,
+        json={
+            "id": "inv-123",
+            "type": "message",
+            "role": "assistant",
+            "content": [{"type": "text", "text": "Here are the movies..."}],
+            "end_reason": "end_turn",
+            "status": "completed",
+            "usage": {"request_tokens": 10, "response_tokens": 20, "total_tokens": 30},
+        },
+    )
+
+    req = models.InvokeAgentRequest(input="What movies are in the database?")
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.invoke_agent(org_id, proj_id, agent_id, req)
+        assert isinstance(resp, models.InvokeAgentResponse)
+        assert resp.id == "inv-123"
+        assert resp.content[0].text == "Here are the movies..."

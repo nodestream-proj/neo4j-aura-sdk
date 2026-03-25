@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel
 
@@ -305,6 +305,7 @@ class IpFilterWithStatus(IpFilter):
 class CreateImportJobRequest(BaseModel):
     importModelId: str
     auraCredentials: Optional[dict] = None
+    importConfig: Optional[dict] = None
 
 
 class ImportExitStatus(BaseModel):
@@ -587,3 +588,105 @@ class UsageResponse(BaseModel):
 class LedgerResponse(BaseModel):
     data: Optional[List[LedgerData]] = None
     links: Optional[Links] = None
+
+
+# --- Agents Models (v2beta1) ---
+class AgentInputMessage(BaseModel):
+    role: str
+    content: str
+
+
+class AgentTool(BaseModel):
+    name: str
+    type: str
+    enabled: Optional[bool] = None
+    description: Optional[str] = None
+    parameters: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None
+    extra_params: Optional[Dict[str, Any]] = None
+
+
+class CreateAgentRequest(BaseModel):
+    name: str
+    description: str
+    dbid: str
+    is_private: bool
+    tools: List[AgentTool]
+    system_prompt: Optional[str] = None
+    is_mcp_enabled: Optional[bool] = None
+    enabled: Optional[bool] = None
+
+
+class ListAgentResponse(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    created_by: Optional[str] = None
+    project_id: Optional[str] = None
+    organization_id: Optional[str] = None
+    system_prompt: Optional[str] = None
+    dbid: Optional[str] = None
+    is_private: Optional[bool] = None
+    is_mcp_enabled: Optional[bool] = None
+    tools: Optional[List[AgentTool]] = None
+    enabled: Optional[bool] = None
+
+
+class GetAgentResponse(BaseModel):
+    id: Optional[str] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    created_by: Optional[str] = None
+    project_id: Optional[str] = None
+    organization_id: Optional[str] = None
+    system_prompt: Optional[str] = None
+    dbid: Optional[str] = None
+    is_private: Optional[bool] = None
+    is_mcp_enabled: Optional[bool] = None
+    tools: Optional[List[AgentTool]] = None
+    enabled: Optional[bool] = None
+
+
+class AgentDetails(GetAgentResponse):
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    endpoint_link: Optional[str] = None
+    avatar_color: Optional[str] = None
+    avatar_icon: Optional[str] = None
+
+
+class InvokeAgentRequest(BaseModel):
+    input: Union[str, List[AgentInputMessage]]
+
+
+class InvokeAgentContentBlock(BaseModel):
+    type: Optional[str] = None
+    text: Optional[str] = None
+    thinking: Optional[str] = None
+    id: Optional[str] = None
+    name: Optional[str] = None
+    input: Optional[Dict[str, Any]] = None
+    output: Optional[Dict[str, Any]] = None
+    tool_use_id: Optional[str] = None
+
+
+class InvokeAgentError(BaseModel):
+    message: Optional[str] = None
+    type: Optional[str] = None
+    status_code: Optional[int] = None
+
+
+class InvokeAgentUsage(BaseModel):
+    request_tokens: Optional[int] = None
+    response_tokens: Optional[int] = None
+    total_tokens: Optional[int] = None
+
+
+class InvokeAgentResponse(BaseModel):
+    id: Optional[str] = None
+    type: Optional[str] = None
+    role: Optional[str] = None
+    content: Optional[List[InvokeAgentContentBlock]] = None
+    end_reason: Optional[str] = None
+    status: Optional[str] = None
+    error: Optional[InvokeAgentError] = None
+    usage: Optional[InvokeAgentUsage] = None

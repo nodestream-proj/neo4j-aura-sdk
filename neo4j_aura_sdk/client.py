@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from .models import (
     ActivityFeedResponse,
     ActivityLog,
+    AgentDetails,
     AuraApiAuthorizationException,
     AuraApiBadRequestException,
     AuraApiException,
@@ -19,6 +20,7 @@ from .models import (
     AuraError,
     AuraErrors,
     AuthResponse,
+    CreateAgentRequest,
     CreateDeploymentRequest,
     CreateImportJobRequest,
     CustomerManagedKey,
@@ -30,6 +32,7 @@ from .models import (
     DeploymentResponse,
     DeploymentsResponse,
     DeploymentTokenResponse,
+    GetAgentResponse,
     ImportJobEnvelope,
     InstancePatchRequest,
     InstanceRequest,
@@ -37,10 +40,13 @@ from .models import (
     InstanceSizingRequest,
     InstanceSizingResponse,
     InstancesResponse,
+    InvokeAgentRequest,
+    InvokeAgentResponse,
     IpFilter,
     IpFilterWithStatus,
     JobIdEnvelope,
     LedgerResponse,
+    ListAgentResponse,
     OrganizationDetailsEnvelope,
     ProjectsResponse,
     ServerDatabasesResponse,
@@ -393,6 +399,18 @@ class AuraClient:
             "PATCH", path, model=model, body=body, api_version=api_version
         )
 
+    async def _put(
+        self,
+        path: str,
+        body: BaseModel,
+        model: Type[BaseModel] | None = None,
+        api_version: str | None = None,
+    ):
+        """Perform a PUT request to the API. See `_get` for parameter semantics."""
+        return await self._request(
+            "PUT", path, model=model, body=body, api_version=api_version
+        )
+
     async def _request(
         self,
         method: str,
@@ -416,7 +434,7 @@ class AuraClient:
         """
         token = await self._get_token()
         headers = {"Authorization": f"Bearer {token}"}
-        if method in ("POST", "PATCH"):
+        if method in ("POST", "PATCH", "PUT"):
             headers.update(
                 {"Content-Type": "application/json", "accept": "application/json"}
             )
@@ -799,7 +817,14 @@ class AuraClient:
             params=params,
         )
 
-    async def get_billing_ledger(self, organizationId: str, start: str, end: str):
+    async def get_billing_ledger(
+        self,
+        organizationId: str,
+        start: str,
+        end: str,
+        page_token: str = None,
+        page_limit: int = None,
+    ):
         """Get credit ledger for an organization (v2beta1).
 
         Args:
@@ -811,6 +836,10 @@ class AuraClient:
         """
         self._ensure_api_is_v2()
         params = {"start": start, "end": end}
+        if page_token:
+            params["page_token"] = page_token
+        if page_limit:
+            params["page_limit"] = page_limit
         return await self._get(
             f"organizations/{organizationId}/billing/ledger",
             model=LedgerResponse,
@@ -1135,13 +1164,85 @@ class AuraClient:
         if page_token:
             params["page_token"] = page_token
 
-        if params:
-            query_string = "&".join(f"{k}={v}" for k, v in params.items())
-            path += f"?{query_string}"
-
         result = await self._get(
-            path, model=ActivityFeedResponse, api_version="v2beta1"
+            path,
+            model=ActivityFeedResponse,
+            api_version="v2beta1",
+            params=params if params else None,
         )
         if result and result.data:
             result.data = [ActivityLog(**item) for item in result.data]
         return result
+
+    # --- Agents Methods (v2beta1) ---
+
+    async def list_agents(self, organizationId: str, projectId: str):
+        """List all agents for a project (v2beta1)."""
+        self._ensure_api_is_v2()
+        items = await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/agents",
+            model=None,
+            api_version="v2beta1",
+        )
+        return [ListAgentResponse(**item) for item in items]
+
+    async def create_agent(
+        self, organizationId: str, projectId: str, details: CreateAgentRequest
+    ):
+        """Create an agent for a project (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/agents",
+            body=details,
+            model=AgentDetails,
+            api_version="v2beta1",
+        )
+
+    async def get_agent(self, organizationId: str, projectId: str, agentId: str):
+        """Get a specific agent by ID (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/agents/{agentId}",
+            model=GetAgentResponse,
+            api_version="v2beta1",
+        )
+
+    async def update_agent(
+        self,
+        organizationId: str,
+        projectId: str,
+        agentId: str,
+        details: CreateAgentRequest,
+    ):
+        """Update an existing agent (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._put(
+            f"organizations/{organizationId}/projects/{projectId}/agents/{agentId}",
+            body=details,
+            model=AgentDetails,
+            api_version="v2beta1",
+        )
+
+    async def delete_agent(self, organizationId: str, projectId: str, agentId: str):
+        """Delete an agent by ID (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/projects/{projectId}/agents/{agentId}",
+            api_version="v2beta1",
+        )
+
+    async def invoke_agent(
+        self,
+        organizationId: str,
+        projectId: str,
+        agentId: str,
+        details: InvokeAgentRequest,
+    ):
+        """Invoke an agent with input text or chat messages (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/agents/{agentId}/invoke",
+            body=details,
+            model=InvokeAgentResponse,
+            api_version="v2beta1",
+        )

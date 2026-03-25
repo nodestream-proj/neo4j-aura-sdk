@@ -29,6 +29,8 @@ tags:
     description: Relates to Activity Feed.
   - name: billing
     description: Relates to Billing.
+  - name: agents
+    description: Relates to Aura Agents.
 
 servers:
   - url: "https://api.neo4j.io/v2beta1"
@@ -955,6 +957,312 @@ paths:
         "500":
           description: Internal server error (ledger load failed)
 
+  "/organizations/{organizationId}/projects/{projectId}/agents":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+    get:
+      summary: List agents
+      tags:
+        - agents
+      operationId: list-agents
+      description: Returns a list of agents for the specified project.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ListAgentResponse"
+              examples:
+                List agents:
+                  value:
+                    - name: My Agent
+                      description: An agent that queries the database
+                      dbid: a1b2c3d4
+                      is_private: false
+                      is_mcp_enabled: false
+                      tools:
+                        - name: query-tool
+                          type: text2cypher
+                          description: Converts natural language to Cypher queries
+                          enabled: true
+                      enabled: true
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
+    post:
+      summary: Create an agent
+      tags:
+        - agents
+      operationId: create-agent
+      description: Creates a new agent for the specified project.
+      requestBody:
+        description: The agent creation request.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAgentRequest"
+            examples:
+              Create agent with text2cypher tool:
+                value:
+                  name: My Agent
+                  description: An agent that queries the database
+                  dbid: a1b2c3d4
+                  is_private: false
+                  tools:
+                    - name: query-tool
+                      type: text2cypher
+                      description: Converts natural language to Cypher queries
+                      enabled: true
+              Create agent with cypherTemplate tool:
+                value:
+                  name: Template Agent
+                  description: An agent using a Cypher template
+                  dbid: a1b2c3d4
+                  is_private: true
+                  tools:
+                    - name: find-movies
+                      type: cypherTemplate
+                      description: Finds movies by title
+                      enabled: true
+                      config:
+                        template: "MATCH (m:Movie) WHERE m.title CONTAINS $title RETURN m"
+                        parameters:
+                          - name: title
+                            data_type: string
+                            description: The movie title to search for
+              Create agent with similaritySearch tool:
+                value:
+                  name: Search Agent
+                  description: An agent using vector similarity search
+                  dbid: a1b2c3d4
+                  is_private: false
+                  tools:
+                    - name: similarity-search
+                      type: similaritySearch
+                      description: Performs vector similarity search
+                      enabled: true
+                      config:
+                        provider: openai
+                        model: text-embedding-ada-002
+                        index: my-vector-index
+                        top_k: 10
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentDetails"
+              examples:
+                Created agent:
+                  value:
+                    id: f47ac10b-58cc-4372-a567-0e02b2c3d479
+                    project_id: f607bebe-0cc0-4166-b60c-b4eed69ee7ee
+                    name: My Agent
+                    description: An agent that queries the database
+                    system_prompt: ""
+                    dbid: a1b2c3d4
+                    created_by: user-123
+                    created_at: "2026-01-15T10:30:00Z"
+                    updated_at: "2026-01-15T10:30:00Z"
+                    tools:
+                      - name: query-tool
+                        type: text2cypher
+                        description: Converts natural language to Cypher queries
+                        extra_params: {}
+                        enabled: true
+                    is_private: false
+                    is_mcp_enabled: false
+                    organization_id: c4ea09e5-44b2-418e-9aae-0c98c37d1f38
+                    avatar_color: ""
+                    avatar_icon: ""
+                    enabled: true
+        "400":
+          description: Bad request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+
+  "/organizations/{organizationId}/projects/{projectId}/agents/{agentId}":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+      - $ref: "#/components/parameters/agentId"
+    get:
+      summary: Get an agent
+      tags:
+        - agents
+      operationId: get-agent
+      description: Returns the details of a specific agent.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetAgentResponse"
+              examples:
+                Get agent:
+                  value:
+                    id: f47ac10b-58cc-4372-a567-0e02b2c3d479
+                    name: My Agent
+                    description: An agent that queries the database
+                    dbid: a1b2c3d4
+                    is_private: false
+                    is_mcp_enabled: false
+                    tools:
+                      - name: query-tool
+                        type: text2cypher
+                        description: Converts natural language to Cypher queries
+                        enabled: true
+                    enabled: true
+        "400":
+          description: Bad request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Agent not found
+        "500":
+          description: Internal server error
+    put:
+      summary: Update an agent
+      tags:
+        - agents
+      operationId: update-agent
+      description: Updates an existing agent's configuration.
+      requestBody:
+        description: The agent update request.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAgentRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentDetails"
+              examples:
+                Updated agent:
+                  value:
+                    id: f47ac10b-58cc-4372-a567-0e02b2c3d479
+                    project_id: f607bebe-0cc0-4166-b60c-b4eed69ee7ee
+                    name: My Updated Agent
+                    description: An updated agent description
+                    system_prompt: You are a helpful assistant
+                    dbid: a1b2c3d4
+                    created_by: user-123
+                    created_at: "2026-01-15T10:30:00Z"
+                    updated_at: "2026-01-16T14:00:00Z"
+                    tools:
+                      - name: query-tool
+                        type: text2cypher
+                        description: Converts natural language to Cypher queries
+                        extra_params: {}
+                        enabled: true
+                    is_private: false
+                    is_mcp_enabled: false
+                    organization_id: c4ea09e5-44b2-418e-9aae-0c98c37d1f38
+                    avatar_color: ""
+                    avatar_icon: ""
+                    enabled: true
+        "400":
+          description: Bad request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Agent not found
+        "500":
+          description: Internal server error
+    delete:
+      summary: Delete an agent
+      tags:
+        - agents
+      operationId: delete-agent
+      description: Deletes an agent by its ID.
+      responses:
+        "202":
+          description: Accepted
+        "400":
+          description: Bad request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Agent not found
+        "500":
+          description: Internal server error
+
+  "/organizations/{organizationId}/projects/{projectId}/agents/{agentId}/invoke":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+      - $ref: "#/components/parameters/agentId"
+    post:
+      summary: Invoke an agent
+      tags:
+        - agents
+      operationId: invoke-agent
+      description: Invokes an agent with the provided input. The input can be a string or an array of messages.
+      requestBody:
+        description: The agent invocation request.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvokeAgentRequest"
+            examples:
+              Invoke with string input:
+                value:
+                  input: "What movies are in the database?"
+              Invoke with message array:
+                value:
+                  input:
+                    - role: user
+                      content: "What movies are in the database?"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvokeAgentResponse"
+              examples:
+                Successful invocation:
+                  value:
+                    id: inv-12345
+                    type: message
+                    role: assistant
+                    content:
+                      - type: text
+                        text: "Here are the movies in the database..."
+                    end_reason: end_turn
+                    status: completed
+                    usage:
+                      request_tokens: 150
+                      response_tokens: 200
+                      total_tokens: 350
+        "400":
+          description: Bad request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden - agent is disabled or private
+        "404":
+          description: Agent not found
+        "500":
+          description: Internal server error
+
 components:
   schemas:
     Links:
@@ -1658,6 +1966,430 @@ components:
           format: double
           example: 10000
 
+    Tool:
+      oneOf:
+        - $ref: "#/components/schemas/CypherTemplateTool"
+        - $ref: "#/components/schemas/SimilaritySearchTool"
+        - $ref: "#/components/schemas/Text2CypherTool"
+
+    CypherTemplateTool:
+      type: object
+      description: A tool that uses a Cypher template
+      required:
+        - type
+        - name
+        - parameters
+      properties:
+        type:
+          type: string
+          enum:
+            - cypherTemplate
+        name:
+          type: string
+        enabled:
+          type: boolean
+        description:
+          type: string
+        parameters:
+          type: object
+          required:
+            - template
+          properties:
+            template:
+              type: string
+            parameters:
+              type: array
+              items:
+                $ref: "#/components/schemas/CypherParameterConfig"
+
+    SimilaritySearchTool:
+      type: object
+      description: A tool that performs vector similarity search
+      required:
+        - type
+        - name
+        - parameters
+      properties:
+        type:
+          type: string
+          enum:
+            - similaritySearch
+        name:
+          type: string
+        enabled:
+          type: boolean
+        description:
+          type: string
+        parameters:
+          type: object
+          required:
+            - index
+          properties:
+            provider:
+              type: string
+            model:
+              type: string
+            index:
+              type: string
+            top_k:
+              type: integer
+
+    Text2CypherTool:
+      type: object
+      description: A tool that converts natural language to Cypher queries
+      required:
+        - type
+        - name
+      properties:
+        type:
+          type: string
+          enum:
+            - text2cypher
+        name:
+          type: string
+        enabled:
+          type: boolean
+        description:
+          type: string
+
+    CypherParameterConfig:
+      type: object
+      description: A parameter for a Cypher template
+      required:
+        - name
+        - data_type
+        - description
+      properties:
+        name:
+          type: string
+          description: The name of the parameter
+        data_type:
+          type: string
+          description: The data type of the parameter
+          enum:
+            - string
+            - number
+            - boolean
+            - integer
+        description:
+          type: string
+          description: A description of the parameter
+          maxLength: 2000
+
+    CreateAgentRequest:
+      type: object
+      description: Request body for creating or updating an agent
+      required:
+        - name
+        - description
+        - dbid
+        - is_private
+        - tools
+      properties:
+        name:
+          type: string
+          description: The name of the agent
+          maxLength: 100
+        description:
+          type: string
+          description: A description of the agent
+        system_prompt:
+          type: string
+          description: An optional system prompt for the agent
+        dbid:
+          type: string
+          description: The ID of the Aura database instance the agent is connected to
+        is_private:
+          type: boolean
+          description: Whether the agent is private
+        is_mcp_enabled:
+          type: boolean
+          description: Whether MCP is enabled for the agent
+        tools:
+          type: array
+          description: The tools available to the agent
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/Tool"
+        enabled:
+          type: boolean
+          description: Whether the agent is enabled
+
+    ListAgentResponse:
+      type: object
+      description: Agent data returned in list responses
+      properties:
+        name:
+          type: string
+          description: The name of the agent
+        description:
+          type: string
+          description: A description of the agent
+        created_by:
+          type: string
+          description: The user who created the agent
+        project_id:
+          type: string
+          description: The project ID the agent belongs to
+        organization_id:
+          type: string
+          description: The organization ID the agent belongs to
+        system_prompt:
+          type: string
+          description: The system prompt for the agent
+        dbid:
+          type: string
+          description: The ID of the database instance
+        is_private:
+          type: boolean
+          description: Whether the agent is private
+        is_mcp_enabled:
+          type: boolean
+          description: Whether MCP is enabled
+        tools:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tool"
+        enabled:
+          type: boolean
+          description: Whether the agent is enabled
+
+    GetAgentResponse:
+      type: object
+      description: Agent data returned in get response
+      properties:
+        id:
+          type: string
+          description: The unique identifier of the agent
+        name:
+          type: string
+          description: The name of the agent
+        description:
+          type: string
+          description: A description of the agent
+        created_by:
+          type: string
+          description: The user who created the agent
+        project_id:
+          type: string
+          description: The project ID the agent belongs to
+        organization_id:
+          type: string
+          description: The organization ID the agent belongs to
+        system_prompt:
+          type: string
+          description: The system prompt for the agent
+        dbid:
+          type: string
+          description: The ID of the database instance
+        is_private:
+          type: boolean
+          description: Whether the agent is private
+        is_mcp_enabled:
+          type: boolean
+          description: Whether MCP is enabled
+        tools:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tool"
+        enabled:
+          type: boolean
+          description: Whether the agent is enabled
+
+    AgentDetails:
+      type: object
+      description: Full agent details returned after create/update operations
+      properties:
+        id:
+          type: string
+          description: The unique identifier of the agent
+        project_id:
+          type: string
+          description: The project ID the agent belongs to
+        name:
+          type: string
+          description: The name of the agent
+        description:
+          type: string
+          description: A description of the agent
+        system_prompt:
+          type: string
+          description: The system prompt for the agent
+        dbid:
+          type: string
+          description: The ID of the database instance
+        created_by:
+          type: string
+          description: The user who created the agent
+        created_at:
+          type: string
+          format: date-time
+          description: The timestamp when the agent was created
+        updated_at:
+          type: string
+          format: date-time
+          description: The timestamp when the agent was last updated
+        tools:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              type:
+                type: string
+                enum:
+                  - text2cypher
+                  - cypherTemplate
+                  - similaritySearch
+              description:
+                type: string
+              extra_params:
+                type: object
+                properties:
+                  template:
+                    type: string
+                  parameters:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CypherParameterConfig"
+                  provider:
+                    type: string
+                  model:
+                    type: string
+                  index:
+                    type: string
+                  top_k:
+                    type: integer
+              enabled:
+                type: boolean
+        is_private:
+          type: boolean
+          description: Whether the agent is private
+        is_mcp_enabled:
+          type: boolean
+          description: Whether MCP is enabled
+        organization_id:
+          type: string
+          description: The organization ID the agent belongs to
+        endpoint_link:
+          type: string
+          description: The public endpoint link for the agent
+        avatar_color:
+          type: string
+          description: The avatar color of the agent
+        avatar_icon:
+          type: string
+          description: The avatar icon of the agent
+        enabled:
+          type: boolean
+          description: Whether the agent is enabled
+
+    InvokeAgentRequest:
+      type: object
+      description: Request body for invoking an agent
+      required:
+        - input
+      properties:
+        input:
+          description: |-
+            The input to the agent. Can be either a string or an array of message objects.
+            When a string, it is treated as a single user message.
+            When an array, each element must have a role and content field.
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: object
+                required:
+                  - role
+                  - content
+                properties:
+                  role:
+                    type: string
+                    description: The role of the message sender
+                  content:
+                    type: string
+                    description: The content of the message
+
+    InvokeAgentResponse:
+      type: object
+      description: Response from invoking an agent
+      properties:
+        id:
+          type: string
+          description: The invocation ID
+        type:
+          type: string
+          description: The response type
+          enum:
+            - message
+            - error
+        role:
+          type: string
+          description: The role of the responder
+        content:
+          type: array
+          description: The response content blocks
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                description: The content block type
+                enum:
+                  - text
+                  - thinking
+                  - tool_use
+                  - tool_result
+              text:
+                type: string
+                description: Text content (for text type)
+              thinking:
+                type: string
+                description: Thinking content (for thinking type)
+              id:
+                type: string
+                description: The tool use ID (for tool_use type)
+              name:
+                type: string
+                description: The tool name (for tool_use type)
+              input:
+                type: object
+                description: The tool input (for tool_use type)
+              output:
+                type: object
+                description: The tool output (for tool_result type)
+              tool_use_id:
+                type: string
+                description: The referenced tool use ID (for tool_result type)
+        end_reason:
+          type: string
+          description: The reason the response ended
+        status:
+          type: string
+          description: The status of the invocation
+        error:
+          type: object
+          description: Error details (only if type is error)
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+            status_code:
+              type: integer
+        usage:
+          type: object
+          description: Token usage information
+          properties:
+            request_tokens:
+              type: integer
+            response_tokens:
+              type: integer
+            total_tokens:
+              type: integer
+
   securitySchemes:
     oauthToken:
       type: oauth2
@@ -1702,6 +2434,13 @@ components:
       schema:
         type: string
       description: Import job ID
+      required: true
+    agentId:
+      name: agentId
+      in: path
+      schema:
+        type: string
+      description: Agent ID
       required: true
     deploymentId:
       name: deploymentId
