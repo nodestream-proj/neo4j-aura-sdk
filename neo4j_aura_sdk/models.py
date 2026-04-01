@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 # --- v1beta5 GraphQL Data API models ---
@@ -596,14 +596,42 @@ class AgentInputMessage(BaseModel):
     content: str
 
 
+class SimilaritySearchToolParameters(BaseModel):
+    provider: str
+    model: str
+    index: str
+    top_k: Optional[int] = None
+    dimension: Optional[int] = None
+
+
 class AgentTool(BaseModel):
     name: str
     type: str
     enabled: Optional[bool] = None
     description: Optional[str] = None
-    parameters: Optional[Dict[str, Any]] = None
+    parameters: Optional[Union[SimilaritySearchToolParameters, Dict[str, Any]]] = None
     config: Optional[Dict[str, Any]] = None
     extra_params: Optional[Dict[str, Any]] = None
+
+    @model_validator(mode="after")
+    def validate_similarity_search_tool(self):
+        if self.type != "similaritySearch":
+            return self
+
+        # Backward compatibility: older payloads used `config`.
+        if self.parameters is None and self.config is not None:
+            self.parameters = self.config
+            self.config = None
+
+        if self.parameters is None:
+            raise ValueError(
+                "similaritySearch tools require `parameters` with provider, model, and index"
+            )
+
+        if isinstance(self.parameters, dict):
+            self.parameters = SimilaritySearchToolParameters(**self.parameters)
+
+        return self
 
 
 class CreateAgentRequest(BaseModel):

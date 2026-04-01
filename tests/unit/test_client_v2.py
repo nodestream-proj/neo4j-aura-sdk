@@ -1,5 +1,6 @@
 import pytest
 import respx
+from pydantic import ValidationError
 
 from neo4j_aura_sdk import AuraClient, models
 
@@ -1028,3 +1029,47 @@ async def test_invoke_agent():
         assert isinstance(resp, models.InvokeAgentResponse)
         assert resp.id == "inv-123"
         assert resp.content[0].text == "Here are the movies..."
+
+
+def test_similarity_search_tool_requires_parameters():
+    with pytest.raises(ValidationError):
+        models.AgentTool(name="similarity-search", type="similaritySearch")
+
+
+def test_similarity_search_tool_accepts_parameters():
+    tool = models.AgentTool(
+        name="similarity-search",
+        type="similaritySearch",
+        parameters={
+            "provider": "openai",
+            "model": "text-embedding-3-small",
+            "index": "my-index",
+            "top_k": 10,
+            "dimension": 1536,
+        },
+    )
+
+    assert isinstance(tool.parameters, models.SimilaritySearchToolParameters)
+    assert tool.parameters.provider == "openai"
+    assert tool.parameters.model == "text-embedding-3-small"
+    assert tool.parameters.index == "my-index"
+    assert tool.parameters.top_k == 10
+    assert tool.parameters.dimension == 1536
+
+
+def test_similarity_search_tool_legacy_config_is_normalized():
+    tool = models.AgentTool(
+        name="similarity-search",
+        type="similaritySearch",
+        config={
+            "provider": "openai",
+            "model": "text-embedding-3-small",
+            "index": "my-index",
+        },
+    )
+
+    assert isinstance(tool.parameters, models.SimilaritySearchToolParameters)
+    assert tool.parameters.provider == "openai"
+    assert tool.parameters.model == "text-embedding-3-small"
+    assert tool.parameters.index == "my-index"
+    assert tool.config is None

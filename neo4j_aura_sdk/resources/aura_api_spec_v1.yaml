@@ -789,6 +789,8 @@ paths:
 
         As DELETE is an idempotent HTTP method it is safe to retry or send duplicate requests. However, the server will only reply at most once with a successful deletion response (202 Accepted) and will respond with error status codes for any other requests (most likely with 404 Not Found). We suggest treating either 202 or 404 as signs of completion when retrying requests to this endpoint.
 
+        Warning: There is no way to recover data from a deleted Aura instance.
+
         Note for Virtual Dedicated Cloud customers: In the example schema below, the `enterprise-db` type is used to represent Virtual Dedicated Cloud.
     patch:
       summary: Edits the instance configuration

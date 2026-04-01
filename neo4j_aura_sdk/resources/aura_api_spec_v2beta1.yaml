@@ -831,6 +831,7 @@ paths:
       description: |
         Returns usage rows for a given organization and time range.
         The `start` and `end` parameters are required and must be RFC3339 timestamps (e.g., `2024-01-02T00:00:00Z`).
+        **Note:** This endpoint is in private beta. If you want to use this endpoint, please contact your account representative.
       operationId: getUsage
       tags:
         - billing
@@ -897,6 +898,7 @@ paths:
       description: |
         Returns credit ledger rows for a given organization and time range.
         The `start` and `end` parameters are required and must be RFC3339 timestamps (e.g., `2024-01-02T00:00:00Z`).
+        **Note:** This endpoint is in private beta. If you want to use this endpoint, please contact your account representative.
       operationId: getLedger
       tags:
         - billing
@@ -2024,6 +2026,8 @@ components:
           type: object
           required:
             - index
+            - provider
+            - model
           properties:
             provider:
               type: string
@@ -2032,6 +2036,8 @@ components:
             index:
               type: string
             top_k:
+              type: integer
+            dimension:
               type: integer
 
     Text2CypherTool:
