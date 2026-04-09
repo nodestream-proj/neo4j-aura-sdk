@@ -794,6 +794,7 @@ class AuraClient:
         end: str,
         page_token: str = None,
         page_limit: int = None,
+        project_id: list[str] = None,
     ):
         """Get billed usage for an organization (v2beta1).
 
@@ -810,6 +811,8 @@ class AuraClient:
             params["page_token"] = page_token
         if page_limit:
             params["page_limit"] = page_limit
+        if project_id:
+            params["project_id"] = project_id
         return await self._get(
             f"organizations/{organizationId}/billing/usage",
             model=UsageResponse,

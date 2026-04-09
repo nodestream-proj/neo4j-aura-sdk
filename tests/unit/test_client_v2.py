@@ -760,10 +760,44 @@ async def test_get_billing_usage():
     async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
         resp = await client.get_billing_usage(org_id, start, end)
         assert resp.data[0].organization_id == org_id
+        assert resp.data[0].project_id == proj_id
         assert resp.data[0].consumed_quantity == 100.5
         assert resp.data[0].list_cost == 250.75
         assert resp.links.self == "/organizations/org1/billing/usage"
         assert isinstance(resp.data[0], models.UsageData)
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_get_billing_usage_with_project_filter():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    start = "2024-01-01T00:00:00Z"
+    end = "2024-01-31T23:59:59Z"
+    project_ids = [
+        "550e8400-e29b-41d4-a716-446655440000",
+        "5f8f4f31-2a8a-4f84-8e4d-89b67c3f67c4",
+    ]
+
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/billing/usage",
+        params={"start": start, "end": end, "project_id": project_ids},
+    ).respond(
+        status_code=200,
+        json={"data": [], "links": {"self": "/organizations/org1/billing/usage"}},
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.get_billing_usage(
+            org_id,
+            start,
+            end,
+            project_id=project_ids,
+        )
+        assert resp.links.self == "/organizations/org1/billing/usage"
 
 
 @respx.mock
@@ -853,9 +887,12 @@ async def test_list_agents():
         status_code=200,
         json=[
             {
+                "id": agent_id,
                 "name": "My Agent",
                 "description": "An agent that queries the database",
                 "dbid": "a1b2c3d4",
+                "created_at": "2025-01-01T00:00:00Z",
+                "updated_at": "2025-01-01T00:00:00Z",
                 "is_private": False,
                 "is_mcp_enabled": False,
                 "tools": [
@@ -866,6 +903,9 @@ async def test_list_agents():
                         "enabled": True,
                     }
                 ],
+                "endpoint_link": "https://example.com/agent",
+                "avatar_color": "#4C8EDA",
+                "avatar_icon": "robot",
                 "enabled": True,
             }
         ],
@@ -875,7 +915,13 @@ async def test_list_agents():
         resp = await client.list_agents(org_id, proj_id)
         assert len(resp) == 1
         assert isinstance(resp[0], models.ListAgentResponse)
+        assert resp[0].id == agent_id
         assert resp[0].name == "My Agent"
+        assert resp[0].created_at == "2025-01-01T00:00:00Z"
+        assert resp[0].updated_at == "2025-01-01T00:00:00Z"
+        assert resp[0].endpoint_link == "https://example.com/agent"
+        assert resp[0].avatar_color == "#4C8EDA"
+        assert resp[0].avatar_icon == "robot"
 
 
 @respx.mock

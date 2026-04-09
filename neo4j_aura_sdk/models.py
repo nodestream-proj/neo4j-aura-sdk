@@ -646,6 +646,7 @@ class CreateAgentRequest(BaseModel):
 
 
 class ListAgentResponse(BaseModel):
+    id: Optional[str] = None
     name: Optional[str] = None
     description: Optional[str] = None
     created_by: Optional[str] = None
@@ -653,9 +654,14 @@ class ListAgentResponse(BaseModel):
     organization_id: Optional[str] = None
     system_prompt: Optional[str] = None
     dbid: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
     is_private: Optional[bool] = None
     is_mcp_enabled: Optional[bool] = None
     tools: Optional[List[AgentTool]] = None
+    endpoint_link: Optional[str] = None
+    avatar_color: Optional[str] = None
+    avatar_icon: Optional[str] = None
     enabled: Optional[bool] = None
 
 
