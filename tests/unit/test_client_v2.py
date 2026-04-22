@@ -1119,3 +1119,151 @@ def test_similarity_search_tool_legacy_config_is_normalized():
     assert tool.parameters.model == "text-embedding-3-small"
     assert tool.parameters.index == "my-index"
     assert tool.config is None
+
+
+# === Organization Users Tests ===
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_list_organization_users():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    users = [
+        {
+            "user_id": "user1",
+            "email": "alice@example.com",
+            "organization_roles": ["admin"],
+            "exempt_from_automatic_removal": True,
+            "mfa_enrollment_status": "enrolled",
+            "mfa_enrolled_methods": [
+                {"id": "totp", "enrolled_at": "2024-01-01T00:00:00Z"}
+            ],
+            "last_activity_at": "2024-04-22T10:00:00Z",
+        },
+        {
+            "user_id": "user2",
+            "email": "bob@example.com",
+            "organization_roles": ["member"],
+            "exempt_from_automatic_removal": False,
+            "mfa_enrollment_status": "not_enrolled",
+            "mfa_enrolled_methods": [],
+            "last_activity_at": "2024-04-20T15:30:00Z",
+        },
+    ]
+
+    respx.get(f"{baseUrl}v2beta1/organizations/{org_id}/users").respond(
+        status_code=200, json=users
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.list_organization_users(org_id)
+        assert isinstance(resp, list)
+        assert len(resp) == 2
+        assert isinstance(resp[0], models.OrganizationUser)
+        assert resp[0].user_id == "user1"
+        assert resp[0].email == "alice@example.com"
+        assert resp[0].organization_roles == ["admin"]
+        assert resp[0].mfa_enrollment_status == "enrolled"
+        assert len(resp[0].mfa_enrolled_methods) == 1
+        assert resp[1].user_id == "user2"
+        assert resp[1].email == "bob@example.com"
+        assert resp[1].organization_roles == ["member"]
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_remove_organization_user():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    user_id = "user1"
+    respx.delete(f"{baseUrl}v2beta1/organizations/{org_id}/users/{user_id}").respond(
+        status_code=204
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.remove_organization_user(org_id, user_id)
+        # 204 No Content returns None as default
+        assert resp is None
+
+
+# === Agent Patch Tests ===
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_patch_agent():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    respx.patch(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/{agent_id}"
+    ).respond(
+        status_code=200,
+        json={
+            "id": agent_id,
+            "project_id": proj_id,
+            "organization_id": org_id,
+            "name": "My Patched Agent",
+            "description": "Original description",
+            "dbid": "a1b2c3d4",
+            "tools": [{"name": "query-tool", "type": "text2cypher", "enabled": True}],
+            "is_private": False,
+            "enabled": False,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-04-22T10:00:00Z",
+        },
+    )
+
+    patch_req = models.PatchAgentRequest(name="My Patched Agent", enabled=False)
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.patch_agent(org_id, proj_id, agent_id, patch_req)
+        assert isinstance(resp, models.AgentDetails)
+        assert resp.id == agent_id
+        assert resp.name == "My Patched Agent"
+        assert resp.enabled is False
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_patch_agent_partial_update():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    respx.patch(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/{agent_id}"
+    ).respond(
+        status_code=200,
+        json={
+            "id": agent_id,
+            "project_id": proj_id,
+            "organization_id": org_id,
+            "name": "Original Agent",
+            "description": "Updated description",
+            "dbid": "a1b2c3d4",
+            "tools": [{"name": "query-tool", "type": "text2cypher", "enabled": True}],
+            "is_private": False,
+            "enabled": True,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-04-22T10:00:00Z",
+        },
+    )
+
+    # Only update description, leaving other fields untouched
+    patch_req = models.PatchAgentRequest(description="Updated description")
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.patch_agent(org_id, proj_id, agent_id, patch_req)
+        assert isinstance(resp, models.AgentDetails)
+        assert resp.description == "Updated description"
+        assert resp.name == "Original Agent"  # Should remain unchanged
+        assert resp.enabled is True  # Should remain unchanged

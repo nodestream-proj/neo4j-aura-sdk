@@ -724,3 +724,77 @@ class InvokeAgentResponse(BaseModel):
     status: Optional[str] = None
     error: Optional[InvokeAgentError] = None
     usage: Optional[InvokeAgentUsage] = None
+
+
+# --- Organization User Models (v2beta1) ---
+class MfaEnrolledMethod(BaseModel):
+    id: str
+    enrolled_at: str
+
+
+class OrganizationUser(BaseModel):
+    user_id: str
+    email: str
+    organization_roles: List[str]
+    exempt_from_automatic_removal: bool
+    mfa_enrollment_status: str
+    mfa_enrolled_methods: Optional[List[MfaEnrolledMethod]] = None
+    last_activity_at: Optional[str] = None
+
+
+# --- Organization Details Model (v2beta1) ---
+class OrganizationDetails(BaseModel):
+    id: str
+    name: str
+
+
+# --- Project Details Model (v2beta1) ---
+class ProjectDetails(BaseModel):
+    id: str
+    name: str
+
+
+# --- Cypher Template Tool Models (v2beta1) ---
+class CypherParameterConfig(BaseModel):
+    name: str
+    data_type: str
+    description: str
+
+
+class CypherTemplateTool(BaseModel):
+    type: str = "cypherTemplate"
+    name: str
+    enabled: Optional[bool] = None
+    description: Optional[str] = None
+    parameters: Optional[Dict[str, Any]] = None
+    extra_params: Optional[Dict[str, Any]] = None
+
+
+# --- Text2Cypher Tool Model (v2beta1) ---
+class Text2CypherTool(BaseModel):
+    type: str = "text2cypher"
+    name: str
+    enabled: Optional[bool] = None
+    description: Optional[str] = None
+
+
+# --- Patch Agent Request Model (v2beta1) ---
+class PatchAgentRequest(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    system_prompt: Optional[str] = None
+    dbid: Optional[str] = None
+    is_private: Optional[bool] = None
+    is_mcp_enabled: Optional[bool] = None
+    tools: Optional[List[AgentTool]] = None
+    enabled: Optional[bool] = None
+
+
+# --- Billing Error Models (v2beta1) ---
+class BillingErrorItem(BaseModel):
+    error: str
+    message: str
+
+
+class BillingErrorResponse(BaseModel):
+    errors: List[BillingErrorItem]

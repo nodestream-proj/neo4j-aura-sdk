@@ -31,6 +31,8 @@ tags:
     description: Relates to Billing.
   - name: agents
     description: Relates to Aura Agents.
+  - name: users
+    description: Relates to Aura Users.
 
 servers:
   - url: "https://api.neo4j.io/v2beta1"
@@ -92,15 +94,81 @@ paths:
                       id: c4ea09e5-44b2-418e-9aae-0c98c37d1f38
                       name: MetaCortex
 
+  "/organizations/{organizationId}/users":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+    get:
+      summary: List all users in an organization
+      tags:
+        - organizations
+        - users
+      operationId: list-organization-users
+      description: |-
+        Returns a list of all users in an Aura Organization.
+        Requires the caller to be an organization admin.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/OrganizationUser"
+              examples:
+                List organization users:
+                  value:
+                    data:
+                      - user_id: 9aa289f6-1ccf-57c8-bc90-a0c3cecc82ac
+                        email: wiley.c@example.com
+                        organization_roles:
+                          - organization-admin
+                        exempt_from_automatic_removal: false
+                        mfa_enrollment_status: enrolled
+                        mfa_enrolled_methods:
+                          - id: totp
+                            enrolled_at: "2025-06-15T12:00:00.000000Z"
+                        last_activity_at: "2026-04-30T10:41:00.000000Z"
+        "401":
+          description: Unauthorized.
+        "403":
+          description: Forbidden. Caller is not an organization admin.
+        "404":
+          description: Organization not found.
+  "/organizations/{organizationId}/users/{user_id}":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/userId"
+    delete:
+      summary: Removes a user from an organization
+      tags:
+        - organizations
+      operationId: show-organization
+      description: Removes an Aura User from an Aura Organization.
+      responses:
+        "204":
+          description: No Content
+          content: {}
+        "400":
+          description: Bad request. User can not be removed.
+        "401":
+          description: Unauthorized. Do not have required permissions in organization.
+        "403":
+          description: Forbidden.
+
   "/organizations/{organizationId}/projects":
     parameters:
       - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/status"
     get:
       summary: List projects
       tags:
         - projects
       operationId: list-projects
-      description: Returns a list of projects for a given Aura organization
+      description: Returns a list of projects with status active for a given Aura organization.
       responses:
         "200":
           description: OK
@@ -904,6 +972,10 @@ paths:
                     $ref: "#/components/schemas/Links"
         "400":
           description: Bad request (missing or invalid parameters)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingErrorResponse"
         "500":
           description: Internal server error (usage load failed)
 
@@ -971,6 +1043,10 @@ paths:
                     $ref: "#/components/schemas/Links"
         "400":
           description: Bad request (missing or invalid parameters)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingErrorResponse"
         "500":
           description: Internal server error (ledger load failed)
 
@@ -1207,6 +1283,65 @@ paths:
           description: Agent not found
         "500":
           description: Internal server error
+    patch:
+      summary: Partially update an agent
+      tags:
+        - agents
+      operationId: patch-agent
+      description: Updates only the provided fields of an existing agent's configuration.
+      requestBody:
+        description: The partial agent update request. Only provided fields will be updated.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchAgentRequest"
+            examples:
+              Patch agent name:
+                value:
+                  name: My Renamed Agent
+              Patch agent enabled:
+                value:
+                  enabled: false
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentDetails"
+              examples:
+                Patched agent:
+                  value:
+                    id: f47ac10b-58cc-4372-a567-0e02b2c3d479
+                    project_id: f607bebe-0cc0-4166-b60c-b4eed69ee7ee
+                    name: My Renamed Agent
+                    description: An agent that queries the database
+                    system_prompt: You are a helpful assistant
+                    dbid: a1b2c3d4
+                    created_by: user-123
+                    created_at: "2026-01-15T10:30:00Z"
+                    updated_at: "2026-01-16T14:00:00Z"
+                    tools:
+                      - name: query-tool
+                        type: text2cypher
+                        description: Converts natural language to Cypher queries
+                        extra_params: {}
+                        enabled: true
+                    is_private: false
+                    is_mcp_enabled: false
+                    organization_id: c4ea09e5-44b2-418e-9aae-0c98c37d1f38
+                    avatar_color: ""
+                    avatar_icon: ""
+                    enabled: true
+        "400":
+          description: Bad request
+        "401":
+          description: Unauthorized
+        "404":
+          description: Agent not found
+        "500":
+          description: Internal server error
     delete:
       summary: Delete an agent
       tags:
@@ -1311,6 +1446,66 @@ components:
         name:
           type: string
           description: The name of the company
+
+    OrganizationUser:
+      type: object
+      description: A user within an Aura Organization
+      required:
+        - user_id
+        - email
+        - organization_roles
+        - exempt_from_automatic_removal
+        - mfa_enrollment_status
+        - mfa_enrolled_methods
+        - last_activity_at
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: The UUID of the user
+        email:
+          type: string
+          format: email
+          description: The email address of the user
+        organization_roles:
+          type: array
+          description: The user's roles within the organization
+          items:
+            type: string
+        exempt_from_automatic_removal:
+          type: boolean
+          description: Whether the user is exempt from automatic removal due to inactivity
+        mfa_enrollment_status:
+          type: string
+          description: The MFA enrollment status of the user
+          enum:
+            - enrolled
+            - not_enrolled
+            - external_auth_provider
+            - non_applicable
+        mfa_enrolled_methods:
+          type: array
+          description: The MFA methods the user has enrolled in
+          items:
+            type: object
+            required:
+              - id
+              - enrolled_at
+            properties:
+              id:
+                type: string
+                description: The MFA method identifier
+                enum:
+                  - totp
+              enrolled_at:
+                type: string
+                format: date-time
+                description: The timestamp when the user enrolled in this MFA method
+        last_activity_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: The timestamp of the user's last activity
 
     ProjectDetails:
       type: object
@@ -1883,6 +2078,31 @@ components:
           type: string
           description: The payload for the activity with detailed information
 
+    BillingErrorItem:
+      type: object
+      description: A single error entry returned by billing endpoints.
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code or category identifier.
+        message:
+          type: string
+          description: Human-readable description of the error.
+
+    BillingErrorResponse:
+      type: object
+      description: Error body returned for HTTP 400 responses.
+      required:
+        - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/BillingErrorItem"
+
     UsageData:
       type: object
       description: Represents usage data for billing purposes, including resource consumption and pricing details
@@ -2111,6 +2331,39 @@ components:
         - dbid
         - is_private
         - tools
+      properties:
+        name:
+          type: string
+          description: The name of the agent
+          maxLength: 100
+        description:
+          type: string
+          description: A description of the agent
+        system_prompt:
+          type: string
+          description: An optional system prompt for the agent
+        dbid:
+          type: string
+          description: The ID of the Aura database instance the agent is connected to
+        is_private:
+          type: boolean
+          description: Whether the agent is private
+        is_mcp_enabled:
+          type: boolean
+          description: Whether MCP is enabled for the agent
+        tools:
+          type: array
+          description: The tools available to the agent
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/Tool"
+        enabled:
+          type: boolean
+          description: Whether the agent is enabled
+
+    PatchAgentRequest:
+      type: object
+      description: Request body for partially updating an agent. Only provided fields will be updated.
       properties:
         name:
           type: string
@@ -2532,6 +2785,17 @@ components:
         type: string
       required: false
       description: Page token to use for pagination. This cannot be combined with the other query parameters.
+    status:
+      name: status
+      in: query
+      schema:
+        type: string
+        enum:
+          - deletion_requested
+          - deleted
+          - active
+      required: false
+      description: Filter projects by status
 
   headers:
     X-Request-Id:

@@ -48,6 +48,8 @@ from .models import (
     LedgerResponse,
     ListAgentResponse,
     OrganizationDetailsEnvelope,
+    OrganizationUser,
+    PatchAgentRequest,
     ProjectsResponse,
     ServerDatabasesResponse,
     ServersResponse,
@@ -786,6 +788,38 @@ class AuraClient:
             api_version="v2beta1",
         )
 
+    # Organization Users
+    async def list_organization_users(self, organizationId: str):
+        """List all users in an organization (v2beta1).
+
+        Args:
+            organizationId: the organization id
+
+        Returns: List of OrganizationUser objects.
+        """
+        self._ensure_api_is_v2()
+        items = await self._get(
+            f"organizations/{organizationId}/users",
+            model=None,
+            api_version="v2beta1",
+        )
+        return [OrganizationUser(**item) for item in items] if items else []
+
+    async def remove_organization_user(self, organizationId: str, user_id: str):
+        """Remove a user from an organization (v2beta1).
+
+        Args:
+            organizationId: the organization id
+            user_id: the user id to remove
+
+        Returns: None on success (204 No Content).
+        """
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/users/{user_id}",
+            api_version="v2beta1",
+        )
+
     # Billing
     async def get_billing_usage(
         self,
@@ -1220,6 +1254,33 @@ class AuraClient:
         """Update an existing agent (v2beta1)."""
         self._ensure_api_is_v2()
         return await self._put(
+            f"organizations/{organizationId}/projects/{projectId}/agents/{agentId}",
+            body=details,
+            model=AgentDetails,
+            api_version="v2beta1",
+        )
+
+    async def patch_agent(
+        self,
+        organizationId: str,
+        projectId: str,
+        agentId: str,
+        details: PatchAgentRequest,
+    ):
+        """Partially update an existing agent (v2beta1).
+
+        This method allows updating only the fields provided in the request.
+
+        Args:
+            organizationId: the organization id
+            projectId: the project id
+            agentId: the agent id to patch
+            details: PatchAgentRequest with only the fields to update
+
+        Returns: AgentDetails with the updated agent information.
+        """
+        self._ensure_api_is_v2()
+        return await self._patch(
             f"organizations/{organizationId}/projects/{projectId}/agents/{agentId}",
             body=details,
             model=AgentDetails,
