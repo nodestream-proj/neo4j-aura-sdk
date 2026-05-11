@@ -660,6 +660,7 @@ class ListAgentResponse(BaseModel):
     is_mcp_enabled: Optional[bool] = None
     tools: Optional[List[AgentTool]] = None
     endpoint_link: Optional[str] = None
+    mcp_endpoint_link: Optional[str] = None
     avatar_color: Optional[str] = None
     avatar_icon: Optional[str] = None
     enabled: Optional[bool] = None
@@ -690,6 +691,7 @@ class AgentDetails(GetAgentResponse):
 
 class InvokeAgentRequest(BaseModel):
     input: Union[str, List[AgentInputMessage]]
+    stream: Optional[bool] = None
 
 
 class InvokeAgentContentBlock(BaseModel):
@@ -742,6 +744,16 @@ class OrganizationUser(BaseModel):
     last_activity_at: Optional[str] = None
 
 
+class OrganizationUserProject(BaseModel):
+    id: str
+    name: str
+    project_roles: List[str]
+
+
+class OrganizationUserDetails(OrganizationUser):
+    projects: List[OrganizationUserProject]
+
+
 # --- Organization Details Model (v2beta1) ---
 class OrganizationDetails(BaseModel):
     id: str
@@ -752,6 +764,17 @@ class OrganizationDetails(BaseModel):
 class ProjectDetails(BaseModel):
     id: str
     name: str
+
+
+# --- Project User Models (v2beta1) ---
+class ProjectUser(BaseModel):
+    user_id: str
+    email: str
+    project_roles: List[str]
+
+
+class PatchProjectUserRequest(BaseModel):
+    project_roles: List[str]
 
 
 # --- Cypher Template Tool Models (v2beta1) ---

@@ -49,8 +49,11 @@ from .models import (
     ListAgentResponse,
     OrganizationDetailsEnvelope,
     OrganizationUser,
+    OrganizationUserDetails,
     PatchAgentRequest,
+    PatchProjectUserRequest,
     ProjectsResponse,
+    ProjectUser,
     ServerDatabasesResponse,
     ServersResponse,
     SnapshotResponse,
@@ -761,19 +764,24 @@ class AuraClient:
             api_version="v2beta1",
         )
 
-    async def list_organization_projects(self, organizationId: str):
+    async def list_organization_projects(self, organizationId: str, status: str = None):
         """List projects for an organization (v2beta1).
 
         Args:
             organizationId: the organization id
+            status: optional filter by project status ('active', 'deleted', 'deletion_requested')
 
         Returns: ProjectsResponse with 'data' key containing list of projects.
         """
         self._ensure_api_is_v2()
+        params = {}
+        if status:
+            params["status"] = status
         return await self._get(
             f"organizations/{organizationId}/projects",
             model=ProjectsResponse,
             api_version="v2beta1",
+            params=params if params else None,
         )
 
     async def list_organizations(self):
@@ -805,6 +813,23 @@ class AuraClient:
         )
         return [OrganizationUser(**item) for item in items] if items else []
 
+    async def get_organization_user(self, organizationId: str, userId: str):
+        """Get detailed information about a user in an organization (v2beta1).
+
+        Args:
+            organizationId: the organization id
+            userId: the UUID of the user
+
+        Returns: OrganizationUserDetails including project memberships.
+        """
+        self._ensure_api_is_v2()
+        result = await self._get(
+            f"organizations/{organizationId}/users/{userId}",
+            model=None,
+            api_version="v2beta1",
+        )
+        return OrganizationUserDetails(**result["data"])
+
     async def remove_organization_user(self, organizationId: str, user_id: str):
         """Remove a user from an organization (v2beta1).
 
@@ -817,6 +842,69 @@ class AuraClient:
         self._ensure_api_is_v2()
         return await self._delete(
             f"organizations/{organizationId}/users/{user_id}",
+            api_version="v2beta1",
+        )
+
+    # Project Users
+    async def list_project_users(self, organizationId: str, projectId: str):
+        """List all users in a project (v2beta1).
+
+        Args:
+            organizationId: the organization id
+            projectId: the project id
+
+        Returns: List of ProjectUser objects.
+        """
+        self._ensure_api_is_v2()
+        result = await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/users",
+            model=None,
+            api_version="v2beta1",
+        )
+        data = result.get("data", []) if isinstance(result, dict) else result
+        return [ProjectUser(**item) for item in data] if data else []
+
+    async def update_project_user(
+        self,
+        organizationId: str,
+        projectId: str,
+        userId: str,
+        details: PatchProjectUserRequest,
+    ):
+        """Update a project user's role (v2beta1).
+
+        Args:
+            organizationId: the organization id
+            projectId: the project id
+            userId: the UUID of the user
+            details: PatchProjectUserRequest with the role to assign
+
+        Returns: ProjectUser with updated role.
+        """
+        self._ensure_api_is_v2()
+        result = await self._patch(
+            f"organizations/{organizationId}/projects/{projectId}/users/{userId}",
+            body=details,
+            model=None,
+            api_version="v2beta1",
+        )
+        return ProjectUser(**result["data"])
+
+    async def remove_project_user(
+        self, organizationId: str, projectId: str, userId: str
+    ):
+        """Remove a user from a project (v2beta1).
+
+        Args:
+            organizationId: the organization id
+            projectId: the project id
+            userId: the UUID of the user
+
+        Returns: None on success (204 No Content).
+        """
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/projects/{projectId}/users/{userId}",
             api_version="v2beta1",
         )
 
@@ -836,6 +924,7 @@ class AuraClient:
             organizationId: the organization id
             start: RFC3339 timestamp (e.g., '2024-01-02T00:00:00Z')
             end: RFC3339 timestamp (e.g., '2024-01-31T23:59:59Z')
+            project_id: optional list of project UUIDs to filter usage rows
 
         Returns: UsageResponse with 'data' containing list of UsageData objects and optional 'links' for pagination.
         """

@@ -138,16 +138,62 @@ paths:
           description: Forbidden. Caller is not an organization admin.
         "404":
           description: Organization not found.
-  "/organizations/{organizationId}/users/{user_id}":
+  "/organizations/{organizationId}/users/{userId}":
     parameters:
       - $ref: "#/components/parameters/organizationId"
       - $ref: "#/components/parameters/userId"
-    delete:
-      summary: Removes a user from an organization
+    get:
+      summary: Get an organization user
       tags:
         - organizations
-      operationId: show-organization
-      description: Removes an Aura User from an Aura Organization.
+        - users
+      operationId: get-organization-user
+      description: |-
+        Returns detailed information about a user in an Aura Organization,
+        including their organization roles, project memberships, and MFA status.
+        Requires the caller to be an organization admin.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/OrganizationUserDetails"
+              examples:
+                Get organization user:
+                  value:
+                    data:
+                      user_id: 9aa289f6-1ccf-57c8-bc90-a0c3cecc82ac
+                      email: wiley.c@example.com
+                      organization_roles:
+                        - organization-member
+                      projects:
+                        - id: 89fcc404-a509-488e-a3a4-53d3e80b99b7
+                          name: My Project
+                          project_roles:
+                            - project-admin
+                      exempt_from_automatic_removal: false
+                      mfa_enrollment_status: enrolled
+                      mfa_enrolled_methods:
+                        - id: totp
+                          enrolled_at: "2025-06-15T12:00:00.000000Z"
+                      last_activity_at: "2026-04-30T10:41:00.000000Z"
+        "401":
+          description: Unauthorized.
+        "403":
+          description: Forbidden. Caller is not an organization admin.
+        "404":
+          description: User not found.
+    delete:
+      summary: Remove a user from an organization
+      tags:
+        - organizations
+        - users
+      operationId: delete-organization-user
+      description: Remove an Aura User from an Aura Organization.
       responses:
         "204":
           description: No Content
@@ -158,6 +204,8 @@ paths:
           description: Unauthorized. Do not have required permissions in organization.
         "403":
           description: Forbidden.
+        "404":
+          description: User not found.
 
   "/organizations/{organizationId}/projects":
     parameters:
@@ -188,6 +236,120 @@ paths:
                     data:
                       - name: Operation Dark Storm
                         id: 9aa289f6-1ccf-57c8-bc90-a0c3cecc82ac
+
+  "/organizations/{organizationId}/projects/{projectId}/users":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+    get:
+      summary: List all users in a project
+      tags:
+        - projects
+        - users
+      operationId: list-project-users
+      description: |-
+        Returns a list of all users in an Aura Project.
+        Requires the caller to be a project admin.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ProjectUser"
+              examples:
+                List project users:
+                  value:
+                    data:
+                      - user_id: 9aa289f6-1ccf-57c8-bc90-a0c3cecc82ac
+                        email: wiley.c@example.com
+                        project_roles:
+                          - project-admin
+        "401":
+          description: Unauthorized.
+        "403":
+          description: Forbidden.
+        "404":
+          description: Project not found.
+
+  "/organizations/{organizationId}/projects/{projectId}/users/{userId}":
+    parameters:
+      - $ref: "#/components/parameters/organizationId"
+      - $ref: "#/components/parameters/projectId"
+      - $ref: "#/components/parameters/userId"
+    patch:
+      summary: Update a project user's role
+      tags:
+        - projects
+        - users
+      operationId: update-project-user
+      description: |-
+        Updates the role of a user in an Aura Project.
+        Requires the caller to be a project admin.
+
+        A user can only be assigned a single project role at a time.
+      requestBody:
+        description: The role to assign to the user.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchProjectUserRequest"
+            examples:
+              Update user role to project-admin:
+                value:
+                  project_roles:
+                    - project-admin
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ProjectUser"
+              examples:
+                Updated project user:
+                  value:
+                    data:
+                      user_id: 9aa289f6-1ccf-57c8-bc90-a0c3cecc82ac
+                      email: wiley.c@example.com
+                      project_roles:
+                        - project-admin
+        "400":
+          description: Bad request. Invalid role or validation error.
+        "401":
+          description: Unauthorized.
+        "403":
+          description: Forbidden. Caller is not a project admin.
+        "404":
+          description: User or project not found.
+    delete:
+      summary: Remove a user from a project
+      tags:
+        - projects
+        - users
+      operationId: delete-project-user
+      description: |-
+        Removes a user from an Aura Project.
+        Requires the caller to be a project admin.
+      responses:
+        "204":
+          description: No Content
+          content: {}
+        "401":
+          description: Unauthorized.
+        "403":
+          description: Forbidden. Caller is not a project admin.
+        "404":
+          description: User or project not found.
 
   "/organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/ip-filters":
     parameters:
@@ -1068,25 +1230,23 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/ListAgentResponse"
+                  $ref: "#/components/schemas/AgentSummary"
               examples:
                 List agents:
                   value:
                     - id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
                       name: My Agent
                       description: An agent that queries the database
+                      project_id: f607bebe-0cc0-4166-b60c-b4eed69ee7ee
+                      organization_id: c4ea09e5-44b2-418e-9aae-0c98c37d1f38
                       dbid: a1b2c3d4
-                      created_at: "2025-01-01T00:00:00Z"
-                      updated_at: "2025-01-01T00:00:00Z"
                       is_private: false
                       is_mcp_enabled: false
                       tools:
                         - name: query-tool
                           type: text2cypher
-                          description: Converts natural language to Cypher queries
-                          enabled: true
-                      avatar_color: "#4C8EDA"
-                      avatar_icon: robot
+                      endpoint_link: https://agent.example.com/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                      mcp_endpoint_link: https://agent.example.com/a1b2c3d4-e5f6-7890-abcd-ef1234567890/mcp
                       enabled: true
         "401":
           description: Unauthorized
@@ -1150,6 +1310,10 @@ paths:
                         model: text-embedding-ada-002
                         index: my-vector-index
                         top_k: 10
+                        dimension: 1536
+                        post_processing_cypher: |-
+                          MATCH (node)<-[:ACTED_IN]-(actor:Person)
+                          RETURN node.title AS title, actor.name AS actor, score
       responses:
         "201":
           description: Created
@@ -1161,25 +1325,21 @@ paths:
                 Created agent:
                   value:
                     id: f47ac10b-58cc-4372-a567-0e02b2c3d479
-                    project_id: f607bebe-0cc0-4166-b60c-b4eed69ee7ee
                     name: My Agent
                     description: An agent that queries the database
+                    created_by: user-123
+                    project_id: f607bebe-0cc0-4166-b60c-b4eed69ee7ee
+                    organization_id: c4ea09e5-44b2-418e-9aae-0c98c37d1f38
                     system_prompt: ""
                     dbid: a1b2c3d4
-                    created_by: user-123
-                    created_at: "2026-01-15T10:30:00Z"
-                    updated_at: "2026-01-15T10:30:00Z"
+                    is_private: false
+                    is_mcp_enabled: false
                     tools:
                       - name: query-tool
                         type: text2cypher
                         description: Converts natural language to Cypher queries
-                        extra_params: {}
                         enabled: true
-                    is_private: false
-                    is_mcp_enabled: false
-                    organization_id: c4ea09e5-44b2-418e-9aae-0c98c37d1f38
-                    avatar_color: ""
-                    avatar_icon: ""
+                        config: {}
                     enabled: true
         "400":
           description: Bad request
@@ -1207,13 +1367,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetAgentResponse"
+                $ref: "#/components/schemas/AgentDetails"
               examples:
                 Get agent:
                   value:
                     id: f47ac10b-58cc-4372-a567-0e02b2c3d479
                     name: My Agent
                     description: An agent that queries the database
+                    created_by: user-123
+                    project_id: f607bebe-0cc0-4166-b60c-b4eed69ee7ee
+                    organization_id: c4ea09e5-44b2-418e-9aae-0c98c37d1f38
+                    system_prompt: ""
                     dbid: a1b2c3d4
                     is_private: false
                     is_mcp_enabled: false
@@ -1222,6 +1386,7 @@ paths:
                         type: text2cypher
                         description: Converts natural language to Cypher queries
                         enabled: true
+                        config: {}
                     enabled: true
         "400":
           description: Bad request
@@ -1236,7 +1401,7 @@ paths:
       tags:
         - agents
       operationId: update-agent
-      description: Updates an existing agent's configuration.
+      description: Updates an existing agent.
       requestBody:
         description: The agent update request.
         required: true
@@ -1255,30 +1420,28 @@ paths:
                 Updated agent:
                   value:
                     id: f47ac10b-58cc-4372-a567-0e02b2c3d479
-                    project_id: f607bebe-0cc0-4166-b60c-b4eed69ee7ee
                     name: My Updated Agent
                     description: An updated agent description
+                    created_by: user-123
+                    project_id: f607bebe-0cc0-4166-b60c-b4eed69ee7ee
+                    organization_id: c4ea09e5-44b2-418e-9aae-0c98c37d1f38
                     system_prompt: You are a helpful assistant
                     dbid: a1b2c3d4
-                    created_by: user-123
-                    created_at: "2026-01-15T10:30:00Z"
-                    updated_at: "2026-01-16T14:00:00Z"
+                    is_private: false
+                    is_mcp_enabled: false
                     tools:
                       - name: query-tool
                         type: text2cypher
                         description: Converts natural language to Cypher queries
-                        extra_params: {}
                         enabled: true
-                    is_private: false
-                    is_mcp_enabled: false
-                    organization_id: c4ea09e5-44b2-418e-9aae-0c98c37d1f38
-                    avatar_color: ""
-                    avatar_icon: ""
+                        config: {}
                     enabled: true
         "400":
           description: Bad request
         "401":
           description: Unauthorized
+        "403":
+          description: Forbidden
         "404":
           description: Agent not found
         "500":
@@ -1288,9 +1451,9 @@ paths:
       tags:
         - agents
       operationId: patch-agent
-      description: Updates only the provided fields of an existing agent's configuration.
+      description: Partially updates an agent. When `tools` is provided it fully replaces the existing tool list.
       requestBody:
-        description: The partial agent update request. Only provided fields will be updated.
+        description: The partial agent update request.
         required: true
         content:
           application/json:
@@ -1314,30 +1477,28 @@ paths:
                 Patched agent:
                   value:
                     id: f47ac10b-58cc-4372-a567-0e02b2c3d479
-                    project_id: f607bebe-0cc0-4166-b60c-b4eed69ee7ee
                     name: My Renamed Agent
                     description: An agent that queries the database
+                    created_by: user-123
+                    project_id: f607bebe-0cc0-4166-b60c-b4eed69ee7ee
+                    organization_id: c4ea09e5-44b2-418e-9aae-0c98c37d1f38
                     system_prompt: You are a helpful assistant
                     dbid: a1b2c3d4
-                    created_by: user-123
-                    created_at: "2026-01-15T10:30:00Z"
-                    updated_at: "2026-01-16T14:00:00Z"
+                    is_private: false
+                    is_mcp_enabled: false
                     tools:
                       - name: query-tool
                         type: text2cypher
                         description: Converts natural language to Cypher queries
-                        extra_params: {}
                         enabled: true
-                    is_private: false
-                    is_mcp_enabled: false
-                    organization_id: c4ea09e5-44b2-418e-9aae-0c98c37d1f38
-                    avatar_color: ""
-                    avatar_icon: ""
+                        config: {}
                     enabled: true
         "400":
           description: Bad request
         "401":
           description: Unauthorized
+        "403":
+          description: Forbidden
         "404":
           description: Agent not found
         "500":
@@ -1370,7 +1531,9 @@ paths:
       tags:
         - agents
       operationId: invoke-agent
-      description: Invokes an agent with the provided input. The input can be a string or an array of messages.
+      description: |-
+        Invokes an agent with the given input. Set `stream: true` to receive output as
+        Server-Sent Events. Subject to a 3-minute timeout and per-organization token quota.
       requestBody:
         description: The agent invocation request.
         required: true
@@ -1387,6 +1550,10 @@ paths:
                   input:
                     - role: user
                       content: "What movies are in the database?"
+              Invoke with streaming:
+                value:
+                  input: "What movies are in the database?"
+                  stream: true
       responses:
         "200":
           description: OK
@@ -1397,26 +1564,34 @@ paths:
               examples:
                 Successful invocation:
                   value:
-                    id: inv-12345
                     type: message
                     role: assistant
                     content:
                       - type: text
                         text: "Here are the movies in the database..."
-                    end_reason: end_turn
-                    status: completed
+                    end_reason: FINAL_ANSWER_PROVIDED
+                    status: SUCCESS
                     usage:
                       request_tokens: 150
                       response_tokens: 200
                       total_tokens: 350
+            text/event-stream:
+              schema:
+                type: string
+                description: |-
+                  Server-Sent Events stream. Each event payload is a JSON object: an
+                  `InvokeAgentContent` block, a terminal `{type: "done", ...}` success frame, or a
+                  terminal `{type: "error", error: {...}}` failure frame.
         "400":
           description: Bad request
         "401":
           description: Unauthorized
         "403":
-          description: Forbidden - agent is disabled or private
+          description: Forbidden. The agent is disabled or private.
         "404":
-          description: Agent not found
+          description: Agent or database not found.
+        "429":
+          description: Token quota for the organization has been exceeded.
         "500":
           description: Internal server error
 
@@ -1506,6 +1681,84 @@ components:
           format: date-time
           nullable: true
           description: The timestamp of the user's last activity
+
+    OrganizationUserDetails:
+      description: Detailed information about a user in an Aura Organization, including project-level access
+      allOf:
+        - $ref: "#/components/schemas/OrganizationUser"
+        - type: object
+          required:
+            - projects
+          properties:
+            projects:
+              type: array
+              description: The projects the user has access to within the organization
+              items:
+                $ref: "#/components/schemas/OrganizationUserProject"
+
+    OrganizationUserProject:
+      type: object
+      description: A project membership for a user within an organization
+      required:
+        - id
+        - name
+        - project_roles
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The UUID of the project
+        name:
+          type: string
+          description: The name of the project
+        project_roles:
+          type: array
+          description: The user's roles within the project
+          items:
+            type: string
+
+    ProjectUser:
+      type: object
+      description: A user within an Aura Project
+      required:
+        - user_id
+        - email
+        - project_roles
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: The UUID of the user
+        email:
+          type: string
+          format: email
+          description: The email address of the user
+        project_roles:
+          type: array
+          description: The user's roles within the project
+          items:
+            type: string
+
+    PatchProjectUserRequest:
+      type: object
+      description: Request body for updating a project user's role
+      required:
+        - project_roles
+      properties:
+        project_roles:
+          type: array
+          description: |-
+            The role to assign to the user.
+            Exactly one role must be provided.
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+            enum:
+              - project-admin
+              - project-member
+              - project-viewer
+              - project-metrics-integration-reader
 
     ProjectDetails:
       type: object
@@ -2209,18 +2462,26 @@ components:
           example: 10000
 
     Tool:
+      description: A tool attached to an agent. The configuration is type-specific.
       oneOf:
         - $ref: "#/components/schemas/CypherTemplateTool"
         - $ref: "#/components/schemas/SimilaritySearchTool"
         - $ref: "#/components/schemas/Text2CypherTool"
+      discriminator:
+        propertyName: type
+        mapping:
+          cypherTemplate: "#/components/schemas/CypherTemplateTool"
+          similaritySearch: "#/components/schemas/SimilaritySearchTool"
+          text2cypher: "#/components/schemas/Text2CypherTool"
 
     CypherTemplateTool:
       type: object
-      description: A tool that uses a Cypher template
+      description: A tool that runs a parameterized Cypher template.
       required:
         - type
         - name
-        - parameters
+        - description
+        - config
       properties:
         type:
           type: string
@@ -2228,12 +2489,15 @@ components:
             - cypherTemplate
         name:
           type: string
-        enabled:
-          type: boolean
+          maxLength: 64
         description:
           type: string
-        parameters:
+          maxLength: 2000
+        enabled:
+          type: boolean
+        config:
           type: object
+          description: The Cypher template and its parameter definitions.
           required:
             - template
           properties:
@@ -2246,11 +2510,12 @@ components:
 
     SimilaritySearchTool:
       type: object
-      description: A tool that performs vector similarity search
+      description: A tool that performs vector similarity search against a vector index.
       required:
         - type
         - name
-        - parameters
+        - description
+        - config
       properties:
         type:
           type: string
@@ -2258,34 +2523,58 @@ components:
             - similaritySearch
         name:
           type: string
-        enabled:
-          type: boolean
+          maxLength: 64
         description:
           type: string
-        parameters:
+          maxLength: 2000
+        enabled:
+          type: boolean
+        config:
           type: object
+          description: The vector similarity search configuration.
           required:
-            - index
             - provider
             - model
+            - index
+            - top_k
           properties:
             provider:
               type: string
+              description: The embedding provider used to generate query embeddings.
+              enum:
+                - openai
+                - vertexai
             model:
               type: string
+              description: |-
+                The embedding model. Must be compatible with the selected provider.
+                Supported `openai` models: `text-embedding-3-small`, `text-embedding-3-large`, `text-embedding-ada-002`.
+                Supported `vertexai` models: `gemini-embedding-001`, `text-embedding-005`, `text-multilingual-embedding-002`.
             index:
               type: string
+              maxLength: 100
+              description: The name of the vector index to query.
             top_k:
               type: integer
+              minimum: 1
+              maximum: 100
+              description: The maximum number of matches to return.
             dimension:
               type: integer
+              description: The embedding dimension, when the provider or index requires an explicit size.
+            post_processing_cypher:
+              type: string
+              description: |-
+                Optional read-only Cypher appended to the vector search and executed as a single query. 
+                The matched node and its score are exposed as `node` and `score`. Write queries are rejected.
 
     Text2CypherTool:
       type: object
-      description: A tool that converts natural language to Cypher queries
+      description: A tool that converts natural language to Cypher queries.
       required:
         - type
         - name
+        - description
       properties:
         type:
           type: string
@@ -2293,14 +2582,19 @@ components:
             - text2cypher
         name:
           type: string
-        enabled:
-          type: boolean
+          maxLength: 64
         description:
           type: string
+          maxLength: 2000
+        enabled:
+          type: boolean
+        config:
+          type: object
+          description: This tool type takes no configuration.
 
     CypherParameterConfig:
       type: object
-      description: A parameter for a Cypher template
+      description: A parameter definition for a Cypher template.
       required:
         - name
         - data_type
@@ -2324,7 +2618,7 @@ components:
 
     CreateAgentRequest:
       type: object
-      description: Request body for creating or updating an agent
+      description: The request body when creating or updating an agent.
       required:
         - name
         - description
@@ -2353,7 +2647,7 @@ components:
           description: Whether MCP is enabled for the agent
         tools:
           type: array
-          description: The tools available to the agent
+          description: The tools configured for the agent. Each tool includes type-specific configuration.
           minItems: 1
           items:
             $ref: "#/components/schemas/Tool"
@@ -2363,7 +2657,7 @@ components:
 
     PatchAgentRequest:
       type: object
-      description: Request body for partially updating an agent. Only provided fields will be updated.
+      description: The request body when partially updating an agent.
       properties:
         name:
           type: string
@@ -2386,7 +2680,7 @@ components:
           description: Whether MCP is enabled for the agent
         tools:
           type: array
-          description: The tools available to the agent
+          description: When present, replaces the agent's tools. Each tool includes type-specific configuration.
           minItems: 1
           items:
             $ref: "#/components/schemas/Tool"
@@ -2394,12 +2688,20 @@ components:
           type: boolean
           description: Whether the agent is enabled
 
-    ListAgentResponse:
+    AgentSummary:
       type: object
-      description: Agent data returned in list responses
+      description: Summary information for an agent returned when listing agents.
+      required:
+        - id
+        - name
+        - description
+        - dbid
+        - is_private
+        - tools
       properties:
         id:
           type: string
+          format: uuid
           description: The unique identifier of the agent
         name:
           type: string
@@ -2407,29 +2709,17 @@ components:
         description:
           type: string
           description: A description of the agent
-        created_by:
-          type: string
-          description: The user who created the agent
         project_id:
           type: string
+          format: uuid
           description: The project ID the agent belongs to
         organization_id:
           type: string
+          format: uuid
           description: The organization ID the agent belongs to
-        system_prompt:
-          type: string
-          description: The system prompt for the agent
         dbid:
           type: string
           description: The ID of the database instance
-        created_at:
-          type: string
-          format: date-time
-          description: The timestamp when the agent was created
-        updated_at:
-          type: string
-          format: date-time
-          description: The timestamp when the agent was last updated
         is_private:
           type: boolean
           description: Whether the agent is private
@@ -2438,163 +2728,100 @@ components:
           description: Whether MCP is enabled
         tools:
           type: array
+          description: A summary of the tools attached to the agent.
           items:
-            $ref: "#/components/schemas/Tool"
+            type: object
+            required:
+              - name
+              - type
+            properties:
+              name:
+                type: string
+                description: The name of the tool
+              type:
+                type: string
+                description: The type of the tool
+                enum:
+                  - text2cypher
+                  - cypherTemplate
+                  - similaritySearch
         endpoint_link:
           type: string
+          format: uri
           description: The public endpoint link for the agent
-        avatar_color:
+        mcp_endpoint_link:
           type: string
-          description: The avatar color of the agent
-        avatar_icon:
-          type: string
-          description: The avatar icon of the agent
-        enabled:
-          type: boolean
-          description: Whether the agent is enabled
-
-    GetAgentResponse:
-      type: object
-      description: Agent data returned in get response
-      properties:
-        id:
-          type: string
-          description: The unique identifier of the agent
-        name:
-          type: string
-          description: The name of the agent
-        description:
-          type: string
-          description: A description of the agent
-        created_by:
-          type: string
-          description: The user who created the agent
-        project_id:
-          type: string
-          description: The project ID the agent belongs to
-        organization_id:
-          type: string
-          description: The organization ID the agent belongs to
-        system_prompt:
-          type: string
-          description: The system prompt for the agent
-        dbid:
-          type: string
-          description: The ID of the database instance
-        is_private:
-          type: boolean
-          description: Whether the agent is private
-        is_mcp_enabled:
-          type: boolean
-          description: Whether MCP is enabled
-        tools:
-          type: array
-          items:
-            $ref: "#/components/schemas/Tool"
+          format: uri
+          description: The MCP endpoint link for the agent
         enabled:
           type: boolean
           description: Whether the agent is enabled
 
     AgentDetails:
       type: object
-      description: Full agent details returned after create/update operations
+      description: Detailed information about an Aura Agent.
+      required:
+        - id
+        - name
+        - description
+        - dbid
+        - is_private
+        - tools
       properties:
         id:
           type: string
+          format: uuid
           description: The unique identifier of the agent
-        project_id:
-          type: string
-          description: The project ID the agent belongs to
         name:
           type: string
           description: The name of the agent
         description:
           type: string
           description: A description of the agent
+        created_by:
+          type: string
+          description: The user who created the agent
+          readOnly: true
+        project_id:
+          type: string
+          format: uuid
+          description: The project ID the agent belongs to
+          readOnly: true
+        organization_id:
+          type: string
+          format: uuid
+          description: The organization ID the agent belongs to
+          readOnly: true
         system_prompt:
           type: string
           description: The system prompt for the agent
         dbid:
           type: string
           description: The ID of the database instance
-        created_by:
-          type: string
-          description: The user who created the agent
-        created_at:
-          type: string
-          format: date-time
-          description: The timestamp when the agent was created
-        updated_at:
-          type: string
-          format: date-time
-          description: The timestamp when the agent was last updated
-        tools:
-          type: array
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-              type:
-                type: string
-                enum:
-                  - text2cypher
-                  - cypherTemplate
-                  - similaritySearch
-              description:
-                type: string
-              extra_params:
-                type: object
-                properties:
-                  template:
-                    type: string
-                  parameters:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/CypherParameterConfig"
-                  provider:
-                    type: string
-                  model:
-                    type: string
-                  index:
-                    type: string
-                  top_k:
-                    type: integer
-              enabled:
-                type: boolean
         is_private:
           type: boolean
           description: Whether the agent is private
         is_mcp_enabled:
           type: boolean
           description: Whether MCP is enabled
-        organization_id:
-          type: string
-          description: The organization ID the agent belongs to
-        endpoint_link:
-          type: string
-          description: The public endpoint link for the agent
-        avatar_color:
-          type: string
-          description: The avatar color of the agent
-        avatar_icon:
-          type: string
-          description: The avatar icon of the agent
+        tools:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tool"
         enabled:
           type: boolean
           description: Whether the agent is enabled
 
     InvokeAgentRequest:
       type: object
-      description: Request body for invoking an agent
+      description: The request body when invoking an agent.
       required:
         - input
       properties:
         input:
           description: |-
-            The input to the agent. Can be either a string or an array of message objects.
-            When a string, it is treated as a single user message.
-            When an array, each element must have a role and content field.
+            The agent input. Either a string (interpreted as a single user message) or an array of
+            messages. Each message object must include `role` and `content`.
           oneOf:
             - type: string
             - type: array
@@ -2610,14 +2837,87 @@ components:
                   content:
                     type: string
                     description: The content of the message
+        stream:
+          type: boolean
+          description: When `true`, the response is delivered as a Server-Sent Events stream.
+
+    InvokeAgentContent:
+      type: object
+      description: A single content block produced by an agent during invocation.
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          description: The content block type.
+          enum:
+            - text
+            - thinking
+            - tool_use
+            - tool_result
+            - cypher_template_tool_use
+            - cypher_template_tool_result
+        text:
+          type: string
+          description: Text content (for `text` type)
+        thinking:
+          type: string
+          description: Thinking content (for `thinking` type)
+        id:
+          type: string
+          description: The tool use ID (for `tool_use` and `cypher_template_tool_use` types)
+        name:
+          type: string
+          description: The tool name (for `tool_use` and `cypher_template_tool_use` types)
+        input:
+          type: object
+          additionalProperties: true
+          description: The tool input (for `tool_use` and `cypher_template_tool_use` types)
+        output:
+          type: object
+          additionalProperties: true
+          description: The tool output (for `tool_result` and `cypher_template_tool_result` types)
+        tool_use_id:
+          type: string
+          description: The referenced tool use ID (for `tool_result` and `cypher_template_tool_result` types)
+
+    InvokeAgentUsage:
+      type: object
+      description: Token usage for an agent invocation.
+      properties:
+        request_tokens:
+          type: integer
+          description: Number of tokens consumed by the request (prompt and tool inputs).
+        response_tokens:
+          type: integer
+          description: Number of tokens produced in the response (including reasoning tokens).
+        total_tokens:
+          type: integer
+          description: Sum of request and response tokens.
+
+    InvokeAgentError:
+      type: object
+      description: Error details returned when an invocation fails.
+      required:
+        - message
+        - type
+      properties:
+        message:
+          type: string
+          description: Human-readable error message.
+        type:
+          type: string
+          description: Error category (for example `EXECUTION_ERROR`).
+        status_code:
+          type: integer
+          description: Upstream HTTP status code, when applicable.
 
     InvokeAgentResponse:
       type: object
-      description: Response from invoking an agent
+      description: The response body returned by a non-streaming agent invocation.
+      required:
+        - type
       properties:
-        id:
-          type: string
-          description: The invocation ID
         type:
           type: string
           description: The response type
@@ -2626,68 +2926,24 @@ components:
             - error
         role:
           type: string
-          description: The role of the responder
+          description: The role of the responder (for `message` responses, always `assistant`).
         content:
           type: array
-          description: The response content blocks
+          description: Content blocks in the response message (for `message` responses).
           items:
-            type: object
-            properties:
-              type:
-                type: string
-                description: The content block type
-                enum:
-                  - text
-                  - thinking
-                  - tool_use
-                  - tool_result
-              text:
-                type: string
-                description: Text content (for text type)
-              thinking:
-                type: string
-                description: Thinking content (for thinking type)
-              id:
-                type: string
-                description: The tool use ID (for tool_use type)
-              name:
-                type: string
-                description: The tool name (for tool_use type)
-              input:
-                type: object
-                description: The tool input (for tool_use type)
-              output:
-                type: object
-                description: The tool output (for tool_result type)
-              tool_use_id:
-                type: string
-                description: The referenced tool use ID (for tool_result type)
+            $ref: "#/components/schemas/InvokeAgentContent"
         end_reason:
           type: string
-          description: The reason the response ended
+          description: |-
+            The reason the response ended. For successful invocations this is
+            `FINAL_ANSWER_PROVIDED`.
         status:
           type: string
-          description: The status of the invocation
+          description: The status of the invocation. For successful invocations this is `SUCCESS`.
         error:
-          type: object
-          description: Error details (only if type is error)
-          properties:
-            message:
-              type: string
-            type:
-              type: string
-            status_code:
-              type: integer
+          $ref: "#/components/schemas/InvokeAgentError"
         usage:
-          type: object
-          description: Token usage information
-          properties:
-            request_tokens:
-              type: integer
-            response_tokens:
-              type: integer
-            total_tokens:
-              type: integer
+          $ref: "#/components/schemas/InvokeAgentUsage"
 
   securitySchemes:
     oauthToken:
@@ -2720,6 +2976,14 @@ components:
         type: string
       description: Organization ID
       required: true
+    userId:
+      name: userId
+      in: path
+      schema:
+        type: string
+        format: uuid
+      description: The UUID of the user
+      required: true
     ipFilterId:
       name: ipFilterId
       in: path
@@ -2739,7 +3003,8 @@ components:
       in: path
       schema:
         type: string
-      description: Agent ID
+        format: uuid
+      description: The UUID of the agent
       required: true
     deploymentId:
       name: deploymentId
