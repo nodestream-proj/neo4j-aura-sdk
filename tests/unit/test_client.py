@@ -290,6 +290,26 @@ async def test_exceptions():
         except models.AuraApiRateLimitExceededException as e:
             assert len(e.errors) == 1
 
+        # Test Unsupported Action
+        respx.get(f"{apiUrl}instances/{iid}").respond(
+            status_code=420, json=jsonResp["exception"]
+        )
+        try:
+            resp = await client.instance(iid)
+            assert not resp
+        except models.AuraApiUnsupportedActionException as e:
+            assert len(e.errors) == 1
+
+        # Test Validation Error
+        respx.get(f"{apiUrl}instances/{iid}").respond(
+            status_code=422, json=jsonResp["exception"]
+        )
+        try:
+            resp = await client.instance(iid)
+            assert not resp
+        except models.AuraApiValidationException as e:
+            assert len(e.errors) == 1
+
         # Test Internal Error
         respx.get(f"{apiUrl}instances/{iid}").respond(
             status_code=500, json=jsonResp["exception"]

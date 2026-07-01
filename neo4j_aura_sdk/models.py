@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 # --- v1beta5 GraphQL Data API models ---
@@ -127,6 +127,24 @@ class AuraApiInternalException(AuraApiException):
 
 
 class AuraApiRateLimitExceededException(AuraApiException):
+    def __init__(self, errors: AuraErrors, status: int):
+        self.status = status
+        super().__init__(errors)
+
+
+class AuraApiUnsupportedActionException(AuraApiException):
+    def __init__(self, errors: AuraErrors, status: int):
+        self.status = status
+        super().__init__(errors)
+
+
+class AuraApiValidationException(AuraApiException):
+    """Raised on HTTP 422 Unprocessable Entity.
+
+    Indicates the request body failed server-side validation, a resource limit
+    was reached, or the operation is unsupported for the target resource type.
+    """
+
     def __init__(self, errors: AuraErrors, status: int):
         self.status = status
         super().__init__(errors)
@@ -821,3 +839,182 @@ class BillingErrorItem(BaseModel):
 
 class BillingErrorResponse(BaseModel):
     errors: List[BillingErrorItem]
+
+
+# --- Newly added v2beta1 models from JSON spec ---
+class OpenRequestModel(BaseModel):
+    """Request model that accepts additional fields to stay forward-compatible."""
+
+    model_config = ConfigDict(extra="allow")
+
+
+class CreateOrganizationInviteRequest(OpenRequestModel):
+    email: str
+    roles: Optional[List[str]] = None
+    project_invites: Optional[List[dict]] = None
+
+
+class OrganizationInvite(BaseModel):
+    id: Optional[str] = None
+    email: Optional[str] = None
+    invited_by: Optional[str] = None
+    organization_id: Optional[str] = None
+    organization_roles: Optional[List[str]] = None
+    project_invites: Optional[List[dict]] = None
+    status: Optional[str] = None
+    expires_at: Optional[str] = None
+
+
+class OrganizationInvitesResponse(BaseModel):
+    data: Optional[List[OrganizationInvite]] = None
+
+
+class OrganizationInviteResponse(BaseModel):
+    data: Optional[OrganizationInvite] = None
+
+
+class AddProjectUserRequest(OpenRequestModel):
+    project_roles: Optional[List[str]] = None
+
+
+class GDSError(BaseModel):
+    id: Optional[str] = None
+    message: Optional[str] = None
+    reason: Optional[str] = None
+
+
+class SessionCreatedBy(BaseModel):
+    type: Optional[str] = None
+    console_user_id: Optional[str] = None
+    database_username: Optional[str] = None
+    database_uuid: Optional[str] = None
+
+
+class SessionResponse(BaseModel):
+    id: Optional[str] = None
+    instance_id: Optional[str] = None
+    database_id: Optional[str] = None
+    name: Optional[str] = None
+    memory: Optional[str] = None
+    status: Optional[str] = None
+    host: Optional[str] = None
+    project_id: Optional[str] = None
+    created_at: Optional[str] = None
+    created_by: Optional[SessionCreatedBy] = None
+    cloud_provider: Optional[str] = None
+    region: Optional[str] = None
+    expiry_date: Optional[str] = None
+    ttl: Optional[str] = None
+
+
+class SessionsResponse(BaseModel):
+    data: Optional[List[SessionResponse]] = None
+    errors: Optional[List[GDSError]] = None
+
+
+class SessionEnvelope(BaseModel):
+    data: Optional[SessionResponse] = None
+    errors: Optional[List[GDSError]] = None
+
+
+class SessionSizeResponse(BaseModel):
+    recommended_size: Optional[str] = None
+    estimated_memory: Optional[str] = None
+
+
+class SessionSizeEnvelope(BaseModel):
+    data: Optional[SessionSizeResponse] = None
+    errors: Optional[List[GDSError]] = None
+
+
+class CreateGraphAnalyticsSessionRequest(OpenRequestModel):
+    name: Optional[str] = None
+    memory: Optional[str] = None
+    instance_id: Optional[str] = None
+    database_id: Optional[str] = None
+    ttl: Optional[str] = None
+
+
+class SessionSizingRequest(OpenRequestModel):
+    instance_id: Optional[str] = None
+    database_id: Optional[str] = None
+
+
+class CreateProjectInstanceRequest(OpenRequestModel):
+    name: Optional[str] = None
+    cloud_provider: Optional[str] = None
+    region: Optional[str] = None
+    type: Optional[str] = None
+    memory: Optional[str] = None
+    storage: Optional[str] = None
+
+
+class ProjectInstanceSummary(BaseModel):
+    id: Optional[str] = None
+    name: Optional[str] = None
+    cloud_provider: Optional[str] = None
+    created_at: Optional[str] = None
+
+
+class ProjectInstancesResponse(BaseModel):
+    data: Optional[List[ProjectInstanceSummary]] = None
+
+
+class ProjectInstanceDetails(BaseModel):
+    id: Optional[str] = None
+    name: Optional[str] = None
+    type: Optional[str] = None
+    cloud_provider: Optional[str] = None
+    region: Optional[str] = None
+    memory: Optional[str] = None
+    storage: Optional[str] = None
+    vector_optimized: Optional[bool] = None
+    multi_database: Optional[bool] = None
+    legacy_status: Optional[str] = None
+    connection_url: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
+
+
+class ProjectInstanceResponse(BaseModel):
+    data: Optional[ProjectInstanceDetails] = None
+
+
+class CreateProjectDatabaseRequest(OpenRequestModel):
+    name: Optional[str] = None
+
+
+class ProjectDatabaseSummary(BaseModel):
+    id: Optional[str] = None
+
+
+class ProjectDatabasesResponse(BaseModel):
+    data: Optional[List[ProjectDatabaseSummary]] = None
+
+
+class ProjectDatabaseResponse(BaseModel):
+    data: Optional[dict] = None
+
+
+class ProjectDatabaseBackup(BaseModel):
+    id: Optional[str] = None
+    timestamp: Optional[str] = None
+    status: Optional[str] = None
+    exportable: Optional[bool] = None
+
+
+class ProjectDatabaseBackupsResponse(BaseModel):
+    data: Optional[List[ProjectDatabaseBackup]] = None
+
+
+class ProjectDatabaseBackupResponse(BaseModel):
+    data: Optional[ProjectDatabaseBackup] = None
+
+
+class CreateProjectDatabaseBackupResponse(BaseModel):
+    data: Optional[dict] = None
+
+
+class RestoreProjectDatabaseRequest(OpenRequestModel):
+    source_instance_id: Optional[str] = None
+    source_snapshot_id: Optional[str] = None

@@ -57,9 +57,9 @@ The scripts attempt to download from these endpoints:
 
 - **v1**: `https://neo4j.com/docs/aura/platform/api/specification/aura_api_spec_v1.yaml`
 - **v1beta5**: `https://neo4j.com/docs/aura/platform/api/specification/beta/aura_api_spec_v5.yaml`
-- **v2beta1**: `https://neo4j.com/docs/aura/platform/api/specification/aura_api_spec_v2beta1.yaml`
+- **v2beta1**: `https://api.neo4j.io/v2beta1/spec.json`
 
-**Note:** These endpoints may require authentication or may not be publicly accessible. If the validation script cannot reach them, it will still validate local files for YAML correctness and structure.
+**Note:** These endpoints may require authentication or may not be publicly accessible. If the validation script cannot reach them, it will still validate local files for YAML/JSON correctness and structure.
 
 If you need to access authenticated endpoints, consider:
 - Using an API key via environment variables
@@ -71,8 +71,10 @@ If you need to access authenticated endpoints, consider:
 Specifications are stored at:
 
 - `neo4j_aura_sdk/resources/aura_api_spec_v1.yaml`
-- `neo4j_aura_sdk/resources/aura_api_spec_v2beta1.yaml`
+- `neo4j_aura_sdk/resources/v2beta1/spec.json`
 - `neo4j_aura_sdk/resources/beta/aura_api_spec_v5.yaml`
+
+During migration, the validator can also read the legacy `v2beta1` YAML file at `neo4j_aura_sdk/resources/aura_api_spec_v2beta1.yaml` if the JSON file is not present.
 
 ## Integration with Client
 

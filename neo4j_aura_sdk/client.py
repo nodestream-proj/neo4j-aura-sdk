@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from .models import (
     ActivityFeedResponse,
     ActivityLog,
+    AddProjectUserRequest,
     AgentDetails,
     AuraApiAuthorizationException,
     AuraApiBadRequestException,
@@ -17,12 +18,19 @@ from .models import (
     AuraApiInternalException,
     AuraApiNotFoundException,
     AuraApiRateLimitExceededException,
+    AuraApiUnsupportedActionException,
+    AuraApiValidationException,
     AuraError,
     AuraErrors,
     AuthResponse,
     CreateAgentRequest,
     CreateDeploymentRequest,
+    CreateGraphAnalyticsSessionRequest,
     CreateImportJobRequest,
+    CreateOrganizationInviteRequest,
+    CreateProjectDatabaseBackupResponse,
+    CreateProjectDatabaseRequest,
+    CreateProjectInstanceRequest,
     CustomerManagedKey,
     CustomerManagedKeyRequest,
     CustomerManagedKeyResponse,
@@ -48,14 +56,27 @@ from .models import (
     LedgerResponse,
     ListAgentResponse,
     OrganizationDetailsEnvelope,
+    OrganizationInviteResponse,
+    OrganizationInvitesResponse,
     OrganizationUser,
     OrganizationUserDetails,
     PatchAgentRequest,
     PatchProjectUserRequest,
+    ProjectDatabaseBackupResponse,
+    ProjectDatabaseBackupsResponse,
+    ProjectDatabaseResponse,
+    ProjectDatabasesResponse,
+    ProjectInstanceResponse,
+    ProjectInstancesResponse,
     ProjectsResponse,
     ProjectUser,
+    RestoreProjectDatabaseRequest,
     ServerDatabasesResponse,
     ServersResponse,
+    SessionEnvelope,
+    SessionSizeEnvelope,
+    SessionSizingRequest,
+    SessionsResponse,
     SnapshotResponse,
     SnapshotsResponse,
     TenantResponse,
@@ -314,6 +335,14 @@ class AuraClient:
             )
         elif response.status_code == 429:
             raise AuraApiRateLimitExceededException(
+                AuraErrors(**response.json()), response.status_code
+            )
+        elif response.status_code == 420:
+            raise AuraApiUnsupportedActionException(
+                AuraErrors(**response.json()), response.status_code
+            )
+        elif response.status_code == 422:
+            raise AuraApiValidationException(
                 AuraErrors(**response.json()), response.status_code
             )
         elif response.status_code >= 500:
@@ -845,6 +874,22 @@ class AuraClient:
             api_version="v2beta1",
         )
 
+    async def patch_organization_user(self, organizationId: str, userId: str):
+        """Patch an organization user (v2beta1).
+
+        The current API does not require a request body for this operation.
+        Returns the updated OrganizationUserDetails.
+        """
+        self._ensure_api_is_v2()
+        result = await self._patch(
+            f"organizations/{organizationId}/users/{userId}",
+            body=JobIdEnvelope(),
+            model=None,
+            api_version="v2beta1",
+        )
+        data = result.get("data", result) if isinstance(result, dict) else result
+        return OrganizationUserDetails(**data)
+
     # Project Users
     async def list_project_users(self, organizationId: str, projectId: str):
         """List all users in a project (v2beta1).
@@ -890,6 +935,24 @@ class AuraClient:
         )
         return ProjectUser(**result["data"])
 
+    async def add_project_user(
+        self,
+        organizationId: str,
+        projectId: str,
+        userId: str,
+        details: AddProjectUserRequest | None = None,
+    ):
+        """Add a user to a project (v2beta1)."""
+        self._ensure_api_is_v2()
+        result = await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/users/{userId}",
+            body=details or JobIdEnvelope(),
+            model=None,
+            api_version="v2beta1",
+        )
+        data = result.get("data", result) if isinstance(result, dict) else result
+        return ProjectUser(**data)
+
     async def remove_project_user(
         self, organizationId: str, projectId: str, userId: str
     ):
@@ -905,6 +968,38 @@ class AuraClient:
         self._ensure_api_is_v2()
         return await self._delete(
             f"organizations/{organizationId}/projects/{projectId}/users/{userId}",
+            api_version="v2beta1",
+        )
+
+    # Organization invites
+    async def list_organization_invites(self, organizationId: str):
+        """List organization invites (v2beta1)."""
+        self._ensure_api_is_v2()
+        result = await self._get(
+            f"organizations/{organizationId}/invites",
+            model=OrganizationInvitesResponse,
+            api_version="v2beta1",
+        )
+        return result.data or []
+
+    async def create_organization_invite(
+        self, organizationId: str, details: CreateOrganizationInviteRequest
+    ):
+        """Create an organization invite (v2beta1)."""
+        self._ensure_api_is_v2()
+        result = await self._post(
+            f"organizations/{organizationId}/invites",
+            body=details,
+            model=OrganizationInviteResponse,
+            api_version="v2beta1",
+        )
+        return result.data
+
+    async def delete_organization_invite(self, organizationId: str, inviteId: str):
+        """Delete an organization invite (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/invites/{inviteId}",
             api_version="v2beta1",
         )
 
@@ -1102,6 +1197,278 @@ class AuraClient:
         return await self._post(
             f"organizations/{organizationId}/projects/{projectId}/import/jobs/{jobId}/cancellation",
             model=JobIdEnvelope,
+            api_version="v2beta1",
+        )
+
+    # Graph analytics sessions
+    async def list_organization_graph_analytics_sessions(
+        self,
+        organizationId: str,
+        list_only_owned: bool | None = None,
+        include_deleted: bool | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        page: int | None = None,
+        page_size: int | None = None,
+    ):
+        """List graph analytics sessions for an organization (v2beta1)."""
+        self._ensure_api_is_v2()
+        params = {}
+        if list_only_owned is not None:
+            params["list_only_owned"] = str(list_only_owned).lower()
+        if include_deleted is not None:
+            params["include_deleted"] = str(include_deleted).lower()
+        if start_date:
+            params["start_date"] = start_date
+        if end_date:
+            params["end_date"] = end_date
+        if page is not None:
+            params["page"] = page
+        if page_size is not None:
+            params["page_size"] = page_size
+        return await self._get(
+            f"organizations/{organizationId}/graph-analytics/sessions",
+            model=SessionsResponse,
+            api_version="v2beta1",
+            params=params if params else None,
+        )
+
+    async def list_project_graph_analytics_sessions(
+        self, organizationId: str, projectId: str
+    ):
+        """List graph analytics sessions for a project (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/graph-analytics/sessions",
+            model=SessionsResponse,
+            api_version="v2beta1",
+        )
+
+    async def create_project_graph_analytics_session(
+        self,
+        organizationId: str,
+        projectId: str,
+        details: CreateGraphAnalyticsSessionRequest,
+    ):
+        """Create a graph analytics session for a project (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/graph-analytics/sessions",
+            body=details,
+            model=SessionEnvelope,
+            api_version="v2beta1",
+        )
+
+    async def get_project_graph_analytics_session(
+        self,
+        organizationId: str,
+        projectId: str,
+        sessionId: str,
+    ):
+        """Get a graph analytics session by id (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/graph-analytics/sessions/{sessionId}",
+            model=SessionEnvelope,
+            api_version="v2beta1",
+        )
+
+    async def delete_project_graph_analytics_session(
+        self,
+        organizationId: str,
+        projectId: str,
+        sessionId: str,
+    ):
+        """Delete a graph analytics session by id (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/projects/{projectId}/graph-analytics/sessions/{sessionId}",
+            api_version="v2beta1",
+        )
+
+    async def estimate_project_graph_analytics_session_size(
+        self,
+        organizationId: str,
+        projectId: str,
+        details: SessionSizingRequest,
+    ):
+        """Estimate project graph analytics session size (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/graph-analytics/sessions/sizing",
+            body=details,
+            model=SessionSizeEnvelope,
+            api_version="v2beta1",
+        )
+
+    # Project instances and databases
+    async def list_project_instances(self, organizationId: str, projectId: str):
+        """List project instances (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/instances",
+            model=ProjectInstancesResponse,
+            api_version="v2beta1",
+        )
+
+    async def create_project_instance(
+        self,
+        organizationId: str,
+        projectId: str,
+        details: CreateProjectInstanceRequest,
+    ):
+        """Create a project instance (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/instances",
+            body=details,
+            model=ProjectInstanceResponse,
+            api_version="v2beta1",
+        )
+
+    async def get_project_instance(
+        self, organizationId: str, projectId: str, instanceId: str
+    ):
+        """Get a project instance by id (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}",
+            model=ProjectInstanceResponse,
+            api_version="v2beta1",
+        )
+
+    async def delete_project_instance(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+    ):
+        """Delete a project instance (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}",
+            api_version="v2beta1",
+        )
+
+    async def list_project_instance_databases(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+    ):
+        """List databases for a project instance (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases",
+            model=ProjectDatabasesResponse,
+            api_version="v2beta1",
+        )
+
+    async def create_project_instance_database(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+        details: CreateProjectDatabaseRequest,
+    ):
+        """Create a database for a project instance (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases",
+            body=details,
+            model=ProjectDatabaseResponse,
+            api_version="v2beta1",
+        )
+
+    async def get_project_instance_database(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+        databaseId: str,
+    ):
+        """Get a database by id for a project instance (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases/{databaseId}",
+            model=ProjectDatabaseResponse,
+            api_version="v2beta1",
+        )
+
+    async def delete_project_instance_database(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+        databaseId: str,
+    ):
+        """Delete a database from a project instance (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases/{databaseId}",
+            api_version="v2beta1",
+        )
+
+    async def list_project_database_backups(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+        databaseId: str,
+    ):
+        """List backups for a project instance database (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases/{databaseId}/backups",
+            model=ProjectDatabaseBackupsResponse,
+            api_version="v2beta1",
+        )
+
+    async def create_project_database_backup(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+        databaseId: str,
+    ):
+        """Create/schedule a backup for a project instance database (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases/{databaseId}/backups",
+            model=CreateProjectDatabaseBackupResponse,
+            api_version="v2beta1",
+        )
+
+    async def get_project_database_backup(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+        databaseId: str,
+        backupId: str,
+    ):
+        """Get a backup by id for a project instance database (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases/{databaseId}/backups/{backupId}",
+            model=ProjectDatabaseBackupResponse,
+            api_version="v2beta1",
+        )
+
+    async def restore_project_instance_database(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+        databaseId: str,
+        details: RestoreProjectDatabaseRequest,
+    ):
+        """Restore a project instance database (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases/{databaseId}/restore",
+            body=details,
+            model=ProjectDatabaseResponse,
             api_version="v2beta1",
         )
 

@@ -16,6 +16,13 @@ SWAGGER_INITIALIZER_URL = (
 )
 
 
+def _build_spec_url(spec_url: str) -> str:
+    """Resolve spec URL whether it is relative or absolute."""
+    if spec_url.startswith(("http://", "https://")):
+        return spec_url
+    return f"{BASE_SPEC_URL}/{spec_url}"
+
+
 def fetch_specs_from_swagger() -> Dict[str, Dict]:
     """Fetch the specs array from swagger-initializer.js and map to local paths."""
     try:
@@ -48,16 +55,20 @@ def fetch_specs_from_swagger() -> Dict[str, Dict]:
                 "key": "v1",
                 "description": "Core Aura API v1",
                 "local": "neo4j_aura_sdk/resources/aura_api_spec_v1.yaml",
+                "format": "yaml",
             },
             "Aura v2beta1": {
                 "key": "v2beta1",
                 "description": "Aura API v2beta1 (Fleet Manager)",
-                "local": "neo4j_aura_sdk/resources/aura_api_spec_v2beta1.yaml",
+                "local": "neo4j_aura_sdk/resources/v2beta1/spec.json",
+                "legacy_local": "neo4j_aura_sdk/resources/aura_api_spec_v2beta1.yaml",
+                "format": "json",
             },
             "Aura v1beta5": {
                 "key": "v1beta5",
                 "description": "Aura API v1beta5 (GraphQL Data API)",
                 "local": "neo4j_aura_sdk/resources/beta/aura_api_spec_v5.yaml",
+                "format": "yaml",
             },
         }
 
@@ -75,10 +86,13 @@ def fetch_specs_from_swagger() -> Dict[str, Dict]:
             mapping = version_mapping[spec_name]
             key = mapping["key"]
             specs[key] = {
-                "url": f"{BASE_SPEC_URL}/{spec_url}",
+                "url": _build_spec_url(spec_url),
                 "local": mapping["local"],
                 "description": mapping["description"],
+                "format": mapping["format"],
             }
+            if "legacy_local" in mapping:
+                specs[key]["legacy_local"] = mapping["legacy_local"]
         
         # Notify about unmapped specs and store them globally
         if unmapped_specs:
@@ -104,16 +118,20 @@ def _get_fallback_specs() -> Dict[str, Dict]:
             "url": f"{BASE_SPEC_URL}/aura_api_spec_v1.yaml",
             "local": "neo4j_aura_sdk/resources/aura_api_spec_v1.yaml",
             "description": "Core Aura API v1",
+            "format": "yaml",
         },
         "v2beta1": {
-            "url": f"{BASE_SPEC_URL}/aura_api_spec_v2beta1.yaml",
-            "local": "neo4j_aura_sdk/resources/aura_api_spec_v2beta1.yaml",
+            "url": f"{BASE_SPEC_URL}/aura_api_spec_v2beta1.json",
+            "local": "neo4j_aura_sdk/resources/v2beta1/spec.json",
+            "legacy_local": "neo4j_aura_sdk/resources/aura_api_spec_v2beta1.yaml",
             "description": "Aura API v2beta1 (Fleet Manager)",
+            "format": "json",
         },
         "v1beta5": {
             "url": f"{BASE_SPEC_URL}/beta/aura_api_spec_v5.yaml",
             "local": "neo4j_aura_sdk/resources/beta/aura_api_spec_v5.yaml",
             "description": "Aura API v1beta5 (GraphQL Data API)",
+            "format": "yaml",
         },
     }
 

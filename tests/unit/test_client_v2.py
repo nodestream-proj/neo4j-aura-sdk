@@ -1193,6 +1193,213 @@ async def test_remove_organization_user():
         assert resp is None
 
 
+# === Additional v2beta1 Coverage (new JSON spec) ===
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_patch_organization_user():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    user_id = "user1"
+    respx.patch(f"{baseUrl}v2beta1/organizations/{org_id}/users/{user_id}").respond(
+        status_code=200,
+        json={
+            "data": {
+                "user_id": user_id,
+                "email": "alice@example.com",
+                "organization_roles": ["organization-member"],
+                "exempt_from_automatic_removal": False,
+                "mfa_enrollment_status": "not_enrolled",
+                "mfa_enrolled_methods": [],
+                "last_activity_at": "2026-01-01T00:00:00Z",
+                "projects": [],
+            }
+        },
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.patch_organization_user(org_id, user_id)
+        assert isinstance(resp, models.OrganizationUserDetails)
+        assert resp.user_id == user_id
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_add_project_user():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    user_id = "user1"
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/users/{user_id}"
+    ).respond(
+        status_code=201,
+        json={
+            "data": {
+                "user_id": user_id,
+                "email": "alice@example.com",
+                "project_roles": ["namespace-member"],
+            }
+        },
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        req = models.AddProjectUserRequest(project_roles=["namespace-member"])
+        resp = await client.add_project_user(org_id, proj_id, user_id, req)
+        assert isinstance(resp, models.ProjectUser)
+        assert resp.user_id == user_id
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_organization_invites_crud():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    invite_id = "invite-1"
+    respx.get(f"{baseUrl}v2beta1/organizations/{org_id}/invites").respond(
+        status_code=200,
+        json={
+            "data": [
+                {
+                    "id": invite_id,
+                    "email": "new-user@example.com",
+                    "status": "active",
+                }
+            ]
+        },
+    )
+    respx.post(f"{baseUrl}v2beta1/organizations/{org_id}/invites").respond(
+        status_code=201,
+        json={
+            "data": {
+                "id": invite_id,
+                "email": "new-user@example.com",
+                "status": "active",
+            }
+        },
+    )
+    respx.delete(
+        f"{baseUrl}v2beta1/organizations/{org_id}/invites/{invite_id}"
+    ).respond(status_code=204)
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        invites = await client.list_organization_invites(org_id)
+        assert len(invites) == 1
+        assert isinstance(invites[0], models.OrganizationInvite)
+
+        req = models.CreateOrganizationInviteRequest(
+            email="new-user@example.com",
+            roles=["organization-member"],
+        )
+        created = await client.create_organization_invite(org_id, req)
+        assert created.id == invite_id
+
+        deleted = await client.delete_organization_invite(org_id, invite_id)
+        assert deleted is None
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_graph_analytics_session_methods():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    session_id = "session-1"
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/graph-analytics/sessions"
+    ).respond(
+        status_code=200,
+        json={"data": [{"id": session_id, "name": "analytics-session"}], "errors": []},
+    )
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/graph-analytics/sessions"
+    ).respond(
+        status_code=200,
+        json={"data": {"id": session_id, "name": "analytics-session"}, "errors": []},
+    )
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/graph-analytics/sessions/sizing"
+    ).respond(
+        status_code=200,
+        json={"data": {"recommended_size": "2GB", "estimated_memory": "1.6GB"}},
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        org_sessions = await client.list_organization_graph_analytics_sessions(org_id)
+        assert org_sessions.data[0].id == session_id
+
+        create_req = models.CreateGraphAnalyticsSessionRequest(
+            name="analytics-session", memory="2GB", instance_id=inst_id
+        )
+        created = await client.create_project_graph_analytics_session(
+            org_id, proj_id, create_req
+        )
+        assert created.data.id == session_id
+
+        sizing_req = models.SessionSizingRequest(instance_id=inst_id)
+        sizing = await client.estimate_project_graph_analytics_session_size(
+            org_id, proj_id, sizing_req
+        )
+        assert sizing.data.recommended_size == "2GB"
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_project_instance_and_database_methods():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    database_id = "db-1"
+    backup_id = "bkp-1"
+
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances"
+    ).respond(status_code=200, json={"data": [{"id": inst_id, "name": "inst"}]})
+
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances"
+    ).respond(status_code=201, json={"data": {"id": inst_id, "name": "inst"}})
+
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases"
+    ).respond(status_code=200, json={"data": [{"id": database_id}]})
+
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases/{database_id}/backups"
+    ).respond(status_code=202, json={"data": {"id": backup_id}})
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        instances = await client.list_project_instances(org_id, proj_id)
+        assert instances.data[0].id == inst_id
+
+        create_req = models.CreateProjectInstanceRequest(name="inst")
+        created = await client.create_project_instance(org_id, proj_id, create_req)
+        assert created.data.id == inst_id
+
+        databases = await client.list_project_instance_databases(
+            org_id, proj_id, inst_id
+        )
+        assert databases.data[0].id == database_id
+
+        backup = await client.create_project_database_backup(
+            org_id, proj_id, inst_id, database_id
+        )
+        assert backup.data["id"] == backup_id
+
+
 # === Agent Patch Tests ===
 
 
