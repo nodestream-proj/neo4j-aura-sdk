@@ -620,11 +620,16 @@ class SimilaritySearchToolParameters(BaseModel):
     index: str
     top_k: Optional[int] = None
     dimension: Optional[int] = None
+    dimensions: Optional[int] = None
+    post_processing_cypher: Optional[str] = None
 
 
-class AgentTool(BaseModel):
+class AgentToolSummary(BaseModel):
     name: str
     type: str
+
+
+class AgentTool(AgentToolSummary):
     enabled: Optional[bool] = None
     description: Optional[str] = None
     parameters: Optional[Union[SimilaritySearchToolParameters, Dict[str, Any]]] = None
@@ -636,18 +641,18 @@ class AgentTool(BaseModel):
         if self.type != "similaritySearch":
             return self
 
-        # Backward compatibility: older payloads used `config`.
-        if self.parameters is None and self.config is not None:
-            self.parameters = self.config
-            self.config = None
-
-        if self.parameters is None:
+        if self.parameters is None and self.config is None:
             raise ValueError(
-                "similaritySearch tools require `parameters` with provider, model, and index"
+                "similaritySearch tools require `parameters` or `config` with provider, model, and index"
             )
 
         if isinstance(self.parameters, dict):
             self.parameters = SimilaritySearchToolParameters(**self.parameters)
+
+        if self.config is not None:
+            self.config = SimilaritySearchToolParameters(**self.config).model_dump(
+                exclude_none=True
+            )
 
         return self
 
@@ -676,7 +681,7 @@ class ListAgentResponse(BaseModel):
     updated_at: Optional[str] = None
     is_private: Optional[bool] = None
     is_mcp_enabled: Optional[bool] = None
-    tools: Optional[List[AgentTool]] = None
+    tools: Optional[List[AgentToolSummary]] = None
     endpoint_link: Optional[str] = None
     mcp_endpoint_link: Optional[str] = None
     avatar_color: Optional[str] = None

@@ -424,7 +424,7 @@ class AuraClient:
     async def _patch(
         self,
         path: str,
-        body: BaseModel,
+        body: BaseModel | None = None,
         model: Type[BaseModel] | None = None,
         api_version: str | None = None,
     ):
@@ -840,7 +840,8 @@ class AuraClient:
             model=None,
             api_version="v2beta1",
         )
-        return [OrganizationUser(**item) for item in items] if items else []
+        data = items.get("data", []) if isinstance(items, dict) else items
+        return [OrganizationUser(**item) for item in data] if data else []
 
     async def get_organization_user(self, organizationId: str, userId: str):
         """Get detailed information about a user in an organization (v2beta1).
@@ -883,7 +884,6 @@ class AuraClient:
         self._ensure_api_is_v2()
         result = await self._patch(
             f"organizations/{organizationId}/users/{userId}",
-            body=JobIdEnvelope(),
             model=None,
             api_version="v2beta1",
         )

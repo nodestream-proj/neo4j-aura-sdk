@@ -1114,11 +1114,31 @@ def test_similarity_search_tool_legacy_config_is_normalized():
         },
     )
 
-    assert isinstance(tool.parameters, models.SimilaritySearchToolParameters)
-    assert tool.parameters.provider == "openai"
-    assert tool.parameters.model == "text-embedding-3-small"
-    assert tool.parameters.index == "my-index"
-    assert tool.config is None
+    assert tool.parameters is None
+    assert tool.config is not None
+    assert tool.config["provider"] == "openai"
+    assert tool.config["model"] == "text-embedding-3-small"
+    assert tool.config["index"] == "my-index"
+
+
+def test_similarity_search_tool_config_serializes_as_config():
+    tool = models.AgentTool(
+        name="similarity-search",
+        type="similaritySearch",
+        config={
+            "provider": "openai",
+            "model": "text-embedding-3-small",
+            "index": "my-index",
+            "dimensions": 1536,
+            "top_k": 10,
+        },
+    )
+
+    payload = tool.model_dump(exclude_none=True)
+    assert "config" in payload
+    assert "parameters" not in payload
+    assert payload["config"]["dimensions"] == 1536
+    assert payload["config"]["top_k"] == 10
 
 
 # === Organization Users Tests ===
@@ -1156,7 +1176,7 @@ async def test_list_organization_users():
     ]
 
     respx.get(f"{baseUrl}v2beta1/organizations/{org_id}/users").respond(
-        status_code=200, json=users
+        status_code=200, json={"data": users}
     )
 
     async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
@@ -1205,7 +1225,9 @@ async def test_patch_organization_user():
     )
 
     user_id = "user1"
-    respx.patch(f"{baseUrl}v2beta1/organizations/{org_id}/users/{user_id}").respond(
+    route = respx.patch(
+        f"{baseUrl}v2beta1/organizations/{org_id}/users/{user_id}"
+    ).respond(
         status_code=200,
         json={
             "data": {
@@ -1225,6 +1247,35 @@ async def test_patch_organization_user():
         resp = await client.patch_organization_user(org_id, user_id)
         assert isinstance(resp, models.OrganizationUserDetails)
         assert resp.user_id == user_id
+        assert route.calls[0].request.content == b""
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_list_agents_allows_similarity_search_summary_tools():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents"
+    ).respond(
+        status_code=200,
+        json=[
+            {
+                "id": agent_id,
+                "name": "My Agent",
+                "tools": [{"name": "sim-search", "type": "similaritySearch"}],
+            }
+        ],
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.list_agents(org_id, proj_id)
+        assert len(resp) == 1
+        assert resp[0].tools is not None
+        assert resp[0].tools[0].type == "similaritySearch"
 
 
 @respx.mock
