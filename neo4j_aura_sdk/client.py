@@ -800,30 +800,32 @@ class AuraClient:
             organizationId: the organization id
             status: optional filter by project status ('active', 'deleted', 'deletion_requested')
 
-        Returns: ProjectsResponse with 'data' key containing list of projects.
+        Returns: List of project objects.
         """
         self._ensure_api_is_v2()
         params = {}
         if status:
             params["status"] = status
-        return await self._get(
+        result = await self._get(
             f"organizations/{organizationId}/projects",
             model=ProjectsResponse,
             api_version="v2beta1",
             params=params if params else None,
         )
+        return result.data or []
 
     async def list_organizations(self):
         """List all organizations (v2beta1).
 
-        Returns: OrganizationDetailsEnvelope with a list of organizations.
+        Returns: List of organization objects.
         """
         self._ensure_api_is_v2()
-        return await self._get(
+        result = await self._get(
             "organizations",
             model=OrganizationDetailsEnvelope,
             api_version="v2beta1",
         )
+        return result.data or []
 
     # Organization Users
     async def list_organization_users(self, organizationId: str):
@@ -858,7 +860,8 @@ class AuraClient:
             model=None,
             api_version="v2beta1",
         )
-        return OrganizationUserDetails(**result["data"])
+        data = result.get("data", result) if isinstance(result, dict) else result
+        return OrganizationUserDetails(**data)
 
     async def remove_organization_user(self, organizationId: str, user_id: str):
         """Remove a user from an organization (v2beta1).
@@ -933,7 +936,8 @@ class AuraClient:
             model=None,
             api_version="v2beta1",
         )
-        return ProjectUser(**result["data"])
+        data = result.get("data", result) if isinstance(result, dict) else result
+        return ProjectUser(**data)
 
     async def add_project_user(
         self,
@@ -946,7 +950,7 @@ class AuraClient:
         self._ensure_api_is_v2()
         result = await self._post(
             f"organizations/{organizationId}/projects/{projectId}/users/{userId}",
-            body=details or JobIdEnvelope(),
+            body=details,
             model=None,
             api_version="v2beta1",
         )
@@ -1211,7 +1215,10 @@ class AuraClient:
         page: int | None = None,
         page_size: int | None = None,
     ):
-        """List graph analytics sessions for an organization (v2beta1)."""
+        """List graph analytics sessions for an organization (v2beta1).
+
+        Returns: List of SessionResponse objects.
+        """
         self._ensure_api_is_v2()
         params = {}
         if list_only_owned is not None:
@@ -1226,23 +1233,28 @@ class AuraClient:
             params["page"] = page
         if page_size is not None:
             params["page_size"] = page_size
-        return await self._get(
+        result = await self._get(
             f"organizations/{organizationId}/graph-analytics/sessions",
             model=SessionsResponse,
             api_version="v2beta1",
             params=params if params else None,
         )
+        return result.data or []
 
     async def list_project_graph_analytics_sessions(
         self, organizationId: str, projectId: str
     ):
-        """List graph analytics sessions for a project (v2beta1)."""
+        """List graph analytics sessions for a project (v2beta1).
+
+        Returns: List of SessionResponse objects.
+        """
         self._ensure_api_is_v2()
-        return await self._get(
+        result = await self._get(
             f"organizations/{organizationId}/projects/{projectId}/graph-analytics/sessions",
             model=SessionsResponse,
             api_version="v2beta1",
         )
+        return result.data or []
 
     async def create_project_graph_analytics_session(
         self,
@@ -1303,13 +1315,17 @@ class AuraClient:
 
     # Project instances and databases
     async def list_project_instances(self, organizationId: str, projectId: str):
-        """List project instances (v2beta1)."""
+        """List project instances (v2beta1).
+
+        Returns: List of ProjectInstanceSummary objects.
+        """
         self._ensure_api_is_v2()
-        return await self._get(
+        result = await self._get(
             f"organizations/{organizationId}/projects/{projectId}/instances",
             model=ProjectInstancesResponse,
             api_version="v2beta1",
         )
+        return result.data or []
 
     async def create_project_instance(
         self,
@@ -1356,13 +1372,17 @@ class AuraClient:
         projectId: str,
         instanceId: str,
     ):
-        """List databases for a project instance (v2beta1)."""
+        """List databases for a project instance (v2beta1).
+
+        Returns: List of ProjectDatabaseSummary objects.
+        """
         self._ensure_api_is_v2()
-        return await self._get(
+        result = await self._get(
             f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases",
             model=ProjectDatabasesResponse,
             api_version="v2beta1",
         )
+        return result.data or []
 
     async def create_project_instance_database(
         self,
@@ -1416,13 +1436,17 @@ class AuraClient:
         instanceId: str,
         databaseId: str,
     ):
-        """List backups for a project instance database (v2beta1)."""
+        """List backups for a project instance database (v2beta1).
+
+        Returns: List of ProjectDatabaseBackup objects.
+        """
         self._ensure_api_is_v2()
-        return await self._get(
+        result = await self._get(
             f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases/{databaseId}/backups",
             model=ProjectDatabaseBackupsResponse,
             api_version="v2beta1",
         )
+        return result.data or []
 
     async def create_project_database_backup(
         self,
@@ -1475,13 +1499,17 @@ class AuraClient:
     # --- Fleet Manager Deployment Methods (v2beta1) ---
 
     async def list_deployments(self, organizationId: str, projectId: str):
-        """List all Fleet Manager deployments for a project (v2beta1)."""
+        """List all Fleet Manager deployments for a project (v2beta1).
+
+        Returns: List of DeploymentSummary objects.
+        """
         self._ensure_api_is_v2()
-        return await self._get(
+        result = await self._get(
             f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments",
             model=DeploymentsResponse,
             api_version="v2beta1",
         )
+        return result.data or []
 
     async def create_deployment(
         self, organizationId: str, projectId: str, details: CreateDeploymentRequest

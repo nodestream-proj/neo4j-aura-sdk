@@ -35,11 +35,11 @@ async def test_list_organizations():
 
     async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
         resp = await client.list_organizations()
-        assert isinstance(resp.data, list)
-        assert resp.data[0]["id"] == "org1"
-        assert resp.data[0]["name"] == "MetaCortex"
-        assert resp.data[1]["id"] == "org2"
-        assert resp.data[1]["name"] == "Zion"
+        assert isinstance(resp, list)
+        assert resp[0]["id"] == "org1"
+        assert resp[0]["name"] == "MetaCortex"
+        assert resp[1]["id"] == "org2"
+        assert resp[1]["name"] == "Zion"
 
 
 @respx.mock
@@ -88,8 +88,8 @@ async def test_list_organization_projects():
 
     async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
         resp = await client.list_organization_projects(org_id)
-        assert resp.data[0]["id"] == proj_id
-        assert resp.data[0]["name"] == "My Project"
+        assert resp[0]["id"] == proj_id
+        assert resp[0]["name"] == "My Project"
 
 
 # === IP Filter Tests ===
@@ -397,7 +397,7 @@ async def test_list_deployments():
 
     async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
         resp = await client.list_deployments(org_id, proj_id)
-        assert resp.data[0].id == deployment_id
+        assert resp[0].id == deployment_id
 
 
 @respx.mock
@@ -782,7 +782,7 @@ async def test_get_billing_usage_with_project_filter():
         "5f8f4f31-2a8a-4f84-8e4d-89b67c3f67c4",
     ]
 
-    respx.get(
+    route = respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/billing/usage",
         params={"start": start, "end": end, "project_id": project_ids},
     ).respond(
@@ -798,6 +798,8 @@ async def test_get_billing_usage_with_project_filter():
             project_id=project_ids,
         )
         assert resp.links.self == "/organizations/org1/billing/usage"
+        assert route.calls[0].request.url.params.get_list("project_id") == project_ids
+        assert str(route.calls[0].request.url).count("project_id=") == 2
 
 
 @respx.mock
@@ -1309,6 +1311,35 @@ async def test_add_project_user():
 
 @respx.mock
 @pytest.mark.asyncio
+async def test_add_project_user_without_body():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    user_id = "user1"
+    route = respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/users/{user_id}"
+    ).respond(
+        status_code=201,
+        json={
+            "data": {
+                "user_id": user_id,
+                "email": "alice@example.com",
+                "project_roles": ["namespace-member"],
+            }
+        },
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.add_project_user(org_id, proj_id, user_id)
+        assert isinstance(resp, models.ProjectUser)
+        assert resp.user_id == user_id
+        assert route.calls[0].request.content == b""
+
+
+@respx.mock
+@pytest.mark.asyncio
 async def test_organization_invites_crud():
     respx.post(f"{baseUrl}oauth/token").respond(
         status_code=200,
@@ -1379,6 +1410,12 @@ async def test_graph_analytics_session_methods():
         status_code=200,
         json={"data": {"id": session_id, "name": "analytics-session"}, "errors": []},
     )
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/graph-analytics/sessions"
+    ).respond(
+        status_code=200,
+        json={"data": [{"id": session_id, "name": "analytics-session"}], "errors": []},
+    )
     respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/graph-analytics/sessions/sizing"
     ).respond(
@@ -1388,7 +1425,12 @@ async def test_graph_analytics_session_methods():
 
     async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
         org_sessions = await client.list_organization_graph_analytics_sessions(org_id)
-        assert org_sessions.data[0].id == session_id
+        assert org_sessions[0].id == session_id
+
+        project_sessions = await client.list_project_graph_analytics_sessions(
+            org_id, proj_id
+        )
+        assert project_sessions[0].id == session_id
 
         create_req = models.CreateGraphAnalyticsSessionRequest(
             name="analytics-session", memory="2GB", instance_id=inst_id
@@ -1427,6 +1469,9 @@ async def test_project_instance_and_database_methods():
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases"
     ).respond(status_code=200, json={"data": [{"id": database_id}]})
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases/{database_id}/backups"
+    ).respond(status_code=200, json={"data": [{"id": backup_id}]})
 
     respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases/{database_id}/backups"
@@ -1434,7 +1479,7 @@ async def test_project_instance_and_database_methods():
 
     async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
         instances = await client.list_project_instances(org_id, proj_id)
-        assert instances.data[0].id == inst_id
+        assert instances[0].id == inst_id
 
         create_req = models.CreateProjectInstanceRequest(name="inst")
         created = await client.create_project_instance(org_id, proj_id, create_req)
@@ -1443,7 +1488,12 @@ async def test_project_instance_and_database_methods():
         databases = await client.list_project_instance_databases(
             org_id, proj_id, inst_id
         )
-        assert databases.data[0].id == database_id
+        assert databases[0].id == database_id
+
+        backups = await client.list_project_database_backups(
+            org_id, proj_id, inst_id, database_id
+        )
+        assert backups[0].id == backup_id
 
         backup = await client.create_project_database_backup(
             org_id, proj_id, inst_id, database_id
