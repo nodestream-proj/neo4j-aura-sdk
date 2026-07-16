@@ -27,7 +27,7 @@ jobs:
     
     steps:
       # Checkout the repository subject to the release.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # Install poetry to build the package.
       - name: Install poetry
@@ -38,7 +38,7 @@ jobs:
       # poetry because its simply building the package. We've confirmed functionality
       # with CI testing before this step.
       - name: Set up Python 3.12 
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: 3.12
           cache: 'poetry'
@@ -63,7 +63,7 @@ jobs:
       # This is so we can sign the package and upload it to the GitHub release.
       # this is being done as a seperate job so that we can minimize the permissions needed for the publish job.
       - name: Store the Built Package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: python-package-distribution
           path: dist/
@@ -71,6 +71,6 @@ jobs:
       # We are then going to sign the package using Github's Attest Build Provenance action.
       # This action will sign the package and upload the signature to the GitHub release.
       # This is to ensure that the package is verified and trusted by the user.
-      - uses: actions/attest-build-provenance@v1
+      - uses: actions/attest-build-provenance@v4
         with:
           subject-path: 'dist/*'

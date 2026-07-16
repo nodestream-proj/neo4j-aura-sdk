@@ -1,6 +1,6 @@
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 # --- v1beta5 GraphQL Data API models ---
@@ -127,6 +127,24 @@ class AuraApiInternalException(AuraApiException):
 
 
 class AuraApiRateLimitExceededException(AuraApiException):
+    def __init__(self, errors: AuraErrors, status: int):
+        self.status = status
+        super().__init__(errors)
+
+
+class AuraApiUnsupportedActionException(AuraApiException):
+    def __init__(self, errors: AuraErrors, status: int):
+        self.status = status
+        super().__init__(errors)
+
+
+class AuraApiValidationException(AuraApiException):
+    """Raised on HTTP 422 Unprocessable Entity.
+
+    Indicates the request body failed server-side validation, a resource limit
+    was reached, or the operation is unsupported for the target resource type.
+    """
+
     def __init__(self, errors: AuraErrors, status: int):
         self.status = status
         super().__init__(errors)
@@ -305,6 +323,7 @@ class IpFilterWithStatus(IpFilter):
 class CreateImportJobRequest(BaseModel):
     importModelId: str
     auraCredentials: Optional[dict] = None
+    importConfig: Optional[dict] = None
 
 
 class ImportExitStatus(BaseModel):
@@ -587,3 +606,420 @@ class UsageResponse(BaseModel):
 class LedgerResponse(BaseModel):
     data: Optional[List[LedgerData]] = None
     links: Optional[Links] = None
+
+
+# --- Agents Models (v2beta1) ---
+class AgentInputMessage(BaseModel):
+    role: str
+    content: str
+
+
+class SimilaritySearchToolParameters(BaseModel):
+    provider: str
+    model: str
+    index: str
+    top_k: Optional[int] = None
+    dimension: Optional[int] = None
+    dimensions: Optional[int] = None
+    post_processing_cypher: Optional[str] = None
+
+
+class AgentToolSummary(BaseModel):
+    name: str
+    type: str
+
+
+class AgentTool(AgentToolSummary):
+    enabled: Optional[bool] = None
+    description: Optional[str] = None
+    parameters: Optional[Union[SimilaritySearchToolParameters, Dict[str, Any]]] = None
+    config: Optional[Dict[str, Any]] = None
+    extra_params: Optional[Dict[str, Any]] = None
+
+    @model_validator(mode="after")
+    def validate_similarity_search_tool(self):
+        if self.type != "similaritySearch":
+            return self
+
+        if self.parameters is None and self.config is None:
+            raise ValueError(
+                "similaritySearch tools require `parameters` or `config` with provider, model, and index"
+            )
+
+        if isinstance(self.parameters, dict):
+            self.parameters = SimilaritySearchToolParameters(**self.parameters)
+
+        if self.config is not None:
+            self.config = SimilaritySearchToolParameters(**self.config).model_dump(
+                exclude_none=True
+            )
+
+        return self
+
+
+class CreateAgentRequest(BaseModel):
+    name: str
+    description: str
+    dbid: str
+    is_private: bool
+    tools: List[AgentTool]
+    system_prompt: Optional[str] = None
+    is_mcp_enabled: Optional[bool] = None
+    enabled: Optional[bool] = None
+
+
+class ListAgentResponse(BaseModel):
+    id: Optional[str] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    created_by: Optional[str] = None
+    project_id: Optional[str] = None
+    organization_id: Optional[str] = None
+    system_prompt: Optional[str] = None
+    dbid: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    is_private: Optional[bool] = None
+    is_mcp_enabled: Optional[bool] = None
+    tools: Optional[List[AgentToolSummary]] = None
+    endpoint_link: Optional[str] = None
+    mcp_endpoint_link: Optional[str] = None
+    avatar_color: Optional[str] = None
+    avatar_icon: Optional[str] = None
+    enabled: Optional[bool] = None
+
+
+class GetAgentResponse(BaseModel):
+    id: Optional[str] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    created_by: Optional[str] = None
+    project_id: Optional[str] = None
+    organization_id: Optional[str] = None
+    system_prompt: Optional[str] = None
+    dbid: Optional[str] = None
+    is_private: Optional[bool] = None
+    is_mcp_enabled: Optional[bool] = None
+    tools: Optional[List[AgentTool]] = None
+    enabled: Optional[bool] = None
+
+
+class AgentDetails(GetAgentResponse):
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    endpoint_link: Optional[str] = None
+    avatar_color: Optional[str] = None
+    avatar_icon: Optional[str] = None
+
+
+class InvokeAgentRequest(BaseModel):
+    input: Union[str, List[AgentInputMessage]]
+    stream: Optional[bool] = None
+
+
+class InvokeAgentContentBlock(BaseModel):
+    type: Optional[str] = None
+    text: Optional[str] = None
+    thinking: Optional[str] = None
+    id: Optional[str] = None
+    name: Optional[str] = None
+    input: Optional[Dict[str, Any]] = None
+    output: Optional[Dict[str, Any]] = None
+    tool_use_id: Optional[str] = None
+
+
+class InvokeAgentError(BaseModel):
+    message: Optional[str] = None
+    type: Optional[str] = None
+    status_code: Optional[int] = None
+
+
+class InvokeAgentUsage(BaseModel):
+    request_tokens: Optional[int] = None
+    response_tokens: Optional[int] = None
+    total_tokens: Optional[int] = None
+
+
+class InvokeAgentResponse(BaseModel):
+    id: Optional[str] = None
+    type: Optional[str] = None
+    role: Optional[str] = None
+    content: Optional[List[InvokeAgentContentBlock]] = None
+    end_reason: Optional[str] = None
+    status: Optional[str] = None
+    error: Optional[InvokeAgentError] = None
+    usage: Optional[InvokeAgentUsage] = None
+
+
+# --- Organization User Models (v2beta1) ---
+class MfaEnrolledMethod(BaseModel):
+    id: str
+    enrolled_at: str
+
+
+class OrganizationUser(BaseModel):
+    user_id: str
+    email: str
+    organization_roles: List[str]
+    exempt_from_automatic_removal: bool
+    mfa_enrollment_status: str
+    mfa_enrolled_methods: Optional[List[MfaEnrolledMethod]] = None
+    last_activity_at: Optional[str] = None
+
+
+class OrganizationUserProject(BaseModel):
+    id: str
+    name: str
+    project_roles: List[str]
+
+
+class OrganizationUserDetails(OrganizationUser):
+    projects: List[OrganizationUserProject]
+
+
+# --- Organization Details Model (v2beta1) ---
+class OrganizationDetails(BaseModel):
+    id: str
+    name: str
+
+
+# --- Project Details Model (v2beta1) ---
+class ProjectDetails(BaseModel):
+    id: str
+    name: str
+
+
+# --- Project User Models (v2beta1) ---
+class ProjectUser(BaseModel):
+    user_id: str
+    email: str
+    project_roles: List[str]
+
+
+class PatchProjectUserRequest(BaseModel):
+    project_roles: List[str]
+
+
+# --- Cypher Template Tool Models (v2beta1) ---
+class CypherParameterConfig(BaseModel):
+    name: str
+    data_type: str
+    description: str
+
+
+class CypherTemplateTool(BaseModel):
+    type: str = "cypherTemplate"
+    name: str
+    enabled: Optional[bool] = None
+    description: Optional[str] = None
+    parameters: Optional[Dict[str, Any]] = None
+    extra_params: Optional[Dict[str, Any]] = None
+
+
+# --- Text2Cypher Tool Model (v2beta1) ---
+class Text2CypherTool(BaseModel):
+    type: str = "text2cypher"
+    name: str
+    enabled: Optional[bool] = None
+    description: Optional[str] = None
+
+
+# --- Patch Agent Request Model (v2beta1) ---
+class PatchAgentRequest(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    system_prompt: Optional[str] = None
+    dbid: Optional[str] = None
+    is_private: Optional[bool] = None
+    is_mcp_enabled: Optional[bool] = None
+    tools: Optional[List[AgentTool]] = None
+    enabled: Optional[bool] = None
+
+
+# --- Billing Error Models (v2beta1) ---
+class BillingErrorItem(BaseModel):
+    error: str
+    message: str
+
+
+class BillingErrorResponse(BaseModel):
+    errors: List[BillingErrorItem]
+
+
+# --- Newly added v2beta1 models from JSON spec ---
+class OpenRequestModel(BaseModel):
+    """Request model that accepts additional fields to stay forward-compatible."""
+
+    model_config = ConfigDict(extra="allow")
+
+
+class CreateOrganizationInviteRequest(OpenRequestModel):
+    email: str
+    roles: Optional[List[str]] = None
+    project_invites: Optional[List[dict]] = None
+
+
+class OrganizationInvite(BaseModel):
+    id: Optional[str] = None
+    email: Optional[str] = None
+    invited_by: Optional[str] = None
+    organization_id: Optional[str] = None
+    organization_roles: Optional[List[str]] = None
+    project_invites: Optional[List[dict]] = None
+    status: Optional[str] = None
+    expires_at: Optional[str] = None
+
+
+class OrganizationInvitesResponse(BaseModel):
+    data: Optional[List[OrganizationInvite]] = None
+
+
+class OrganizationInviteResponse(BaseModel):
+    data: Optional[OrganizationInvite] = None
+
+
+class AddProjectUserRequest(OpenRequestModel):
+    project_roles: Optional[List[str]] = None
+
+
+class GDSError(BaseModel):
+    id: Optional[str] = None
+    message: Optional[str] = None
+    reason: Optional[str] = None
+
+
+class SessionCreatedBy(BaseModel):
+    type: Optional[str] = None
+    console_user_id: Optional[str] = None
+    database_username: Optional[str] = None
+    database_uuid: Optional[str] = None
+
+
+class SessionResponse(BaseModel):
+    id: Optional[str] = None
+    instance_id: Optional[str] = None
+    database_id: Optional[str] = None
+    name: Optional[str] = None
+    memory: Optional[str] = None
+    status: Optional[str] = None
+    host: Optional[str] = None
+    project_id: Optional[str] = None
+    created_at: Optional[str] = None
+    created_by: Optional[SessionCreatedBy] = None
+    cloud_provider: Optional[str] = None
+    region: Optional[str] = None
+    expiry_date: Optional[str] = None
+    ttl: Optional[str] = None
+
+
+class SessionsResponse(BaseModel):
+    data: Optional[List[SessionResponse]] = None
+    errors: Optional[List[GDSError]] = None
+
+
+class SessionEnvelope(BaseModel):
+    data: Optional[SessionResponse] = None
+    errors: Optional[List[GDSError]] = None
+
+
+class SessionSizeResponse(BaseModel):
+    recommended_size: Optional[str] = None
+    estimated_memory: Optional[str] = None
+
+
+class SessionSizeEnvelope(BaseModel):
+    data: Optional[SessionSizeResponse] = None
+    errors: Optional[List[GDSError]] = None
+
+
+class CreateGraphAnalyticsSessionRequest(OpenRequestModel):
+    name: Optional[str] = None
+    memory: Optional[str] = None
+    instance_id: Optional[str] = None
+    database_id: Optional[str] = None
+    ttl: Optional[str] = None
+
+
+class SessionSizingRequest(OpenRequestModel):
+    instance_id: Optional[str] = None
+    database_id: Optional[str] = None
+
+
+class CreateProjectInstanceRequest(OpenRequestModel):
+    name: Optional[str] = None
+    cloud_provider: Optional[str] = None
+    region: Optional[str] = None
+    type: Optional[str] = None
+    memory: Optional[str] = None
+    storage: Optional[str] = None
+
+
+class ProjectInstanceSummary(BaseModel):
+    id: Optional[str] = None
+    name: Optional[str] = None
+    cloud_provider: Optional[str] = None
+    created_at: Optional[str] = None
+
+
+class ProjectInstancesResponse(BaseModel):
+    data: Optional[List[ProjectInstanceSummary]] = None
+
+
+class ProjectInstanceDetails(BaseModel):
+    id: Optional[str] = None
+    name: Optional[str] = None
+    type: Optional[str] = None
+    cloud_provider: Optional[str] = None
+    region: Optional[str] = None
+    memory: Optional[str] = None
+    storage: Optional[str] = None
+    vector_optimized: Optional[bool] = None
+    multi_database: Optional[bool] = None
+    legacy_status: Optional[str] = None
+    connection_url: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
+
+
+class ProjectInstanceResponse(BaseModel):
+    data: Optional[ProjectInstanceDetails] = None
+
+
+class CreateProjectDatabaseRequest(OpenRequestModel):
+    name: Optional[str] = None
+
+
+class ProjectDatabaseSummary(BaseModel):
+    id: Optional[str] = None
+
+
+class ProjectDatabasesResponse(BaseModel):
+    data: Optional[List[ProjectDatabaseSummary]] = None
+
+
+class ProjectDatabaseResponse(BaseModel):
+    data: Optional[dict] = None
+
+
+class ProjectDatabaseBackup(BaseModel):
+    id: Optional[str] = None
+    timestamp: Optional[str] = None
+    status: Optional[str] = None
+    exportable: Optional[bool] = None
+
+
+class ProjectDatabaseBackupsResponse(BaseModel):
+    data: Optional[List[ProjectDatabaseBackup]] = None
+
+
+class ProjectDatabaseBackupResponse(BaseModel):
+    data: Optional[ProjectDatabaseBackup] = None
+
+
+class CreateProjectDatabaseBackupResponse(BaseModel):
+    data: Optional[dict] = None
+
+
+class RestoreProjectDatabaseRequest(OpenRequestModel):
+    source_instance_id: Optional[str] = None
+    source_snapshot_id: Optional[str] = None

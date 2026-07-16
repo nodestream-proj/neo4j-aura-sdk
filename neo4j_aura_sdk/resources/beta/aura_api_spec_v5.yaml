@@ -755,6 +755,8 @@ paths:
         If another operation is being performed on the instance you are trying to delete, a 409 Conflict HTTP response code will be returned that indicates that deletion cannot be performed. As deletion is an asynchronous operation, the endpoint returns a 202 Accepted HTTP response code.
 
         As DELETE is an idempotent HTTP method it is safe to retry or send duplicate requests. However, the server will only reply at most once with a successful deletion response (202 Accepted) and will respond with error status codes for any other requests (most likely with 404 Not Found). We suggest treating either 202 or 404 as signs of completion when retrying requests to this endpoint.
+
+        Warning: There is no way to recover data from a deleted Aura instance.
     patch:
       summary: Edits the instance configuration
       description: |-

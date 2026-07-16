@@ -8,6 +8,7 @@ to detect when the API specifications have been updated.
 """
 
 import hashlib
+import json
 import sys
 from pathlib import Path
 from typing import Dict
@@ -15,7 +16,7 @@ from typing import Dict
 import httpx
 import yaml
 
-from specs import BASE_SPEC_URL, SPECS, UNMAPPED_SPECS
+from specs import SPECS, UNMAPPED_SPECS
 
 
 def get_file_hash(filepath: Path) -> str:
@@ -38,14 +39,46 @@ def download_spec(url: str) -> str:
         return None
 
 
-def validate_yaml(content: str) -> bool:
-    """Validate that content is valid YAML."""
+def _resolve_format(spec_info: Dict[str, str]) -> str:
+    """Determine format from explicit metadata or file extension."""
+    if spec_info.get("format") in {"yaml", "json"}:
+        return spec_info["format"]
+
+    local_path = spec_info.get("local", "")
+    if local_path.endswith(".json"):
+        return "json"
+    return "yaml"
+
+
+def validate_content(content: str, spec_format: str) -> bool:
+    """Validate that content is valid YAML or JSON."""
     try:
-        yaml.safe_load(content)
+        if spec_format == "json":
+            json.loads(content)
+        else:
+            yaml.safe_load(content)
         return True
-    except yaml.YAMLError as e:
-        print(f"Invalid YAML: {e}")
+    except (json.JSONDecodeError, yaml.YAMLError) as e:
+        print(f"Invalid {spec_format.upper()}: {e}")
         return False
+
+
+def parse_spec(content: str, spec_format: str) -> Dict:
+    """Parse spec content into a dictionary."""
+    if spec_format == "json":
+        return json.loads(content)
+    return yaml.safe_load(content)
+
+
+def _canonical_spec_hash(spec_data: Dict) -> str:
+    """Create deterministic semantic hash for spec comparison."""
+    canonical = json.dumps(
+        spec_data,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    )
+    return hashlib.sha256(canonical.encode()).hexdigest()
 
 
 def compare_specs() -> Dict[str, Dict]:
@@ -60,7 +93,20 @@ def compare_specs() -> Dict[str, Dict]:
         print(f"{'=' * 60}")
 
         local_path = repo_root / spec_info["local"]
+        local_format = _resolve_format(spec_info)
+        legacy_local = spec_info.get("legacy_local")
+        if not local_path.exists() and legacy_local:
+            legacy_path = repo_root / legacy_local
+            if legacy_path.exists():
+                print(
+                    f"Using legacy local file for {version}: {legacy_local}"
+                )
+                local_path = legacy_path
+                local_format = "yaml"
+
         url = spec_info["url"]
+        remote_format = _resolve_format(spec_info)
+        parser_name = local_format.upper()
 
         if not local_path.exists():
             print(f"❌ Local file not found: {local_path}")
@@ -86,26 +132,26 @@ def compare_specs() -> Dict[str, Dict]:
                 with open(local_path, "r") as f:
                     local_content = f.read()
 
-                if validate_yaml(local_content):
-                    spec_yaml = yaml.safe_load(local_content)
-                    version_str = spec_yaml.get("info", {}).get(
+                if validate_content(local_content, local_format):
+                    parsed_spec = parse_spec(local_content, local_format)
+                    version_str = parsed_spec.get("info", {}).get(
                         "version", "unknown"
                     )
-                    endpoint_count = len(spec_yaml.get("paths", {}))
-                    print(f"   ✅ Local file is valid YAML")
+                    endpoint_count = len(parsed_spec.get("paths", {}))
+                    print(f"   ✅ Local file is valid {parser_name}")
                     print(f"      Version: {version_str}")
                     print(f"      Endpoints: {endpoint_count}")
                     results[version] = {
                         "status": "local_only",
-                        "message": "Local file is valid, remote unreachable",
+                        "message": f"Local file is valid {parser_name}, remote unreachable",
                         "version": version_str,
                         "endpoints": endpoint_count,
                     }
                 else:
-                    print(f"   ❌ Local file has invalid YAML")
+                    print(f"   ❌ Local file has invalid {parser_name}")
                     results[version] = {
                         "status": "invalid",
-                        "message": "Local file has invalid YAML",
+                        "message": f"Local file has invalid {parser_name}",
                     }
             except Exception as e:
                 print(f"   ❌ Error reading local file: {e}")
@@ -115,12 +161,12 @@ def compare_specs() -> Dict[str, Dict]:
                 }
             continue
 
-        # Validate downloaded content is valid YAML
-        if not validate_yaml(downloaded_content):
-            print(f"❌ Downloaded spec is not valid YAML")
+        # Validate downloaded content against expected spec format
+        if not validate_content(downloaded_content, remote_format):
+            print(f"❌ Downloaded spec is not valid {remote_format.upper()}")
             results[version] = {
-                "status": "invalid_yaml",
-                "message": "Downloaded content is not valid YAML",
+                "status": "invalid_content",
+                "message": f"Downloaded content is not valid {remote_format.upper()}",
             }
             continue
 
@@ -130,11 +176,20 @@ def compare_specs() -> Dict[str, Dict]:
         with open(local_path, "r") as f:
             local_content = f.read()
 
-        # Calculate hashes
-        downloaded_hash = hashlib.sha256(
-            downloaded_content.encode()
-        ).hexdigest()
-        local_hash = hashlib.sha256(local_content.encode()).hexdigest()
+        # Calculate hashes. If formats differ, compare semantic hashes.
+        if local_format == remote_format:
+            downloaded_hash = hashlib.sha256(
+                downloaded_content.encode()
+            ).hexdigest()
+            local_hash = hashlib.sha256(local_content.encode()).hexdigest()
+        else:
+            local_spec = parse_spec(local_content, local_format)
+            downloaded_spec = parse_spec(downloaded_content, remote_format)
+            local_hash = _canonical_spec_hash(local_spec)
+            downloaded_hash = _canonical_spec_hash(downloaded_spec)
+            print(
+                f"Comparing semantically across formats ({local_format.upper()} -> {remote_format.upper()})"
+            )
 
         print(f"Local hash:      {local_hash[:16]}...")
         print(f"Remote hash:     {downloaded_hash[:16]}...")
@@ -152,13 +207,13 @@ def compare_specs() -> Dict[str, Dict]:
 
             # Show version comparison
             try:
-                local_yaml = yaml.safe_load(local_content)
-                downloaded_yaml = yaml.safe_load(downloaded_content)
+                local_spec = parse_spec(local_content, local_format)
+                downloaded_spec = parse_spec(downloaded_content, remote_format)
 
-                local_version = local_yaml.get("info", {}).get(
+                local_version = local_spec.get("info", {}).get(
                     "version", "unknown"
                 )
-                remote_version = downloaded_yaml.get("info", {}).get(
+                remote_version = downloaded_spec.get("info", {}).get(
                     "version", "unknown"
                 )
 
@@ -166,8 +221,8 @@ def compare_specs() -> Dict[str, Dict]:
                 print(f"    Remote version:   {remote_version}")
 
                 # Compare endpoint counts
-                local_paths = len(local_yaml.get("paths", {}))
-                remote_paths = len(downloaded_yaml.get("paths", {}))
+                local_paths = len(local_spec.get("paths", {}))
+                remote_paths = len(downloaded_spec.get("paths", {}))
                 print(f"    Local endpoints:  {local_paths}")
                 print(f"    Remote endpoints: {remote_paths}")
             except Exception as e:

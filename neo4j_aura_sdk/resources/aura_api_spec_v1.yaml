@@ -789,6 +789,8 @@ paths:
 
         As DELETE is an idempotent HTTP method it is safe to retry or send duplicate requests. However, the server will only reply at most once with a successful deletion response (202 Accepted) and will respond with error status codes for any other requests (most likely with 404 Not Found). We suggest treating either 202 or 404 as signs of completion when retrying requests to this endpoint.
 
+        Warning: There is no way to recover data from a deleted Aura instance.
+
         Note for Virtual Dedicated Cloud customers: In the example schema below, the `enterprise-db` type is used to represent Virtual Dedicated Cloud.
     patch:
       summary: Edits the instance configuration
@@ -961,6 +963,14 @@ paths:
           $ref: '#/components/responses/InstanceNotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '420':
+          description: 'Action unsupported for this tier of instance.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Error'
+                  - $ref: '#/components/schemas/MiddlewareError'
         '429':
           $ref: '#/components/responses/TooManyRequests'
         '500':
@@ -976,13 +986,18 @@ paths:
 
         The overwrite process mimics the 'Clone to existing' functionality of the Aura Console.
 
-        If only a source_instance_id is provided, a new snapshot of that instance is created and used for overwriting. Alternatively, you can specify an additional source_snapshot_id to use a specific snapshot of the source instance for overwriting.
+        If only a `source_instance_id` is provided, a new snapshot of that instance is created and used for overwriting. Alternatively, you can specify an additional `source_snapshot_id` to use a specific snapshot of the source instance for overwriting.
 
         Overwriting an instance is an asynchronous operation. You can poll the current status of this operation by periodically getting the instance details for the instance ID using the GET /instances/{instanceId} endpoint.
 
         The time it takes to overwrite depends on the amount of data stored in the instance; larger quantities of data will take longer. The exact time this will take is dependent on the size of your data store.
 
         If you are trying to overwrite an instance that is already being cloned then, a 409 Conflict HTTP response code will be returned as the operation cannot be performed.
+
+        If you are trying to overwrite a free instance, a 420 Unsupported Action response code will be returned as the operation cannot be performed.
+
+        If you are trying to overwrite an instance smaller than the source data instance, a 500 DB Overwrite Size Disparity response code with a message of `Cannot clone database <ID_1> into smaller database <ID_2>.` will be returned as the operation cannot be performed.
+        This is dependant on the allocated instance size, not the size of the actual data.
 
         As overwrite is an asynchronous operation, the endpoint returns a 202 Accepted HTTP response code.
 

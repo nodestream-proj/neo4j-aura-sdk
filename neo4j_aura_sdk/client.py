@@ -10,17 +10,27 @@ from pydantic import BaseModel
 from .models import (
     ActivityFeedResponse,
     ActivityLog,
+    AddProjectUserRequest,
+    AgentDetails,
     AuraApiAuthorizationException,
     AuraApiBadRequestException,
     AuraApiException,
     AuraApiInternalException,
     AuraApiNotFoundException,
     AuraApiRateLimitExceededException,
+    AuraApiUnsupportedActionException,
+    AuraApiValidationException,
     AuraError,
     AuraErrors,
     AuthResponse,
+    CreateAgentRequest,
     CreateDeploymentRequest,
+    CreateGraphAnalyticsSessionRequest,
     CreateImportJobRequest,
+    CreateOrganizationInviteRequest,
+    CreateProjectDatabaseBackupResponse,
+    CreateProjectDatabaseRequest,
+    CreateProjectInstanceRequest,
     CustomerManagedKey,
     CustomerManagedKeyRequest,
     CustomerManagedKeyResponse,
@@ -30,6 +40,7 @@ from .models import (
     DeploymentResponse,
     DeploymentsResponse,
     DeploymentTokenResponse,
+    GetAgentResponse,
     ImportJobEnvelope,
     InstancePatchRequest,
     InstanceRequest,
@@ -37,14 +48,35 @@ from .models import (
     InstanceSizingRequest,
     InstanceSizingResponse,
     InstancesResponse,
+    InvokeAgentRequest,
+    InvokeAgentResponse,
     IpFilter,
     IpFilterWithStatus,
     JobIdEnvelope,
     LedgerResponse,
+    ListAgentResponse,
     OrganizationDetailsEnvelope,
+    OrganizationInviteResponse,
+    OrganizationInvitesResponse,
+    OrganizationUser,
+    OrganizationUserDetails,
+    PatchAgentRequest,
+    PatchProjectUserRequest,
+    ProjectDatabaseBackupResponse,
+    ProjectDatabaseBackupsResponse,
+    ProjectDatabaseResponse,
+    ProjectDatabasesResponse,
+    ProjectInstanceResponse,
+    ProjectInstancesResponse,
     ProjectsResponse,
+    ProjectUser,
+    RestoreProjectDatabaseRequest,
     ServerDatabasesResponse,
     ServersResponse,
+    SessionEnvelope,
+    SessionSizeEnvelope,
+    SessionSizingRequest,
+    SessionsResponse,
     SnapshotResponse,
     SnapshotsResponse,
     TenantResponse,
@@ -305,6 +337,14 @@ class AuraClient:
             raise AuraApiRateLimitExceededException(
                 AuraErrors(**response.json()), response.status_code
             )
+        elif response.status_code == 420:
+            raise AuraApiUnsupportedActionException(
+                AuraErrors(**response.json()), response.status_code
+            )
+        elif response.status_code == 422:
+            raise AuraApiValidationException(
+                AuraErrors(**response.json()), response.status_code
+            )
         elif response.status_code >= 500:
             raise AuraApiInternalException(
                 AuraErrors(**response.json()), response.status_code
@@ -384,13 +424,25 @@ class AuraClient:
     async def _patch(
         self,
         path: str,
-        body: BaseModel,
+        body: BaseModel | None = None,
         model: Type[BaseModel] | None = None,
         api_version: str | None = None,
     ):
         """Perform a PATCH request to the API. See `_get` for parameter semantics."""
         return await self._request(
             "PATCH", path, model=model, body=body, api_version=api_version
+        )
+
+    async def _put(
+        self,
+        path: str,
+        body: BaseModel,
+        model: Type[BaseModel] | None = None,
+        api_version: str | None = None,
+    ):
+        """Perform a PUT request to the API. See `_get` for parameter semantics."""
+        return await self._request(
+            "PUT", path, model=model, body=body, api_version=api_version
         )
 
     async def _request(
@@ -416,7 +468,7 @@ class AuraClient:
         """
         token = await self._get_token()
         headers = {"Authorization": f"Bearer {token}"}
-        if method in ("POST", "PATCH"):
+        if method in ("POST", "PATCH", "PUT"):
             headers.update(
                 {"Content-Type": "application/json", "accept": "application/json"}
             )
@@ -741,30 +793,217 @@ class AuraClient:
             api_version="v2beta1",
         )
 
-    async def list_organization_projects(self, organizationId: str):
+    async def list_organization_projects(self, organizationId: str, status: str = None):
         """List projects for an organization (v2beta1).
 
         Args:
             organizationId: the organization id
+            status: optional filter by project status ('active', 'deleted', 'deletion_requested')
 
-        Returns: ProjectsResponse with 'data' key containing list of projects.
+        Returns: List of project objects.
         """
         self._ensure_api_is_v2()
-        return await self._get(
+        params = {}
+        if status:
+            params["status"] = status
+        result = await self._get(
             f"organizations/{organizationId}/projects",
             model=ProjectsResponse,
             api_version="v2beta1",
+            params=params if params else None,
         )
+        return result.data or []
 
     async def list_organizations(self):
         """List all organizations (v2beta1).
 
-        Returns: OrganizationDetailsEnvelope with a list of organizations.
+        Returns: List of organization objects.
         """
         self._ensure_api_is_v2()
-        return await self._get(
+        result = await self._get(
             "organizations",
             model=OrganizationDetailsEnvelope,
+            api_version="v2beta1",
+        )
+        return result.data or []
+
+    # Organization Users
+    async def list_organization_users(self, organizationId: str):
+        """List all users in an organization (v2beta1).
+
+        Args:
+            organizationId: the organization id
+
+        Returns: List of OrganizationUser objects.
+        """
+        self._ensure_api_is_v2()
+        items = await self._get(
+            f"organizations/{organizationId}/users",
+            model=None,
+            api_version="v2beta1",
+        )
+        data = items.get("data", []) if isinstance(items, dict) else items
+        return [OrganizationUser(**item) for item in data] if data else []
+
+    async def get_organization_user(self, organizationId: str, userId: str):
+        """Get detailed information about a user in an organization (v2beta1).
+
+        Args:
+            organizationId: the organization id
+            userId: the UUID of the user
+
+        Returns: OrganizationUserDetails including project memberships.
+        """
+        self._ensure_api_is_v2()
+        result = await self._get(
+            f"organizations/{organizationId}/users/{userId}",
+            model=None,
+            api_version="v2beta1",
+        )
+        data = result.get("data", result) if isinstance(result, dict) else result
+        return OrganizationUserDetails(**data)
+
+    async def remove_organization_user(self, organizationId: str, user_id: str):
+        """Remove a user from an organization (v2beta1).
+
+        Args:
+            organizationId: the organization id
+            user_id: the user id to remove
+
+        Returns: None on success (204 No Content).
+        """
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/users/{user_id}",
+            api_version="v2beta1",
+        )
+
+    async def patch_organization_user(self, organizationId: str, userId: str):
+        """Patch an organization user (v2beta1).
+
+        The current API does not require a request body for this operation.
+        Returns the updated OrganizationUserDetails.
+        """
+        self._ensure_api_is_v2()
+        result = await self._patch(
+            f"organizations/{organizationId}/users/{userId}",
+            model=None,
+            api_version="v2beta1",
+        )
+        data = result.get("data", result) if isinstance(result, dict) else result
+        return OrganizationUserDetails(**data)
+
+    # Project Users
+    async def list_project_users(self, organizationId: str, projectId: str):
+        """List all users in a project (v2beta1).
+
+        Args:
+            organizationId: the organization id
+            projectId: the project id
+
+        Returns: List of ProjectUser objects.
+        """
+        self._ensure_api_is_v2()
+        result = await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/users",
+            model=None,
+            api_version="v2beta1",
+        )
+        data = result.get("data", []) if isinstance(result, dict) else result
+        return [ProjectUser(**item) for item in data] if data else []
+
+    async def update_project_user(
+        self,
+        organizationId: str,
+        projectId: str,
+        userId: str,
+        details: PatchProjectUserRequest,
+    ):
+        """Update a project user's role (v2beta1).
+
+        Args:
+            organizationId: the organization id
+            projectId: the project id
+            userId: the UUID of the user
+            details: PatchProjectUserRequest with the role to assign
+
+        Returns: ProjectUser with updated role.
+        """
+        self._ensure_api_is_v2()
+        result = await self._patch(
+            f"organizations/{organizationId}/projects/{projectId}/users/{userId}",
+            body=details,
+            model=None,
+            api_version="v2beta1",
+        )
+        data = result.get("data", result) if isinstance(result, dict) else result
+        return ProjectUser(**data)
+
+    async def add_project_user(
+        self,
+        organizationId: str,
+        projectId: str,
+        userId: str,
+        details: AddProjectUserRequest | None = None,
+    ):
+        """Add a user to a project (v2beta1)."""
+        self._ensure_api_is_v2()
+        result = await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/users/{userId}",
+            body=details,
+            model=None,
+            api_version="v2beta1",
+        )
+        data = result.get("data", result) if isinstance(result, dict) else result
+        return ProjectUser(**data)
+
+    async def remove_project_user(
+        self, organizationId: str, projectId: str, userId: str
+    ):
+        """Remove a user from a project (v2beta1).
+
+        Args:
+            organizationId: the organization id
+            projectId: the project id
+            userId: the UUID of the user
+
+        Returns: None on success (204 No Content).
+        """
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/projects/{projectId}/users/{userId}",
+            api_version="v2beta1",
+        )
+
+    # Organization invites
+    async def list_organization_invites(self, organizationId: str):
+        """List organization invites (v2beta1)."""
+        self._ensure_api_is_v2()
+        result = await self._get(
+            f"organizations/{organizationId}/invites",
+            model=OrganizationInvitesResponse,
+            api_version="v2beta1",
+        )
+        return result.data or []
+
+    async def create_organization_invite(
+        self, organizationId: str, details: CreateOrganizationInviteRequest
+    ):
+        """Create an organization invite (v2beta1)."""
+        self._ensure_api_is_v2()
+        result = await self._post(
+            f"organizations/{organizationId}/invites",
+            body=details,
+            model=OrganizationInviteResponse,
+            api_version="v2beta1",
+        )
+        return result.data
+
+    async def delete_organization_invite(self, organizationId: str, inviteId: str):
+        """Delete an organization invite (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/invites/{inviteId}",
             api_version="v2beta1",
         )
 
@@ -776,6 +1015,7 @@ class AuraClient:
         end: str,
         page_token: str = None,
         page_limit: int = None,
+        project_id: list[str] = None,
     ):
         """Get billed usage for an organization (v2beta1).
 
@@ -783,6 +1023,7 @@ class AuraClient:
             organizationId: the organization id
             start: RFC3339 timestamp (e.g., '2024-01-02T00:00:00Z')
             end: RFC3339 timestamp (e.g., '2024-01-31T23:59:59Z')
+            project_id: optional list of project UUIDs to filter usage rows
 
         Returns: UsageResponse with 'data' containing list of UsageData objects and optional 'links' for pagination.
         """
@@ -792,6 +1033,8 @@ class AuraClient:
             params["page_token"] = page_token
         if page_limit:
             params["page_limit"] = page_limit
+        if project_id:
+            params["project_id"] = project_id
         return await self._get(
             f"organizations/{organizationId}/billing/usage",
             model=UsageResponse,
@@ -799,7 +1042,14 @@ class AuraClient:
             params=params,
         )
 
-    async def get_billing_ledger(self, organizationId: str, start: str, end: str):
+    async def get_billing_ledger(
+        self,
+        organizationId: str,
+        start: str,
+        end: str,
+        page_token: str = None,
+        page_limit: int = None,
+    ):
         """Get credit ledger for an organization (v2beta1).
 
         Args:
@@ -811,6 +1061,10 @@ class AuraClient:
         """
         self._ensure_api_is_v2()
         params = {"start": start, "end": end}
+        if page_token:
+            params["page_token"] = page_token
+        if page_limit:
+            params["page_limit"] = page_limit
         return await self._get(
             f"organizations/{organizationId}/billing/ledger",
             model=LedgerResponse,
@@ -950,16 +1204,312 @@ class AuraClient:
             api_version="v2beta1",
         )
 
+    # Graph analytics sessions
+    async def list_organization_graph_analytics_sessions(
+        self,
+        organizationId: str,
+        list_only_owned: bool | None = None,
+        include_deleted: bool | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        page: int | None = None,
+        page_size: int | None = None,
+    ):
+        """List graph analytics sessions for an organization (v2beta1).
+
+        Returns: List of SessionResponse objects.
+        """
+        self._ensure_api_is_v2()
+        params = {}
+        if list_only_owned is not None:
+            params["list_only_owned"] = str(list_only_owned).lower()
+        if include_deleted is not None:
+            params["include_deleted"] = str(include_deleted).lower()
+        if start_date:
+            params["start_date"] = start_date
+        if end_date:
+            params["end_date"] = end_date
+        if page is not None:
+            params["page"] = page
+        if page_size is not None:
+            params["page_size"] = page_size
+        result = await self._get(
+            f"organizations/{organizationId}/graph-analytics/sessions",
+            model=SessionsResponse,
+            api_version="v2beta1",
+            params=params if params else None,
+        )
+        return result.data or []
+
+    async def list_project_graph_analytics_sessions(
+        self, organizationId: str, projectId: str
+    ):
+        """List graph analytics sessions for a project (v2beta1).
+
+        Returns: List of SessionResponse objects.
+        """
+        self._ensure_api_is_v2()
+        result = await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/graph-analytics/sessions",
+            model=SessionsResponse,
+            api_version="v2beta1",
+        )
+        return result.data or []
+
+    async def create_project_graph_analytics_session(
+        self,
+        organizationId: str,
+        projectId: str,
+        details: CreateGraphAnalyticsSessionRequest,
+    ):
+        """Create a graph analytics session for a project (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/graph-analytics/sessions",
+            body=details,
+            model=SessionEnvelope,
+            api_version="v2beta1",
+        )
+
+    async def get_project_graph_analytics_session(
+        self,
+        organizationId: str,
+        projectId: str,
+        sessionId: str,
+    ):
+        """Get a graph analytics session by id (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/graph-analytics/sessions/{sessionId}",
+            model=SessionEnvelope,
+            api_version="v2beta1",
+        )
+
+    async def delete_project_graph_analytics_session(
+        self,
+        organizationId: str,
+        projectId: str,
+        sessionId: str,
+    ):
+        """Delete a graph analytics session by id (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/projects/{projectId}/graph-analytics/sessions/{sessionId}",
+            api_version="v2beta1",
+        )
+
+    async def estimate_project_graph_analytics_session_size(
+        self,
+        organizationId: str,
+        projectId: str,
+        details: SessionSizingRequest,
+    ):
+        """Estimate project graph analytics session size (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/graph-analytics/sessions/sizing",
+            body=details,
+            model=SessionSizeEnvelope,
+            api_version="v2beta1",
+        )
+
+    # Project instances and databases
+    async def list_project_instances(self, organizationId: str, projectId: str):
+        """List project instances (v2beta1).
+
+        Returns: List of ProjectInstanceSummary objects.
+        """
+        self._ensure_api_is_v2()
+        result = await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/instances",
+            model=ProjectInstancesResponse,
+            api_version="v2beta1",
+        )
+        return result.data or []
+
+    async def create_project_instance(
+        self,
+        organizationId: str,
+        projectId: str,
+        details: CreateProjectInstanceRequest,
+    ):
+        """Create a project instance (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/instances",
+            body=details,
+            model=ProjectInstanceResponse,
+            api_version="v2beta1",
+        )
+
+    async def get_project_instance(
+        self, organizationId: str, projectId: str, instanceId: str
+    ):
+        """Get a project instance by id (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}",
+            model=ProjectInstanceResponse,
+            api_version="v2beta1",
+        )
+
+    async def delete_project_instance(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+    ):
+        """Delete a project instance (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}",
+            api_version="v2beta1",
+        )
+
+    async def list_project_instance_databases(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+    ):
+        """List databases for a project instance (v2beta1).
+
+        Returns: List of ProjectDatabaseSummary objects.
+        """
+        self._ensure_api_is_v2()
+        result = await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases",
+            model=ProjectDatabasesResponse,
+            api_version="v2beta1",
+        )
+        return result.data or []
+
+    async def create_project_instance_database(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+        details: CreateProjectDatabaseRequest,
+    ):
+        """Create a database for a project instance (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases",
+            body=details,
+            model=ProjectDatabaseResponse,
+            api_version="v2beta1",
+        )
+
+    async def get_project_instance_database(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+        databaseId: str,
+    ):
+        """Get a database by id for a project instance (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases/{databaseId}",
+            model=ProjectDatabaseResponse,
+            api_version="v2beta1",
+        )
+
+    async def delete_project_instance_database(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+        databaseId: str,
+    ):
+        """Delete a database from a project instance (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases/{databaseId}",
+            api_version="v2beta1",
+        )
+
+    async def list_project_database_backups(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+        databaseId: str,
+    ):
+        """List backups for a project instance database (v2beta1).
+
+        Returns: List of ProjectDatabaseBackup objects.
+        """
+        self._ensure_api_is_v2()
+        result = await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases/{databaseId}/backups",
+            model=ProjectDatabaseBackupsResponse,
+            api_version="v2beta1",
+        )
+        return result.data or []
+
+    async def create_project_database_backup(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+        databaseId: str,
+    ):
+        """Create/schedule a backup for a project instance database (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases/{databaseId}/backups",
+            model=CreateProjectDatabaseBackupResponse,
+            api_version="v2beta1",
+        )
+
+    async def get_project_database_backup(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+        databaseId: str,
+        backupId: str,
+    ):
+        """Get a backup by id for a project instance database (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases/{databaseId}/backups/{backupId}",
+            model=ProjectDatabaseBackupResponse,
+            api_version="v2beta1",
+        )
+
+    async def restore_project_instance_database(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+        databaseId: str,
+        details: RestoreProjectDatabaseRequest,
+    ):
+        """Restore a project instance database (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases/{databaseId}/restore",
+            body=details,
+            model=ProjectDatabaseResponse,
+            api_version="v2beta1",
+        )
+
     # --- Fleet Manager Deployment Methods (v2beta1) ---
 
     async def list_deployments(self, organizationId: str, projectId: str):
-        """List all Fleet Manager deployments for a project (v2beta1)."""
+        """List all Fleet Manager deployments for a project (v2beta1).
+
+        Returns: List of DeploymentSummary objects.
+        """
         self._ensure_api_is_v2()
-        return await self._get(
+        result = await self._get(
             f"organizations/{organizationId}/projects/{projectId}/fleet-manager/deployments",
             model=DeploymentsResponse,
             api_version="v2beta1",
         )
+        return result.data or []
 
     async def create_deployment(
         self, organizationId: str, projectId: str, details: CreateDeploymentRequest
@@ -1135,13 +1685,112 @@ class AuraClient:
         if page_token:
             params["page_token"] = page_token
 
-        if params:
-            query_string = "&".join(f"{k}={v}" for k, v in params.items())
-            path += f"?{query_string}"
-
         result = await self._get(
-            path, model=ActivityFeedResponse, api_version="v2beta1"
+            path,
+            model=ActivityFeedResponse,
+            api_version="v2beta1",
+            params=params if params else None,
         )
         if result and result.data:
             result.data = [ActivityLog(**item) for item in result.data]
         return result
+
+    # --- Agents Methods (v2beta1) ---
+
+    async def list_agents(self, organizationId: str, projectId: str):
+        """List all agents for a project (v2beta1)."""
+        self._ensure_api_is_v2()
+        items = await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/agents",
+            model=None,
+            api_version="v2beta1",
+        )
+        return [ListAgentResponse(**item) for item in items]
+
+    async def create_agent(
+        self, organizationId: str, projectId: str, details: CreateAgentRequest
+    ):
+        """Create an agent for a project (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/agents",
+            body=details,
+            model=AgentDetails,
+            api_version="v2beta1",
+        )
+
+    async def get_agent(self, organizationId: str, projectId: str, agentId: str):
+        """Get a specific agent by ID (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/agents/{agentId}",
+            model=GetAgentResponse,
+            api_version="v2beta1",
+        )
+
+    async def update_agent(
+        self,
+        organizationId: str,
+        projectId: str,
+        agentId: str,
+        details: CreateAgentRequest,
+    ):
+        """Update an existing agent (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._put(
+            f"organizations/{organizationId}/projects/{projectId}/agents/{agentId}",
+            body=details,
+            model=AgentDetails,
+            api_version="v2beta1",
+        )
+
+    async def patch_agent(
+        self,
+        organizationId: str,
+        projectId: str,
+        agentId: str,
+        details: PatchAgentRequest,
+    ):
+        """Partially update an existing agent (v2beta1).
+
+        This method allows updating only the fields provided in the request.
+
+        Args:
+            organizationId: the organization id
+            projectId: the project id
+            agentId: the agent id to patch
+            details: PatchAgentRequest with only the fields to update
+
+        Returns: AgentDetails with the updated agent information.
+        """
+        self._ensure_api_is_v2()
+        return await self._patch(
+            f"organizations/{organizationId}/projects/{projectId}/agents/{agentId}",
+            body=details,
+            model=AgentDetails,
+            api_version="v2beta1",
+        )
+
+    async def delete_agent(self, organizationId: str, projectId: str, agentId: str):
+        """Delete an agent by ID (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/projects/{projectId}/agents/{agentId}",
+            api_version="v2beta1",
+        )
+
+    async def invoke_agent(
+        self,
+        organizationId: str,
+        projectId: str,
+        agentId: str,
+        details: InvokeAgentRequest,
+    ):
+        """Invoke an agent with input text or chat messages (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/agents/{agentId}/invoke",
+            body=details,
+            model=InvokeAgentResponse,
+            api_version="v2beta1",
+        )
