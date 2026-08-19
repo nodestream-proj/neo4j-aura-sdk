@@ -1538,7 +1538,7 @@ paths:
       description: |-
         Upgrades an AuraDB Professional instance to an AuraDB Business Critical instance. Upgrades are not available for Marketplace projects or trial instances.
 
-        Optionally, provide values for `memory` and `storage` in the request body to resize the instance along with the upgrade. If you donâ€™t provide values, the instance keeps its configuration. If you provide `memory` you must also provide `storage` and vice versa.
+        Optionally, provide values for `memory` and `storage` in the request body to resize the instance along with the upgrade. If you don’t provide values, the instance keeps its configuration. If you provide `memory` you must also provide `storage` and vice versa.
 
         This endpoint requires the `Content-Type: application/json` header to be set.
 

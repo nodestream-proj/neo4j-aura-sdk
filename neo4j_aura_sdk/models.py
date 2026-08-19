@@ -879,6 +879,7 @@ class OrganizationInviteResponse(BaseModel):
 
 
 class AddProjectUserRequest(OpenRequestModel):
+    user_id: Optional[str] = None
     project_roles: Optional[List[str]] = None
 
 
@@ -943,6 +944,74 @@ class CreateGraphAnalyticsSessionRequest(OpenRequestModel):
 class SessionSizingRequest(OpenRequestModel):
     instance_id: Optional[str] = None
     database_id: Optional[str] = None
+
+
+class VirtualGraphPrice(BaseModel):
+    amount: Optional[str] = None
+    metric_unit: Optional[str] = None
+    sku: Optional[str] = None
+
+
+class VirtualGraphAllowedConfig(BaseModel):
+    memory: Optional[str] = None
+    price: Optional[VirtualGraphPrice] = None
+
+
+class VirtualGraphAllowedConfigs(BaseModel):
+    configs: Optional[List[VirtualGraphAllowedConfig]] = None
+    default_memory: Optional[str] = None
+
+
+class VirtualGraph(BaseModel):
+    bolt_url: Optional[str] = None
+    cloud_provider: Optional[str] = None
+    created_at: Optional[str] = None
+    data_source_id: Optional[str] = None
+    data_source_type: Optional[str] = None
+    error_detail: Optional[str] = None
+    id: Optional[str] = None
+    maximum_bytes_billed: Optional[int] = None
+    memory: Optional[str] = None
+    name: Optional[str] = None
+    region: Optional[str] = None
+    status: Optional[str] = None
+
+
+class VirtualGraphCreateData(VirtualGraph):
+    plain_password: Optional[str] = None
+
+
+class VirtualGraphsResponse(BaseModel):
+    data: Optional[List[VirtualGraph]] = None
+    links: Optional[Links] = None
+
+
+class VirtualGraphResponse(BaseModel):
+    data: Optional[VirtualGraph] = None
+
+
+class VirtualGraphCreateResponse(BaseModel):
+    data: Optional[VirtualGraphCreateData] = None
+
+
+class VirtualGraphAllowedConfigsResponse(BaseModel):
+    data: Optional[VirtualGraphAllowedConfigs] = None
+
+
+class CreateVirtualGraphRequest(OpenRequestModel):
+    cloud_provider: Optional[str] = None
+    data_source_id: Optional[str] = None
+    import_model_id: Optional[str] = None
+    maximum_bytes_billed: Optional[int] = None
+    memory: Optional[str] = None
+    name: Optional[str] = None
+    region: Optional[str] = None
+
+
+class UpdateVirtualGraphRequest(OpenRequestModel):
+    import_model_id: Optional[str] = None
+    memory: Optional[str] = None
+    name: Optional[str] = None
 
 
 class CreateProjectInstanceRequest(OpenRequestModel):
