@@ -1314,31 +1314,10 @@ async def test_add_project_user():
 
 @respx.mock
 @pytest.mark.asyncio
-async def test_add_project_user_without_body():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
-
-    user_id = "user1"
-    route = respx.post(
-        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/users"
-    ).respond(
-        status_code=201,
-        json={
-            "data": {
-                "user_id": user_id,
-                "email": "alice@example.com",
-                "project_roles": ["namespace-member"],
-            }
-        },
-    )
-
+async def test_add_project_user_without_body_requires_project_role():
     async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
-        resp = await client.add_project_user(org_id, proj_id, user_id)
-        assert isinstance(resp, models.ProjectUser)
-        assert resp.user_id == user_id
-        assert b'"user_id":"user1"' in route.calls[0].request.content
+        with pytest.raises(ValueError, match="requires exactly one non-empty role"):
+            await client.add_project_user(org_id, proj_id, "user1")
 
 
 @respx.mock
@@ -1701,3 +1680,60 @@ async def test_patch_agent_partial_update():
         assert resp.description == "Updated description"
         assert resp.name == "Original Agent"  # Should remain unchanged
         assert resp.enabled is True  # Should remain unchanged
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_add_project_user_rejects_conflicting_user_ids():
+    req = models.AddProjectUserRequest(
+        user_id="user-a",
+        project_roles=["project-member"],
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        with pytest.raises(ValueError, match="conflicting user IDs"):
+            await client.add_project_user(org_id, proj_id, "user-b", req)
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_add_project_user_does_not_mutate_details():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    route = respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/users"
+    ).respond(
+        status_code=201,
+        json={
+            "data": {
+                "user_id": "user1",
+                "email": "alice@example.com",
+                "project_roles": ["project-member"],
+            }
+        },
+    )
+
+    req = models.AddProjectUserRequest(project_roles=["project-member"])
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.add_project_user(org_id, proj_id, "user1", req)
+        assert isinstance(resp, models.ProjectUser)
+        assert req.user_id is None
+        assert b'"user_id":"user1"' in route.calls[0].request.content
+
+
+@respx.mock
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "roles",
+    [None, [], ["project-member", "project-viewer"], ["   "]],
+)
+async def test_add_project_user_requires_exactly_one_valid_role(roles):
+    req = models.AddProjectUserRequest(user_id="user1", project_roles=roles)
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        with pytest.raises(ValueError, match="requires exactly one non-empty role"):
+            await client.add_project_user(org_id, proj_id, details=req)

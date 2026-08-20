@@ -960,16 +960,33 @@ class AuraClient:
         """
         self._ensure_api_is_v2()
 
-        request_body = details
-        if request_body is None:
-            request_body = AddProjectUserRequest()
+        request_body = (
+            details.model_copy(deep=True) if details else AddProjectUserRequest()
+        )
 
-        if userId and not request_body.user_id:
+        if userId and request_body.user_id and userId != request_body.user_id:
+            raise ValueError(
+                "add_project_user received conflicting user IDs: "
+                "userId and details.user_id must match"
+            )
+
+        if userId:
             request_body.user_id = userId
 
         if not request_body.user_id:
             raise ValueError(
                 "add_project_user requires either userId or details.user_id"
+            )
+
+        project_roles = request_body.project_roles
+        if (
+            not isinstance(project_roles, list)
+            or len(project_roles) != 1
+            or not isinstance(project_roles[0], str)
+            or not project_roles[0].strip()
+        ):
+            raise ValueError(
+                "add_project_user requires exactly one non-empty role in details.project_roles"
             )
 
         result = await self._post(
