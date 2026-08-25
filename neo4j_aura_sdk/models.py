@@ -1059,7 +1059,8 @@ class CreateProjectDatabaseRequest(OpenRequestModel):
 
 
 class ProjectDatabaseSummary(BaseModel):
-    id: Optional[str] = None
+    id: str
+    name: str
 
 
 class ProjectDatabasesResponse(BaseModel):

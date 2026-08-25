@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### Changed
+- Synced `neo4j_aura_sdk/resources/v2beta1/spec.json` with the latest published v2beta1 OpenAPI spec.
+- `models.ProjectDatabaseSummary` (returned by the project instance database list/create/get/delete endpoints) now includes the required `name` field alongside `id`, matching the updated spec.
+- Documented the billing `get_billing_usage` / `get_billing_ledger` rate limit (10 requests per organization per 24 hours) and data freshness (refreshed daily, up to 48h lag) in their docstrings.
+
+### Tests
+- Added unit test coverage for `create_project_instance_database`, `get_project_instance_database`, and `delete_project_instance_database`, which previously had none.
+- Updated the project instance database list test to assert the new `name` field.
+
 ## [0.1.3] - 2025-11-17
 ### Added
 - Added support for v2beta1 endpoints: IP filters and import jobs (models and client methods).

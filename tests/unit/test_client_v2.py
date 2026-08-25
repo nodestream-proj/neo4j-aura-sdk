@@ -1571,9 +1571,32 @@ async def test_project_instance_and_database_methods():
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances"
     ).respond(status_code=201, json={"data": {"id": inst_id, "name": "inst"}})
 
+    database_name = "my-database"
+
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases"
-    ).respond(status_code=200, json={"data": [{"id": database_id}]})
+    ).respond(
+        status_code=200,
+        json={"data": [{"id": database_id, "name": database_name}]},
+    )
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases"
+    ).respond(
+        status_code=201,
+        json={"data": {"id": database_id, "name": database_name}},
+    )
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases/{database_id}"
+    ).respond(
+        status_code=200,
+        json={"data": {"id": database_id, "name": database_name}},
+    )
+    respx.delete(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases/{database_id}"
+    ).respond(
+        status_code=200,
+        json={"data": {"id": database_id, "name": database_name}},
+    )
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases/{database_id}/backups"
     ).respond(status_code=200, json={"data": [{"id": backup_id}]})
@@ -1594,6 +1617,24 @@ async def test_project_instance_and_database_methods():
             org_id, proj_id, inst_id
         )
         assert databases[0].id == database_id
+        assert databases[0].name == database_name
+
+        create_db_req = models.CreateProjectDatabaseRequest(name=database_name)
+        created_db = await client.create_project_instance_database(
+            org_id, proj_id, inst_id, create_db_req
+        )
+        assert created_db.data["id"] == database_id
+        assert created_db.data["name"] == database_name
+
+        fetched_db = await client.get_project_instance_database(
+            org_id, proj_id, inst_id, database_id
+        )
+        assert fetched_db.data["id"] == database_id
+        assert fetched_db.data["name"] == database_name
+
+        await client.delete_project_instance_database(
+            org_id, proj_id, inst_id, database_id
+        )
 
         backups = await client.list_project_database_backups(
             org_id, proj_id, inst_id, database_id

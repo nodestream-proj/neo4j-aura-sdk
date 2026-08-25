@@ -1069,6 +1069,10 @@ class AuraClient:
             project_id: optional list of project UUIDs to filter usage rows
 
         Returns: UsageResponse with 'data' containing list of UsageData objects and optional 'links' for pagination.
+
+        Note: Rate limited to 10 requests per organization per 24 hours. Usage
+        data is refreshed once daily and may lag up to 48 hours behind
+        real-time changes.
         """
         self._ensure_api_is_v2()
         params = {"start": start, "end": end}
@@ -1101,6 +1105,10 @@ class AuraClient:
             end: RFC3339 timestamp (e.g., '2024-01-31T23:59:59Z')
 
         Returns: LedgerResponse with 'data' containing list of LedgerData objects and optional 'links' for pagination.
+
+        Note: Rate limited to 10 requests per organization per 24 hours.
+        Ledger data is refreshed once daily and may lag up to 48 hours behind
+        real-time changes.
         """
         self._ensure_api_is_v2()
         params = {"start": start, "end": end}

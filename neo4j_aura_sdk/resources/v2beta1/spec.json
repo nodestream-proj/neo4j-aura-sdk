@@ -617,8 +617,16 @@
           "id": {
             "description": "The ID of the Database",
             "type": "string"
+          },
+          "name": {
+            "description": "The name of the Database",
+            "type": "string"
           }
         },
+        "required": [
+          "id",
+          "name"
+        ],
         "type": "object"
       },
       "DeleteGraphMappingResponse": {
@@ -2793,7 +2801,7 @@
     },
     "/organizations/{org_id}/billing/ledger": {
       "get": {
-        "description": "Returns credit ledger rows for a given organization and time range.\nThe `start` and `end` parameters are required and must be RFC3339 timestamps (e.g., `2024-01-02T00:00:00Z`).",
+        "description": "Returns credit ledger rows for a given organization and time range.\nThe `start` and `end` parameters are required and must be RFC3339 timestamps (e.g., `2024-01-02T00:00:00Z`).\n\n**Rate limit:** 10 requests per organization per 24 hours.\n**Data freshness:** Ledger data is refreshed once daily and may lag up to 48 hours behind real-time changes.",
         "operationId": "get-ledger",
         "parameters": [
           {
@@ -2886,7 +2894,7 @@
     },
     "/organizations/{org_id}/billing/usage": {
       "get": {
-        "description": "Returns usage rows for a given organization and time range.\nThe `start` and `end` parameters are required and must be RFC3339 timestamps (e.g., `2024-01-02T00:00:00Z`).",
+        "description": "Returns usage rows for a given organization and time range.\nThe `start` and `end` parameters are required and must be RFC3339 timestamps (e.g., `2024-01-02T00:00:00Z`).\n\n**Rate limit:** 10 requests per organization per 24 hours.\n**Data freshness:** Usage data is refreshed once daily and may lag up to 48 hours behind real-time changes.",
         "operationId": "get-usage",
         "parameters": [
           {
@@ -7083,10 +7091,12 @@
                     "value": {
                       "data": [
                         {
-                          "id": "db-1234"
+                          "id": "db-1234",
+                          "name": "my-database"
                         },
                         {
-                          "id": "db-5678"
+                          "id": "db-5678",
+                          "name": "my-other-database"
                         }
                       ]
                     }
@@ -7156,6 +7166,19 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "examples": {
+                "Create a named Database": {
+                  "value": {
+                    "name": "my-database"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "content": {
@@ -7164,7 +7187,8 @@
                   "Create Database": {
                     "value": {
                       "data": {
-                        "id": "db-1234"
+                        "id": "db-1234",
+                        "name": "my-database"
                       }
                     }
                   }
@@ -7257,7 +7281,8 @@
                   "Delete Database": {
                     "value": {
                       "data": {
-                        "id": "db-1234"
+                        "id": "db-1234",
+                        "name": "my-database"
                       }
                     }
                   }
@@ -7339,7 +7364,8 @@
                   "Get Database": {
                     "value": {
                       "data": {
-                        "id": "db-1234"
+                        "id": "db-1234",
+                        "name": "my-database"
                       }
                     }
                   }
