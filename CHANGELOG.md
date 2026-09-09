@@ -13,6 +13,9 @@ All notable changes to this project will be documented in this file.
 - Added unit test coverage for `create_project_instance_database`, `get_project_instance_database`, and `delete_project_instance_database`, which previously had none.
 - Updated the project instance database list test to assert the new `name` field.
 
+### Security
+- Resolved all 13 open Dependabot alerts (1 critical, 5 high, 7 moderate) by bumping dev dependencies (`pytest` 8→9.0.3+, `black` 24→26.3.1+, `requests` →2.33.0+, `python-dotenv` →1.2.2+, `pytest-asyncio` 0.23→1.4.0+ for pytest 9 compatibility) and letting `httpx`/`requests` re-resolve to patched transitive versions (`h11` →0.16.0+, `urllib3` →2.7.0+, `idna` →3.15+). Regenerated `poetry.lock` accordingly.
+
 ## [0.1.4] - 2026-07-16
 ### Added
 - Added broad v2beta1 API coverage for organization and project user management, including organization user listing/details/patch/removal, project user listing/add/update/removal, and organization invite list/create/delete operations.
