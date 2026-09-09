@@ -566,6 +566,10 @@ class AuraClient:
             details: InstanceRequest model describing the instance to create
 
         Returns: InstanceResponse for the created instance.
+
+        Note: Creation is asynchronous and typically takes a few minutes, but
+        can occasionally take up to 10 minutes. Poll `instance()` until the
+        status transitions from "creating" to "running" before connecting.
         """
         return await self._post("instances", body=details, model=InstanceResponse)
 

@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 - Synced `neo4j_aura_sdk/resources/v2beta1/spec.json` with the latest published v2beta1 OpenAPI spec.
 - `models.ProjectDatabaseSummary` (returned by the project instance database list/create/get/delete endpoints) now includes the required `name` field alongside `id`, matching the updated spec.
 - Documented the billing `get_billing_usage` / `get_billing_ledger` rate limit (10 requests per organization per 24 hours) and data freshness (refreshed daily, up to 48h lag) in their docstrings.
+- Synced `neo4j_aura_sdk/resources/aura_api_spec_v1.yaml` and `neo4j_aura_sdk/resources/beta/aura_api_spec_v5.yaml` with the latest published specs (documentation-only: instance creation timing note). Documented the same note on `create_instance`'s docstring.
 
 ### Tests
 - Added unit test coverage for `create_project_instance_database`, `get_project_instance_database`, and `delete_project_instance_database`, which previously had none.
