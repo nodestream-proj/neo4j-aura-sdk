@@ -512,6 +512,15 @@
             "description": "If this is the default database in the cluster",
             "type": "boolean"
           },
+          "deployment_id": {
+            "description": "The UUID of the deployment the database belongs to",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "The database ID",
+            "type": "string"
+          },
           "last_start_time": {
             "description": "The time when the database was last started",
             "format": "date-time",
@@ -608,8 +617,16 @@
           "id": {
             "description": "The ID of the Database",
             "type": "string"
+          },
+          "name": {
+            "description": "The name of the Database",
+            "type": "string"
           }
         },
+        "required": [
+          "id",
+          "name"
+        ],
         "type": "object"
       },
       "DeleteGraphMappingResponse": {
@@ -626,6 +643,19 @@
         "required": [
           "graph_name",
           "created_by"
+        ],
+        "type": "object"
+      },
+      "DeleteJobResponse": {
+        "description": "Response for deleting a job.",
+        "properties": {
+          "id": {
+            "description": "The ID of the deleted job.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
         ],
         "type": "object"
       },
@@ -667,6 +697,7 @@
             "type": "string"
           },
           "id": {
+            "format": "uuid",
             "readOnly": true,
             "type": "string"
           },
@@ -689,6 +720,7 @@
           },
           "created_by": {
             "description": "The ID of the user who created the deployment",
+            "format": "uuid",
             "type": "string"
           },
           "dbms": {
@@ -711,6 +743,7 @@
           },
           "id": {
             "description": "The ID of the deployment",
+            "format": "uuid",
             "readOnly": true,
             "type": "string"
           },
@@ -721,7 +754,7 @@
           "token": {
             "description": "The token registered to the deployment",
             "properties": {
-              "auto_rotate": {
+              "auto_rotated": {
                 "description": "Defines if the token will auto renew on expiry",
                 "type": "boolean"
               },
@@ -732,6 +765,7 @@
               },
               "created_by": {
                 "description": "The ID of the user that created the token",
+                "format": "uuid",
                 "type": "string"
               },
               "creation_time": {
@@ -742,6 +776,11 @@
               "expiry_time": {
                 "description": "The time when the token expires",
                 "format": "date-time",
+                "type": "string"
+              },
+              "id": {
+                "description": "The token ID",
+                "format": "uuid",
                 "type": "string"
               },
               "last_used_time": {
@@ -1301,6 +1340,27 @@
         },
         "type": "object"
       },
+      "JobCreatedBy": {
+        "description": "The creator of a job.",
+        "properties": {
+          "type": {
+            "description": "The type of user that created the job. Jobs are always created by a console user.",
+            "enum": [
+              "console"
+            ],
+            "type": "string"
+          },
+          "user_id": {
+            "description": "The UUID of the console user that created the job.",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "type": "object"
+      },
       "JobIdEnvelope": {
         "description": "Envelope containing a job ID",
         "properties": {
@@ -1313,6 +1373,56 @@
             "type": "object"
           }
         },
+        "type": "object"
+      },
+      "JobResponse": {
+        "description": "A graph analytics job.",
+        "properties": {
+          "created_at": {
+            "description": "The timestamp when the job was created.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "created_by": {
+            "$ref": "#/components/schemas/JobCreatedBy"
+          },
+          "id": {
+            "description": "The ID of the job.",
+            "type": "string"
+          },
+          "instance_id": {
+            "description": "The ID of the AuraDB instance the job runs against.",
+            "type": "string"
+          },
+          "project_id": {
+            "description": "The ID of the project the job belongs to.",
+            "type": "string"
+          },
+          "schedule": {
+            "description": "A standard 5-field cron expression specifying when the job runs periodically, in UTC.\n\n Fields in order:\n- Minute (0-59)\n- Hour (0-23)\n- Day of month (1-31)\n- Month (1-12)\n- Day of week (0-6, Sunday=0)\n\nIf omitted, the job runs once immediately.",
+            "example": "0 3 * * *",
+            "type": "string"
+          },
+          "status": {
+            "description": "The status of the job.",
+            "enum": [
+              "pending",
+              "scheduled",
+              "running",
+              "succeeded",
+              "failed"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "instance_id",
+          "project_id",
+          "status",
+          "created_at",
+          "created_by"
+        ],
         "type": "object"
       },
       "LedgerData": {
@@ -1772,6 +1882,16 @@
             "description": "The address of the server",
             "type": "string"
           },
+          "deployment_id": {
+            "description": "The UUID of the deployment the server belongs to",
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "The server UUID",
+            "format": "uuid",
+            "type": "string"
+          },
           "jvm_vendor": {
             "description": "The JVM vendor of the server",
             "type": "string"
@@ -1822,12 +1942,16 @@
             },
             "type": "object"
           },
-          "mode_constraints": {
+          "mode_constraint": {
             "description": "The mode constraint of the server",
             "type": "string"
           },
           "name": {
             "description": "The name of the server",
+            "type": "string"
+          },
+          "os_arch": {
+            "description": "The OS architecture of the server",
             "type": "string"
           },
           "os_name": {
@@ -1885,12 +2009,21 @@
             "description": "The current status of the database",
             "type": "string"
           },
+          "deployment_id": {
+            "description": "The UUID of the deployment the database belongs to",
+            "format": "uuid",
+            "type": "string"
+          },
           "graph_shards": {
             "description": "The graph shards of the database",
             "items": {
               "type": "string"
             },
             "type": "array"
+          },
+          "id": {
+            "description": "The database ID",
+            "type": "string"
           },
           "last_committed_txn": {
             "description": "The number of the last committed transaction",
@@ -1913,6 +2046,11 @@
           },
           "role": {
             "description": "The role of the database",
+            "type": "string"
+          },
+          "server_id": {
+            "description": "The UUID of the server the database belongs to",
+            "format": "uuid",
             "type": "string"
           },
           "status_message": {
@@ -2193,6 +2331,10 @@
       "UsageData": {
         "description": "Represents usage data for billing purposes, including resource consumption and pricing details",
         "properties": {
+          "base_sku": {
+            "example": "professional.aws.primary_db.1gb",
+            "type": "string"
+          },
           "billable_size": {
             "description": "Size of the billable resource. This field is omitted when the size is zero or not available.",
             "example": 32,
@@ -2295,6 +2437,153 @@
           }
         },
         "type": "object"
+      },
+      "VirtualGraph": {
+        "description": "A Virtual Graph instance in the caller's project.",
+        "properties": {
+          "bolt_url": {
+            "description": "Bolt connection URL for the instance.",
+            "type": "string"
+          },
+          "cloud_provider": {
+            "description": "Cloud provider the instance is deployed on.",
+            "enum": [
+              "gcp",
+              "aws",
+              "azure"
+            ],
+            "type": "string"
+          },
+          "created_at": {
+            "description": "Creation timestamp.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "data_source_id": {
+            "description": "ID of the federated data source backing this instance.",
+            "type": "string"
+          },
+          "data_source_type": {
+            "description": "Data source connector type.",
+            "type": "string"
+          },
+          "error_detail": {
+            "description": "User-facing error detail when status is ERROR.",
+            "type": "string"
+          },
+          "id": {
+            "description": "Virtual Graph instance ID (for example ge82059a).",
+            "type": "string"
+          },
+          "maximum_bytes_billed": {
+            "description": "Per-query bytes-billed cap. Present only for BigQuery-backed instances.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "memory": {
+            "description": "Allocated memory (for example 4Gi).",
+            "type": "string"
+          },
+          "name": {
+            "description": "User-defined display name.",
+            "type": "string"
+          },
+          "region": {
+            "description": "Cloud region the instance is deployed in.",
+            "type": "string"
+          },
+          "status": {
+            "description": "Lifecycle state.",
+            "enum": [
+              "creating",
+              "running",
+              "updating",
+              "error",
+              "deleted"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "VirtualGraphAllowedConfigs": {
+        "description": "Allowed configurations for Virtual Graph instances in the caller's project.",
+        "properties": {
+          "configs": {
+            "description": "Selectable configurations for a Virtual Graph instance.",
+            "example": [
+              {
+                "memory": "4Gi",
+                "price": {
+                  "amount": "0.5",
+                  "metric_unit": "hour",
+                  "sku": "virtual-graph-4gi"
+                }
+              },
+              {
+                "memory": "8Gi",
+                "price": {
+                  "amount": "1.0",
+                  "metric_unit": "hour",
+                  "sku": "virtual-graph-8gi"
+                }
+              }
+            ],
+            "items": {
+              "properties": {
+                "memory": {
+                  "description": "Memory allocation (for example 4Gi).",
+                  "type": "string"
+                },
+                "price": {
+                  "description": "Resolved price for this configuration. Omitted when no price could be resolved.",
+                  "properties": {
+                    "amount": {
+                      "description": "Unit price as a decimal string (for example 0.5).",
+                      "type": "string"
+                    },
+                    "metric_unit": {
+                      "description": "Billing unit the price applies to (for example hour).",
+                      "type": "string"
+                    },
+                    "sku": {
+                      "description": "Consumption SKU the price belongs to.",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "default_memory": {
+            "description": "Default setting applied when omitted on create.",
+            "example": "4Gi",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "VirtualGraphCreateResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/VirtualGraph"
+          },
+          {
+            "properties": {
+              "plain_password": {
+                "description": "Initial Neo4j password. Returned only on create; store securely.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "plain_password"
+            ],
+            "type": "object"
+          }
+        ]
       }
     },
     "securitySchemes": {
@@ -2427,6 +2716,38 @@
         "operationId": "get-organization-activity-feed",
         "parameters": [
           {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_limit",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "in": "path",
             "name": "org_id",
             "required": true,
@@ -2446,6 +2767,9 @@
                         "$ref": "#/components/schemas/ActivityLog"
                       },
                       "type": "array"
+                    },
+                    "links": {
+                      "$ref": "#/components/schemas/Links"
                     }
                   },
                   "type": "object"
@@ -2477,9 +2801,41 @@
     },
     "/organizations/{org_id}/billing/ledger": {
       "get": {
-        "description": "Returns credit ledger rows for a given organization and time range.\nThe `start` and `end` parameters are required and must be RFC3339 timestamps (e.g., `2024-01-02T00:00:00Z`).",
+        "description": "Returns credit ledger rows for a given organization and time range.\nThe `start` and `end` parameters are required and must be RFC3339 timestamps (e.g., `2024-01-02T00:00:00Z`).\n\n**Rate limit:** 10 requests per organization per 24 hours.\n**Data freshness:** Ledger data is refreshed once daily and may lag up to 48 hours behind real-time changes.",
         "operationId": "get-ledger",
         "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_limit",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "in": "path",
             "name": "org_id",
@@ -2538,9 +2894,49 @@
     },
     "/organizations/{org_id}/billing/usage": {
       "get": {
-        "description": "Returns usage rows for a given organization and time range.\nThe `start` and `end` parameters are required and must be RFC3339 timestamps (e.g., `2024-01-02T00:00:00Z`).",
+        "description": "Returns usage rows for a given organization and time range.\nThe `start` and `end` parameters are required and must be RFC3339 timestamps (e.g., `2024-01-02T00:00:00Z`).\n\n**Rate limit:** 10 requests per organization per 24 hours.\n**Data freshness:** Usage data is refreshed once daily and may lag up to 48 hours behind real-time changes.",
         "operationId": "get-usage",
         "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_limit",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "in": "path",
             "name": "org_id",
@@ -3391,6 +3787,38 @@
         "operationId": "get-project-activity-feed",
         "parameters": [
           {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_limit",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "in": "path",
             "name": "org_id",
             "required": true,
@@ -3418,6 +3846,9 @@
                         "$ref": "#/components/schemas/ActivityLog"
                       },
                       "type": "array"
+                    },
+                    "links": {
+                      "$ref": "#/components/schemas/Links"
                     }
                   },
                   "type": "object"
@@ -3444,6 +3875,134 @@
         "summary": "Get activity feed for the given project",
         "tags": [
           "activity-feed"
+        ]
+      }
+    },
+    "/organizations/{org_id}/projects/{project_id}/agent-invocation/{agent_id}/invoke": {
+      "post": {
+        "description": "Invokes an agent with the given input. Set `stream: true` to receive output as\nServer-Sent Events. Subject to a 3-minute timeout and per-organization token quota.",
+        "operationId": "invoke-agent-invocation-api",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Accept",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "examples": {
+                "Invoke with message array": {
+                  "value": {
+                    "input": [
+                      {
+                        "content": "What movies are in the database?",
+                        "role": "user"
+                      }
+                    ]
+                  }
+                },
+                "Invoke with streaming": {
+                  "value": {
+                    "input": "What movies are in the database?",
+                    "stream": true
+                  }
+                },
+                "Invoke with string input": {
+                  "value": {
+                    "input": "What movies are in the database?"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Successful invocation": {
+                    "value": {
+                      "content": [
+                        {
+                          "text": "Here are the movies in the database...",
+                          "type": "text"
+                        }
+                      ],
+                      "end_reason": "FINAL_ANSWER_PROVIDED",
+                      "role": "assistant",
+                      "status": "SUCCESS",
+                      "type": "message",
+                      "usage": {
+                        "request_tokens": 150,
+                        "response_tokens": 200,
+                        "total_tokens": 350
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/InvokeAgentResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden. The agent is disabled or private."
+          },
+          "404": {
+            "description": "Agent or database not found."
+          },
+          "429": {
+            "description": "Token quota for the organization has been exceeded."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Invoke an agent",
+        "tags": [
+          "agents"
         ]
       }
     },
@@ -4234,15 +4793,43 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "The request body for creating a deployment",
+                "properties": {
+                  "connection_url": {
+                    "description": "Optional connection url for the deployment",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "The name for the deployment",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "content": {
               "application/json": {
                 "schema": {
                   "properties": {
-                    "id": {
-                      "description": "The ID of the created deployment",
-                      "type": "string"
+                    "data": {
+                      "properties": {
+                        "id": {
+                          "description": "The ID of the created deployment",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
                     }
                   },
                   "type": "object"
@@ -4357,14 +4944,12 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "allOf": [
-                    {
+                  "properties": {
+                    "data": {
                       "$ref": "#/components/schemas/DetailedDeployment"
-                    },
-                    {
-                      "type": "object"
                     }
-                  ]
+                  },
+                  "type": "object"
                 }
               }
             },
@@ -4698,9 +5283,14 @@
               "application/json": {
                 "schema": {
                   "properties": {
-                    "token": {
-                      "description": "The new token for the given deployment.\n\nThis token should be applied to the deployment through 'call.fleetManagement.registerToken(\"token\")';",
-                      "type": "string"
+                    "data": {
+                      "properties": {
+                        "token": {
+                          "description": "The new token for the given deployment.\n\nThis token should be applied to the deployment through 'call.fleetManagement.registerToken(\"token\")';",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
                     }
                   },
                   "type": "object"
@@ -4764,9 +5354,14 @@
               "application/json": {
                 "schema": {
                   "properties": {
-                    "token": {
-                      "description": "Token to register the deployment with Fleet Manager.\n\nThis token should be applied to the deployment through 'call.fleetManagement.registerToken(\"token\")';",
-                      "type": "string"
+                    "data": {
+                      "properties": {
+                        "token": {
+                          "description": "Token to register the deployment with Fleet Manager.\n\nThis token should be applied to the deployment through 'call.fleetManagement.registerToken(\"token\")';",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
                     }
                   },
                   "type": "object"
@@ -5304,6 +5899,12 @@
                   "relationship_count": 1000000,
                   "relationship_property_count": 1
                 },
+                "not": {
+                  "required": [
+                    "algorithm_categories",
+                    "algorithms"
+                  ]
+                },
                 "properties": {
                   "algorithm_categories": {
                     "description": "The algorithm categories to be used in the session.",
@@ -5320,6 +5921,38 @@
                         "similarity"
                       ],
                       "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "algorithms": {
+                    "description": "A list of algorithms and their configuration to run estimation against. This field is mutually exclusive with algorithm_categories; only one of the two may be provided.",
+                    "example": [
+                      {
+                        "config": {
+                          "damping_factor": 0.85,
+                          "max_iterations": 20
+                        },
+                        "name": "pagerank"
+                      }
+                    ],
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "config": {
+                          "additionalProperties": true,
+                          "description": "The configuration for the algorithm.",
+                          "type": "object"
+                        },
+                        "name": {
+                          "description": "The name of the algorithm to run estimation against.",
+                          "example": "pagerank",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name"
+                      ],
+                      "type": "object"
                     },
                     "type": "array"
                   },
@@ -6308,6 +6941,115 @@
         "tags": [
           "instances"
         ]
+      },
+      "patch": {
+        "description": "Update an Instance's configuration \u0026 details.",
+        "operationId": "PATCH/v2beta1/organizations/:org_id/projects/:project_id/instances/:instance_id",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "instance_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "The request body for updating an Instance",
+                "properties": {
+                  "memory": {
+                    "description": "The desired memory for the Instance",
+                    "example": "16GB",
+                    "type": "string"
+                  },
+                  "storage": {
+                    "description": "The desired storage for the Instance",
+                    "example": "32GB",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Updated Instance details": {
+                    "value": {
+                      "data": {
+                        "cloud_provider": "gcp",
+                        "graph_analytics": "serverless",
+                        "id": "2f49c2b3",
+                        "legacy_status": "resizing",
+                        "memory": "16GB",
+                        "multi_database": true,
+                        "name": "Production",
+                        "region": "europe-west1",
+                        "storage": "32GB",
+                        "type": "enterprise-db",
+                        "vector_optimized": false
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/InstanceDetails"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden."
+          },
+          "404": {
+            "description": "Instance not found."
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Update Instance by ID",
+        "tags": [
+          "instances"
+        ]
       }
     },
     "/organizations/{org_id}/projects/{project_id}/instances/{instance_id}/databases": {
@@ -6349,10 +7091,12 @@
                     "value": {
                       "data": [
                         {
-                          "id": "db-1234"
+                          "id": "db-1234",
+                          "name": "my-database"
                         },
                         {
-                          "id": "db-5678"
+                          "id": "db-5678",
+                          "name": "my-other-database"
                         }
                       ]
                     }
@@ -6422,6 +7166,19 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "examples": {
+                "Create a named Database": {
+                  "value": {
+                    "name": "my-database"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "content": {
@@ -6430,7 +7187,8 @@
                   "Create Database": {
                     "value": {
                       "data": {
-                        "id": "db-1234"
+                        "id": "db-1234",
+                        "name": "my-database"
                       }
                     }
                   }
@@ -6523,7 +7281,8 @@
                   "Delete Database": {
                     "value": {
                       "data": {
-                        "id": "db-1234"
+                        "id": "db-1234",
+                        "name": "my-database"
                       }
                     }
                   }
@@ -6605,7 +7364,8 @@
                   "Get Database": {
                     "value": {
                       "data": {
-                        "id": "db-1234"
+                        "id": "db-1234",
+                        "name": "my-database"
                       }
                     }
                   }
@@ -6914,7 +7674,7 @@
     },
     "/organizations/{org_id}/projects/{project_id}/instances/{instance_id}/databases/{database_id}/restore": {
       "post": {
-        "description": "Restores the given Database from a Backup.\n\nThis is only supported for Multi Database Instances. The restore is performed asynchronously; you can poll the Database details using the GET endpoint to track its progress.",
+        "description": "Restores the given Database from a Backup.\n\nThe restore is performed asynchronously; you can poll the Database details using the GET endpoint to track its progress.",
         "operationId": "restore-instance-database",
         "parameters": [
           {
@@ -6955,16 +7715,14 @@
             "application/json": {
               "schema": {
                 "description": "The request body for restoring a Database from a Backup",
+                "minProperties": 1,
                 "properties": {
-                  "id": {
+                  "backup_id": {
                     "description": "The ID of the Backup to restore the Database from",
                     "example": "backup-5678",
                     "type": "string"
                   }
                 },
-                "required": [
-                  "id"
-                ],
                 "type": "object"
               }
             }
@@ -6988,9 +7746,6 @@
           },
           "409": {
             "description": "Conflict. The Database is suspended, not running, has an ongoing operation, or the backup is not in a completed state."
-          },
-          "422": {
-            "description": "Unprocessable entity. Restore is only supported for Multi Database Instances; single-database Instances are not supported by this endpoint."
           }
         },
         "security": [
@@ -7178,6 +7933,105 @@
           "projects",
           "users"
         ]
+      },
+      "post": {
+        "description": "Adds a new user to an Aura Project.\nRequires the caller to be a project admin.",
+        "operationId": "add-project-user",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "examples": {
+                "Add user to project with project-admin role": {
+                  "value": {
+                    "project_roles": [
+                      "project-admin"
+                    ],
+                    "user_id": "9aa289f6-1ccf-57c8-bc90-a0c3cecc82ac"
+                  }
+                }
+              },
+              "schema": {
+                "additionalProperties": false,
+                "description": "Request body for adding a user to a project.",
+                "properties": {
+                  "project_roles": {
+                    "description": "The role to assign to the user.\nExactly one role must be provided.",
+                    "items": {
+                      "enum": [
+                        "project-admin",
+                        "project-member",
+                        "project-viewer",
+                        "project-metrics-integration-reader"
+                      ],
+                      "type": "string"
+                    },
+                    "maxItems": 1,
+                    "minItems": 1,
+                    "type": "array"
+                  },
+                  "user_id": {
+                    "description": "The UUID of the user to add to the project.",
+                    "format": "uuid",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "user_id",
+                  "project_roles"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad request. Invalid role or validation error."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden. Caller is not a project admin."
+          },
+          "404": {
+            "description": "User or project not found, or user not in organization."
+          },
+          "409": {
+            "description": "User already in project."
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Add a user to a project",
+        "tags": [
+          "projects",
+          "users"
+        ]
       }
     },
     "/organizations/{org_id}/projects/{project_id}/users/{user_id}": {
@@ -7275,6 +8129,31 @@
                     ]
                   }
                 }
+              },
+              "schema": {
+                "additionalProperties": false,
+                "description": "Request body for updating a project user's role.",
+                "properties": {
+                  "project_roles": {
+                    "description": "The role to assign to the user.\nExactly one role must be provided.",
+                    "items": {
+                      "enum": [
+                        "project-admin",
+                        "project-member",
+                        "project-viewer",
+                        "project-metrics-integration-reader"
+                      ],
+                      "type": "string"
+                    },
+                    "maxItems": 1,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "project_roles"
+                ],
+                "type": "object"
               }
             }
           }
@@ -7331,10 +8210,347 @@
           "projects",
           "users"
         ]
+      }
+    },
+    "/organizations/{org_id}/projects/{project_id}/virtual-graphs": {
+      "get": {
+        "description": "Lists Virtual Graph instances in the specified project, newest first. Soft-deleted instances are omitted. Results are cursor-paginated: pass page_limit to size the page and the returned links.next as page_token to fetch the next page.",
+        "operationId": "list-virtual-graphs",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page_limit",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "List virtual graphs": {
+                    "value": {
+                      "data": [
+                        {
+                          "bolt_url": "neo4j+s://ge82059a.graph-engine.neo4j.io",
+                          "cloud_provider": "gcp",
+                          "created_at": "2026-06-09T10:15:00Z",
+                          "data_source_id": "ds-abc123",
+                          "data_source_type": "databricks-pat",
+                          "error_detail": "",
+                          "id": "ge82059a",
+                          "memory": "4Gi",
+                          "name": "sales-analytics",
+                          "region": "europe-west1",
+                          "status": "running"
+                        }
+                      ],
+                      "links": {
+                        "first": "https://api.neo4j.io/v2beta1/organizations/56c01200-de7a-4f1d-ac06-b893c3b5e284/projects/828b30d5-55d1-421f-8ed6-fc6a7fa4a623/virtual-graphs?page_limit=100",
+                        "next": null,
+                        "self": "https://api.neo4j.io/v2beta1/organizations/56c01200-de7a-4f1d-ac06-b893c3b5e284/projects/828b30d5-55d1-421f-8ed6-fc6a7fa4a623/virtual-graphs?page_limit=100"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/VirtualGraph"
+                      },
+                      "type": "array"
+                    },
+                    "links": {
+                      "description": "Cursor-pagination links.",
+                      "properties": {
+                        "first": {
+                          "description": "URL of the first page.",
+                          "type": "string"
+                        },
+                        "next": {
+                          "description": "URL of the next page, or null on the last page.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "self": {
+                          "description": "URL of the current page.",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "List virtual graphs",
+        "tags": [
+          "virtual-graphs"
+        ]
       },
       "post": {
-        "description": "Adds a new user to a project.",
-        "operationId": "POST/v2beta1/organizations/:org_id/projects/:project_id/users/:user_id",
+        "description": "Creates a Virtual Graph instance from an existing data source and data model. Provisioning completes asynchronously; the response returns immediately with status creating and a Location header pointing at the new instance (its GET endpoint).\n\nRequires the `enable-graph-engine` feature flag for the organization and write access to the project (`namespace-member` or `namespace-admin`).",
+        "operationId": "create-virtual-graph",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "Request body for creating a Virtual Graph from an existing data source and data model.",
+                "properties": {
+                  "cloud_provider": {
+                    "description": "Cloud provider for deployment.",
+                    "enum": [
+                      "gcp",
+                      "aws",
+                      "azure"
+                    ],
+                    "type": "string"
+                  },
+                  "data_source_id": {
+                    "description": "ID of a data source created in Data Importer (for example a Databricks or Snowflake connector).",
+                    "type": "string"
+                  },
+                  "import_model_id": {
+                    "description": "ID of a graph data model stored in Data Importer. The model is fetched on the caller's behalf to build the Virtual Graph.",
+                    "type": "string"
+                  },
+                  "maximum_bytes_billed": {
+                    "description": "Optional. Per-query bytes-billed cap for BigQuery data sources; ignored for other source types.",
+                    "format": "int64",
+                    "type": "integer"
+                  },
+                  "memory": {
+                    "description": "Optional. Memory allocation (for example 4Gi). Must be one of the values from GET …/virtual-graphs/allowed-configs.",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "Display name for the Virtual Graph.",
+                    "maxLength": 30,
+                    "type": "string"
+                  },
+                  "region": {
+                    "description": "Cloud region for deployment (for example europe-west1).",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "data_source_id",
+                  "import_model_id",
+                  "name",
+                  "cloud_provider",
+                  "region"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Created virtual graph": {
+                    "value": {
+                      "data": {
+                        "bolt_url": "neo4j+s://ge82059a.graph-engine.neo4j.io",
+                        "cloud_provider": "gcp",
+                        "created_at": "2026-06-09T10:15:00Z",
+                        "data_source_id": "ds-abc123",
+                        "data_source_type": "databricks-pat",
+                        "error_detail": "",
+                        "id": "ge82059a",
+                        "memory": "4Gi",
+                        "name": "sales-analytics",
+                        "plain_password": "generated-password-only-shown-once",
+                        "region": "europe-west1",
+                        "status": "creating"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/VirtualGraphCreateResponse"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Accepted. Provisioning has started."
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden. Virtual Graphs may be disabled for this organization or the caller lacks project write access."
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Create a virtual graph",
+        "tags": [
+          "virtual-graphs"
+        ]
+      }
+    },
+    "/organizations/{org_id}/projects/{project_id}/virtual-graphs/allowed-configs": {
+      "get": {
+        "description": "Returns the selectable memory configurations and the default for Virtual Graph instances in the caller's project.",
+        "operationId": "get-virtual-graph-allowed-configs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Allowed configs": {
+                    "value": {
+                      "data": {
+                        "configs": [
+                          {
+                            "memory": "4Gi"
+                          },
+                          {
+                            "memory": "8Gi"
+                          }
+                        ],
+                        "default_memory": "4Gi"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/VirtualGraphAllowedConfigs"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Get allowed virtual graph configurations",
+        "tags": [
+          "virtual-graphs"
+        ]
+      }
+    },
+    "/organizations/{org_id}/projects/{project_id}/virtual-graphs/{id}": {
+      "delete": {
+        "description": "Deletes a Virtual Graph instance from the project. Deletion completes asynchronously.",
+        "operationId": "delete-virtual-graph",
         "parameters": [
           {
             "in": "path",
@@ -7354,7 +8570,150 @@
           },
           {
             "in": "path",
-            "name": "user_id",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted. Deletion is applied asynchronously."
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Delete a virtual graph",
+        "tags": [
+          "virtual-graphs"
+        ]
+      },
+      "get": {
+        "description": "Returns a single Virtual Graph instance by ID in the caller's project.",
+        "operationId": "get-virtual-graph",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Get virtual graph": {
+                    "value": {
+                      "data": {
+                        "bolt_url": "neo4j+s://ge82059a.graph-engine.neo4j.io",
+                        "cloud_provider": "gcp",
+                        "created_at": "2026-06-09T10:15:00Z",
+                        "data_source_id": "ds-abc123",
+                        "data_source_type": "databricks-pat",
+                        "error_detail": "",
+                        "id": "ge82059a",
+                        "memory": "4Gi",
+                        "name": "sales-analytics",
+                        "region": "europe-west1",
+                        "status": "running"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/VirtualGraph"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Virtual graph not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Get a virtual graph",
+        "tags": [
+          "virtual-graphs"
+        ]
+      },
+      "patch": {
+        "description": "Renames a Virtual Graph instance, resizes its memory allocation, and/or updates its graph model schema.",
+        "operationId": "update-virtual-graph",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "org_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
             "required": true,
             "schema": {
               "type": "string"
@@ -7364,37 +8723,47 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "examples": {
-                "add user to project with project-admin role": {
-                  "value": {
-                    "project_roles": [
-                      "project-admin"
-                    ],
-                    "user_id": "9aa289f6-1ccf-57c8-bc90-a0c3cecc82ac"
+              "schema": {
+                "description": "Partial update for a Virtual Graph instance.",
+                "properties": {
+                  "import_model_id": {
+                    "description": "ID of a graph data model stored in Data Importer. When provided, the Virtual Graph's graph model schema is updated from this model.",
+                    "type": "string"
+                  },
+                  "memory": {
+                    "description": "New memory allocation (for example 8Gi). Must be one of the values from GET …/virtual-graphs/allowed-configs.",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "New display name.",
+                    "maxLength": 30,
+                    "minLength": 1,
+                    "type": "string"
                   }
-                }
+                },
+                "type": "object"
               }
             }
           }
         },
         "responses": {
-          "201": {
-            "description": "Created"
+          "202": {
+            "description": "Accepted. The update is applied asynchronously."
           },
           "400": {
-            "description": "Bad request. Invalid role or validation error."
+            "description": "Bad request"
           },
           "401": {
-            "description": "Unauthorized."
+            "description": "Unauthorized"
           },
           "403": {
-            "description": "Forbidden. Caller is not a project admin."
+            "description": "Forbidden"
           },
           "404": {
-            "description": "User or project not found, or user not in organization."
+            "description": "Virtual graph not found"
           },
-          "409": {
-            "description": "User already in project."
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -7402,9 +8771,9 @@
             "oauthToken": []
           }
         ],
+        "summary": "Update a virtual graph",
         "tags": [
-          "projects",
-          "users"
+          "virtual-graphs"
         ]
       }
     },
@@ -7647,6 +9016,45 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "examples": {
+                "Update user role to organization-admin": {
+                  "value": {
+                    "organization_roles": [
+                      "organization-admin"
+                    ]
+                  }
+                }
+              },
+              "schema": {
+                "additionalProperties": false,
+                "description": "The request body for updating an organization user's role.",
+                "properties": {
+                  "organization_roles": {
+                    "description": "The organization role to assign to the user.\nExactly one role must be provided.",
+                    "items": {
+                      "enum": [
+                        "organization-owner",
+                        "organization-admin",
+                        "organization-member"
+                      ],
+                      "type": "string"
+                    },
+                    "maxItems": 1,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "organization_roles"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {

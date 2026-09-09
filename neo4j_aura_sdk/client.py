@@ -31,6 +31,7 @@ from .models import (
     CreateProjectDatabaseBackupResponse,
     CreateProjectDatabaseRequest,
     CreateProjectInstanceRequest,
+    CreateVirtualGraphRequest,
     CustomerManagedKey,
     CustomerManagedKeyRequest,
     CustomerManagedKeyResponse,
@@ -81,7 +82,12 @@ from .models import (
     SnapshotsResponse,
     TenantResponse,
     TenantsResponse,
+    UpdateVirtualGraphRequest,
     UsageResponse,
+    VirtualGraphAllowedConfigsResponse,
+    VirtualGraphCreateResponse,
+    VirtualGraphResponse,
+    VirtualGraphsResponse,
 )
 
 
@@ -560,6 +566,10 @@ class AuraClient:
             details: InstanceRequest model describing the instance to create
 
         Returns: InstanceResponse for the created instance.
+
+        Note: Creation is asynchronous and typically takes a few minutes, but
+        can occasionally take up to 10 minutes. Poll `instance()` until the
+        status transitions from "creating" to "running" before connecting.
         """
         return await self._post("instances", body=details, model=InstanceResponse)
 
@@ -943,17 +953,54 @@ class AuraClient:
         self,
         organizationId: str,
         projectId: str,
-        userId: str,
+        userId: str | None = None,
         details: AddProjectUserRequest | None = None,
     ):
-        """Add a user to a project (v2beta1)."""
+        """Add a user to a project (v2beta1).
+
+        Supports both request styles:
+        - preferred (latest spec): POST /users with `user_id` in request body
+        - legacy compatibility: userId parameter promoted into request body when provided
+        """
         self._ensure_api_is_v2()
+
+        request_body = (
+            details.model_copy(deep=True) if details else AddProjectUserRequest()
+        )
+
+        if userId and request_body.user_id and userId != request_body.user_id:
+            raise ValueError(
+                "add_project_user received conflicting user IDs: "
+                "userId and details.user_id must match"
+            )
+
+        if userId:
+            request_body.user_id = userId
+
+        if not request_body.user_id:
+            raise ValueError(
+                "add_project_user requires either userId or details.user_id"
+            )
+
+        project_roles = request_body.project_roles
+        if (
+            not isinstance(project_roles, list)
+            or len(project_roles) != 1
+            or not isinstance(project_roles[0], str)
+            or not project_roles[0].strip()
+        ):
+            raise ValueError(
+                "add_project_user requires exactly one non-empty role in details.project_roles"
+            )
+
         result = await self._post(
-            f"organizations/{organizationId}/projects/{projectId}/users/{userId}",
-            body=details,
+            f"organizations/{organizationId}/projects/{projectId}/users",
+            body=request_body,
             model=None,
             api_version="v2beta1",
         )
+        if result is None:
+            return None
         data = result.get("data", result) if isinstance(result, dict) else result
         return ProjectUser(**data)
 
@@ -1026,6 +1073,10 @@ class AuraClient:
             project_id: optional list of project UUIDs to filter usage rows
 
         Returns: UsageResponse with 'data' containing list of UsageData objects and optional 'links' for pagination.
+
+        Note: Rate limited to 10 requests per organization per 24 hours. Usage
+        data is refreshed once daily and may lag up to 48 hours behind
+        real-time changes.
         """
         self._ensure_api_is_v2()
         params = {"start": start, "end": end}
@@ -1058,6 +1109,10 @@ class AuraClient:
             end: RFC3339 timestamp (e.g., '2024-01-31T23:59:59Z')
 
         Returns: LedgerResponse with 'data' containing list of LedgerData objects and optional 'links' for pagination.
+
+        Note: Rate limited to 10 requests per organization per 24 hours.
+        Ledger data is refreshed once daily and may lag up to 48 hours behind
+        real-time changes.
         """
         self._ensure_api_is_v2()
         params = {"start": start, "end": end}
@@ -1792,5 +1847,113 @@ class AuraClient:
             f"organizations/{organizationId}/projects/{projectId}/agents/{agentId}/invoke",
             body=details,
             model=InvokeAgentResponse,
+            api_version="v2beta1",
+        )
+
+    async def invoke_agent_invocation_api(
+        self,
+        organizationId: str,
+        projectId: str,
+        agentId: str,
+        details: InvokeAgentRequest,
+    ):
+        """Invoke an agent using the agent-invocation route (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/agent-invocation/{agentId}/invoke",
+            body=details,
+            model=InvokeAgentResponse,
+            api_version="v2beta1",
+        )
+
+    # --- Virtual Graph Methods (v2beta1) ---
+
+    async def list_virtual_graphs(
+        self,
+        organizationId: str,
+        projectId: str,
+        page_limit: int | None = None,
+        page_token: str | None = None,
+    ):
+        """List virtual graphs for a project (v2beta1)."""
+        self._ensure_api_is_v2()
+        params = {}
+        if page_limit is not None:
+            params["page_limit"] = page_limit
+        if page_token:
+            params["page_token"] = page_token
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/virtual-graphs",
+            model=VirtualGraphsResponse,
+            api_version="v2beta1",
+            params=params if params else None,
+        )
+
+    async def create_virtual_graph(
+        self,
+        organizationId: str,
+        projectId: str,
+        details: CreateVirtualGraphRequest,
+    ):
+        """Create a virtual graph for a project (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/virtual-graphs",
+            body=details,
+            model=VirtualGraphCreateResponse,
+            api_version="v2beta1",
+        )
+
+    async def get_virtual_graph_allowed_configs(
+        self, organizationId: str, projectId: str
+    ):
+        """Get allowed virtual graph configurations for a project (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/virtual-graphs/allowed-configs",
+            model=VirtualGraphAllowedConfigsResponse,
+            api_version="v2beta1",
+        )
+
+    async def get_virtual_graph(
+        self,
+        organizationId: str,
+        projectId: str,
+        virtualGraphId: str,
+    ):
+        """Get a virtual graph by id (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/virtual-graphs/{virtualGraphId}",
+            model=VirtualGraphResponse,
+            api_version="v2beta1",
+        )
+
+    async def update_virtual_graph(
+        self,
+        organizationId: str,
+        projectId: str,
+        virtualGraphId: str,
+        details: UpdateVirtualGraphRequest,
+    ):
+        """Update a virtual graph (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._patch(
+            f"organizations/{organizationId}/projects/{projectId}/virtual-graphs/{virtualGraphId}",
+            body=details,
+            model=VirtualGraphResponse,
+            api_version="v2beta1",
+        )
+
+    async def delete_virtual_graph(
+        self,
+        organizationId: str,
+        projectId: str,
+        virtualGraphId: str,
+    ):
+        """Delete a virtual graph (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/projects/{projectId}/virtual-graphs/{virtualGraphId}",
             api_version="v2beta1",
         )

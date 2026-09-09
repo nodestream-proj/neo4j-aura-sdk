@@ -1290,7 +1290,7 @@ async def test_add_project_user():
 
     user_id = "user1"
     respx.post(
-        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/users/{user_id}"
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/users"
     ).respond(
         status_code=201,
         json={
@@ -1303,7 +1303,10 @@ async def test_add_project_user():
     )
 
     async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
-        req = models.AddProjectUserRequest(project_roles=["namespace-member"])
+        req = models.AddProjectUserRequest(
+            user_id=user_id,
+            project_roles=["project-member"],
+        )
         resp = await client.add_project_user(org_id, proj_id, user_id, req)
         assert isinstance(resp, models.ProjectUser)
         assert resp.user_id == user_id
@@ -1311,31 +1314,133 @@ async def test_add_project_user():
 
 @respx.mock
 @pytest.mark.asyncio
-async def test_add_project_user_without_body():
+async def test_add_project_user_without_body_requires_project_role():
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        with pytest.raises(ValueError, match="requires exactly one non-empty role"):
+            await client.add_project_user(org_id, proj_id, "user1")
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_add_project_user_requires_user_id():
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        with pytest.raises(ValueError):
+            await client.add_project_user(org_id, proj_id)
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_invoke_agent_invocation_api():
     respx.post(f"{baseUrl}oauth/token").respond(
         status_code=200,
         json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
     )
 
-    user_id = "user1"
-    route = respx.post(
-        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/users/{user_id}"
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agent-invocation/{agent_id}/invoke"
     ).respond(
-        status_code=201,
+        status_code=200,
+        json={
+            "id": "inv-456",
+            "type": "message",
+            "role": "assistant",
+            "content": [{"type": "text", "text": "Stream-compatible response"}],
+            "end_reason": "end_turn",
+            "status": "completed",
+        },
+    )
+
+    req = models.InvokeAgentRequest(input="hello")
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.invoke_agent_invocation_api(org_id, proj_id, agent_id, req)
+        assert isinstance(resp, models.InvokeAgentResponse)
+        assert resp.id == "inv-456"
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_virtual_graph_methods():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    vg_id = "ge82059a"
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/virtual-graphs"
+    ).respond(
+        status_code=200,
+        json={
+            "data": [{"id": vg_id, "name": "sales-analytics", "memory": "4Gi"}],
+            "links": {"self": "self-url", "first": "first-url", "next": None},
+        },
+    )
+
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/virtual-graphs"
+    ).respond(
+        status_code=202,
         json={
             "data": {
-                "user_id": user_id,
-                "email": "alice@example.com",
-                "project_roles": ["namespace-member"],
+                "id": vg_id,
+                "name": "sales-analytics",
+                "memory": "4Gi",
+                "plain_password": "initial-secret",
             }
         },
     )
 
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/virtual-graphs/allowed-configs"
+    ).respond(
+        status_code=200,
+        json={
+            "data": {
+                "configs": [{"memory": "4Gi"}, {"memory": "8Gi"}],
+                "default_memory": "4Gi",
+            }
+        },
+    )
+
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/virtual-graphs/{vg_id}"
+    ).respond(status_code=200, json={"data": {"id": vg_id, "name": "sales-analytics"}})
+
+    respx.patch(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/virtual-graphs/{vg_id}"
+    ).respond(status_code=202)
+
+    respx.delete(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/virtual-graphs/{vg_id}"
+    ).respond(status_code=202)
+
     async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
-        resp = await client.add_project_user(org_id, proj_id, user_id)
-        assert isinstance(resp, models.ProjectUser)
-        assert resp.user_id == user_id
-        assert route.calls[0].request.content == b""
+        listed = await client.list_virtual_graphs(org_id, proj_id)
+        assert listed.data[0].id == vg_id
+
+        create_req = models.CreateVirtualGraphRequest(
+            name="sales-analytics",
+            cloud_provider="gcp",
+            region="europe-west1",
+            data_source_id="ds-1",
+            import_model_id="im-1",
+        )
+        created = await client.create_virtual_graph(org_id, proj_id, create_req)
+        assert created.data.id == vg_id
+        assert created.data.plain_password == "initial-secret"
+
+        allowed = await client.get_virtual_graph_allowed_configs(org_id, proj_id)
+        assert allowed.data.default_memory == "4Gi"
+
+        fetched = await client.get_virtual_graph(org_id, proj_id, vg_id)
+        assert fetched.data.id == vg_id
+
+        update_req = models.UpdateVirtualGraphRequest(name="updated-name")
+        updated = await client.update_virtual_graph(org_id, proj_id, vg_id, update_req)
+        assert updated is None
+
+        deleted = await client.delete_virtual_graph(org_id, proj_id, vg_id)
+        assert deleted is None
 
 
 @respx.mock
@@ -1466,9 +1571,32 @@ async def test_project_instance_and_database_methods():
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances"
     ).respond(status_code=201, json={"data": {"id": inst_id, "name": "inst"}})
 
+    database_name = "my-database"
+
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases"
-    ).respond(status_code=200, json={"data": [{"id": database_id}]})
+    ).respond(
+        status_code=200,
+        json={"data": [{"id": database_id, "name": database_name}]},
+    )
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases"
+    ).respond(
+        status_code=201,
+        json={"data": {"id": database_id, "name": database_name}},
+    )
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases/{database_id}"
+    ).respond(
+        status_code=200,
+        json={"data": {"id": database_id, "name": database_name}},
+    )
+    respx.delete(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases/{database_id}"
+    ).respond(
+        status_code=200,
+        json={"data": {"id": database_id, "name": database_name}},
+    )
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases/{database_id}/backups"
     ).respond(status_code=200, json={"data": [{"id": backup_id}]})
@@ -1489,6 +1617,24 @@ async def test_project_instance_and_database_methods():
             org_id, proj_id, inst_id
         )
         assert databases[0].id == database_id
+        assert databases[0].name == database_name
+
+        create_db_req = models.CreateProjectDatabaseRequest(name=database_name)
+        created_db = await client.create_project_instance_database(
+            org_id, proj_id, inst_id, create_db_req
+        )
+        assert created_db.data["id"] == database_id
+        assert created_db.data["name"] == database_name
+
+        fetched_db = await client.get_project_instance_database(
+            org_id, proj_id, inst_id, database_id
+        )
+        assert fetched_db.data["id"] == database_id
+        assert fetched_db.data["name"] == database_name
+
+        await client.delete_project_instance_database(
+            org_id, proj_id, inst_id, database_id
+        )
 
         backups = await client.list_project_database_backups(
             org_id, proj_id, inst_id, database_id
@@ -1575,3 +1721,60 @@ async def test_patch_agent_partial_update():
         assert resp.description == "Updated description"
         assert resp.name == "Original Agent"  # Should remain unchanged
         assert resp.enabled is True  # Should remain unchanged
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_add_project_user_rejects_conflicting_user_ids():
+    req = models.AddProjectUserRequest(
+        user_id="user-a",
+        project_roles=["project-member"],
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        with pytest.raises(ValueError, match="conflicting user IDs"):
+            await client.add_project_user(org_id, proj_id, "user-b", req)
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_add_project_user_does_not_mutate_details():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    route = respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/users"
+    ).respond(
+        status_code=201,
+        json={
+            "data": {
+                "user_id": "user1",
+                "email": "alice@example.com",
+                "project_roles": ["project-member"],
+            }
+        },
+    )
+
+    req = models.AddProjectUserRequest(project_roles=["project-member"])
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.add_project_user(org_id, proj_id, "user1", req)
+        assert isinstance(resp, models.ProjectUser)
+        assert req.user_id is None
+        assert b'"user_id":"user1"' in route.calls[0].request.content
+
+
+@respx.mock
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "roles",
+    [None, [], ["project-member", "project-viewer"], ["   "]],
+)
+async def test_add_project_user_requires_exactly_one_valid_role(roles):
+    req = models.AddProjectUserRequest(user_id="user1", project_roles=roles)
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        with pytest.raises(ValueError, match="requires exactly one non-empty role"):
+            await client.add_project_user(org_id, proj_id, details=req)
