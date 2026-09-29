@@ -1850,22 +1850,6 @@ class AuraClient:
             api_version="v2beta1",
         )
 
-    async def invoke_agent_invocation_api(
-        self,
-        organizationId: str,
-        projectId: str,
-        agentId: str,
-        details: InvokeAgentRequest,
-    ):
-        """Invoke an agent using the agent-invocation route (v2beta1)."""
-        self._ensure_api_is_v2()
-        return await self._post(
-            f"organizations/{organizationId}/projects/{projectId}/agent-invocation/{agentId}/invoke",
-            body=details,
-            model=InvokeAgentResponse,
-            api_version="v2beta1",
-        )
-
     # --- Virtual Graph Methods (v2beta1) ---
 
     async def list_virtual_graphs(

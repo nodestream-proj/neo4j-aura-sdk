@@ -16,6 +16,12 @@ All notable changes to this project will be documented in this file.
 ### Security
 - Resolved all 13 open Dependabot alerts (1 critical, 5 high, 7 moderate) by bumping dev dependencies (`pytest` 8→9.0.3+, `black` 24→26.3.1+, `requests` →2.33.0+, `python-dotenv` →1.2.2+, `pytest-asyncio` 0.23→1.4.0+ for pytest 9 compatibility) and letting `httpx`/`requests` re-resolve to patched transitive versions (`h11` →0.16.0+, `urllib3` →2.7.0+, `idna` →3.15+). Regenerated `poetry.lock` accordingly.
 
+### Removed (Breaking)
+- Removed `AuraClient.invoke_agent_invocation_api` (v2beta1). Its endpoint, `POST /organizations/{org_id}/projects/{project_id}/agent-invocation/{agent_id}/invoke`, was removed from the upstream v2beta1 spec with no replacement. Use `invoke_agent` (`POST /agents/{agentId}/invoke`), which is unaffected and was already the canonical way to invoke an agent.
+
+### Fixed
+- Fixed `scripts/download_specs.py` and `scripts/validate_specs.py` to read/write spec files with an explicit `encoding="utf-8"`. Without it, Python defaults to the OS locale encoding, which on Windows silently corrupted non-ASCII characters (e.g. `'` became invalid UTF-8) in every downloaded spec file. All three committed spec files had this corruption baked in from prior runs; re-downloading with the fix restored the correct text with no other content change.
+
 ## [0.1.4] - 2026-07-16
 ### Added
 - Added broad v2beta1 API coverage for organization and project user management, including organization user listing/details/patch/removal, project user listing/add/update/removal, and organization invite list/create/delete operations.

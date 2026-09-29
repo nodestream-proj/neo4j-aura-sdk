@@ -1330,35 +1330,6 @@ async def test_add_project_user_requires_user_id():
 
 @respx.mock
 @pytest.mark.asyncio
-async def test_invoke_agent_invocation_api():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
-
-    respx.post(
-        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agent-invocation/{agent_id}/invoke"
-    ).respond(
-        status_code=200,
-        json={
-            "id": "inv-456",
-            "type": "message",
-            "role": "assistant",
-            "content": [{"type": "text", "text": "Stream-compatible response"}],
-            "end_reason": "end_turn",
-            "status": "completed",
-        },
-    )
-
-    req = models.InvokeAgentRequest(input="hello")
-    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
-        resp = await client.invoke_agent_invocation_api(org_id, proj_id, agent_id, req)
-        assert isinstance(resp, models.InvokeAgentResponse)
-        assert resp.id == "inv-456"
-
-
-@respx.mock
-@pytest.mark.asyncio
 async def test_virtual_graph_methods():
     respx.post(f"{baseUrl}oauth/token").respond(
         status_code=200,

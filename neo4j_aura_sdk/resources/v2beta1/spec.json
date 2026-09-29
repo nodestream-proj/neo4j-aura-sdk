@@ -1513,9 +1513,21 @@
           "created_by": {
             "$ref": "#/components/schemas/ModelCreatedBy"
           },
+          "graph_schema": {
+            "description": "GraphSchema of the model.",
+            "type": "object"
+          },
           "id": {
             "description": "The unique identifier of the model.",
             "format": "uuid",
+            "type": "string"
+          },
+          "model_info": {
+            "description": "ModelInfo of the model.",
+            "type": "object"
+          },
+          "model_type": {
+            "description": "ModelType of the model, e.g. \"graphsage\". Absent for models stored before it was recorded.",
             "type": "string"
           },
           "name": {
@@ -1535,6 +1547,14 @@
             ],
             "type": "string"
           },
+          "runtime_origin": {
+            "description": "RuntimeOrigin of the runtime that trained the model, either \"java\" or \"python\". Absent for models stored before it was recorded.",
+            "enum": [
+              "java",
+              "python"
+            ],
+            "type": "string"
+          },
           "size_in_bytes": {
             "description": "The size of the model in bytes.",
             "format": "int64",
@@ -1543,6 +1563,10 @@
           "storage_location": {
             "description": "The storage location of the model.",
             "type": "string"
+          },
+          "train_config": {
+            "description": "TrainConfig of the model.",
+            "type": "object"
           }
         },
         "required": [
@@ -2658,14 +2682,14 @@
         ]
       }
     },
-    "/organizations/{org_id}": {
+    "/organizations/{organization_id}": {
       "get": {
         "description": "Returns information about an Aura Organization.",
         "operationId": "show-organization",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -2710,7 +2734,7 @@
         ]
       }
     },
-    "/organizations/{org_id}/activity-feed": {
+    "/organizations/{organization_id}/activity-feed": {
       "get": {
         "description": "Get activity feed for the given organization.",
         "operationId": "get-organization-activity-feed",
@@ -2749,7 +2773,7 @@
           },
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -2799,7 +2823,7 @@
         ]
       }
     },
-    "/organizations/{org_id}/billing/ledger": {
+    "/organizations/{organization_id}/billing/ledger": {
       "get": {
         "description": "Returns credit ledger rows for a given organization and time range.\nThe `start` and `end` parameters are required and must be RFC3339 timestamps (e.g., `2024-01-02T00:00:00Z`).\n\n**Rate limit:** 10 requests per organization per 24 hours.\n**Data freshness:** Ledger data is refreshed once daily and may lag up to 48 hours behind real-time changes.",
         "operationId": "get-ledger",
@@ -2838,7 +2862,7 @@
           },
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -2892,7 +2916,7 @@
         ]
       }
     },
-    "/organizations/{org_id}/billing/usage": {
+    "/organizations/{organization_id}/billing/usage": {
       "get": {
         "description": "Returns usage rows for a given organization and time range.\nThe `start` and `end` parameters are required and must be RFC3339 timestamps (e.g., `2024-01-02T00:00:00Z`).\n\n**Rate limit:** 10 requests per organization per 24 hours.\n**Data freshness:** Usage data is refreshed once daily and may lag up to 48 hours behind real-time changes.",
         "operationId": "get-usage",
@@ -2939,7 +2963,7 @@
           },
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -2993,7 +3017,7 @@
         ]
       }
     },
-    "/organizations/{org_id}/graph-analytics/sessions": {
+    "/organizations/{organization_id}/graph-analytics/sessions": {
       "get": {
         "description": "Lists sessions visible to either an organization owner or admin, optionally filtered by instance, database, owner, and creation date, with pagination.",
         "operationId": "list-org-sessions",
@@ -3048,7 +3072,7 @@
           },
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -3130,14 +3154,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/invites": {
+    "/organizations/{organization_id}/invites": {
       "get": {
         "description": "Returns a list of pending and historical invites for an Aura Organization. Requires the caller to be an organization admin.",
         "operationId": "list-organization-invites",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -3216,7 +3240,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -3343,14 +3367,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/invites/{invite_id}": {
+    "/organizations/{organization_id}/invites/{invite_id}": {
       "delete": {
         "description": "Deletes an Aura Organization invite. Requires the caller to be an organization admin.",
         "operationId": "delete-organization-invite",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -3393,14 +3417,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/ip-filters": {
+    "/organizations/{organization_id}/ip-filters": {
       "get": {
         "description": "Returns a list of IP filters of the organization.\n\nFor an IP filter's status on individual databases please see the \n``/organizations/{organizationId}/projects/{projectId}/instances/{instanceId}ip-filters``\nendpoint.",
         "operationId": "list-ip-filters",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -3487,7 +3511,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -3540,14 +3564,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/ip-filters/{ip_filter_id}": {
+    "/organizations/{organization_id}/ip-filters/{ip_filter_id}": {
       "delete": {
         "description": "Deletes an existing IP filter.",
         "operationId": "delete-ip-filter",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -3583,7 +3607,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -3650,7 +3674,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -3711,7 +3735,7 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects": {
+    "/organizations/{organization_id}/projects": {
       "get": {
         "description": "Returns a list of projects with status active for a given Aura organization.",
         "operationId": "list-projects",
@@ -3731,7 +3755,7 @@
           },
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -3781,7 +3805,7 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/activity-feed": {
+    "/organizations/{organization_id}/projects/{project_id}/activity-feed": {
       "get": {
         "description": "Get activity feed for the given project.",
         "operationId": "get-project-activity-feed",
@@ -3820,7 +3844,7 @@
           },
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -3878,142 +3902,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/agent-invocation/{agent_id}/invoke": {
-      "post": {
-        "description": "Invokes an agent with the given input. Set `stream: true` to receive output as\nServer-Sent Events. Subject to a 3-minute timeout and per-organization token quota.",
-        "operationId": "invoke-agent-invocation-api",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "Accept",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "org_id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "project_id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "agent_id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "examples": {
-                "Invoke with message array": {
-                  "value": {
-                    "input": [
-                      {
-                        "content": "What movies are in the database?",
-                        "role": "user"
-                      }
-                    ]
-                  }
-                },
-                "Invoke with streaming": {
-                  "value": {
-                    "input": "What movies are in the database?",
-                    "stream": true
-                  }
-                },
-                "Invoke with string input": {
-                  "value": {
-                    "input": "What movies are in the database?"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "examples": {
-                  "Successful invocation": {
-                    "value": {
-                      "content": [
-                        {
-                          "text": "Here are the movies in the database...",
-                          "type": "text"
-                        }
-                      ],
-                      "end_reason": "FINAL_ANSWER_PROVIDED",
-                      "role": "assistant",
-                      "status": "SUCCESS",
-                      "type": "message",
-                      "usage": {
-                        "request_tokens": 150,
-                        "response_tokens": 200,
-                        "total_tokens": 350
-                      }
-                    }
-                  }
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/InvokeAgentResponse"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "403": {
-            "description": "Forbidden. The agent is disabled or private."
-          },
-          "404": {
-            "description": "Agent or database not found."
-          },
-          "429": {
-            "description": "Token quota for the organization has been exceeded."
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        },
-        "security": [
-          {
-            "oauthToken": []
-          }
-        ],
-        "summary": "Invoke an agent",
-        "tags": [
-          "agents"
-        ]
-      }
-    },
-    "/organizations/{org_id}/projects/{project_id}/agents": {
+    "/organizations/{organization_id}/projects/{project_id}/agents": {
       "get": {
         "description": "Returns a list of agents for the specified project.",
         "operationId": "list-agents",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -4090,7 +3986,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -4240,14 +4136,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/agents/{agent_id}": {
+    "/organizations/{organization_id}/projects/{project_id}/agents/{agent_id}": {
       "delete": {
         "description": "Deletes an agent by its ID.",
         "operationId": "delete-agent",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -4303,7 +4199,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -4392,7 +4288,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -4502,7 +4398,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -4589,7 +4485,7 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/agents/{agent_id}/invoke": {
+    "/organizations/{organization_id}/projects/{project_id}/agents/{agent_id}/invoke": {
       "post": {
         "description": "Invokes an agent with the given input. Set `stream: true` to receive output as\nServer-Sent Events. Subject to a 3-minute timeout and per-organization token quota.",
         "operationId": "invoke-agent",
@@ -4603,7 +4499,7 @@
           },
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -4717,14 +4613,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/fleet-manager/deployments": {
+    "/organizations/{organization_id}/projects/{project_id}/fleet-manager/deployments": {
       "get": {
         "description": "This endpoint returns a list containing a summary of each of your Fleet Manager deployments. To find out more about a specific deployment, retrieve the details using the GET /deployments/{deploymentId} endpoint.",
         "operationId": "get-deployments",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -4778,7 +4674,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -4817,7 +4713,7 @@
           }
         },
         "responses": {
-          "201": {
+          "200": {
             "content": {
               "application/json": {
                 "schema": {
@@ -4856,14 +4752,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/fleet-manager/deployments/{deployment_id}": {
+    "/organizations/{organization_id}/projects/{project_id}/fleet-manager/deployments/{deployment_id}": {
       "delete": {
         "description": "Unregister a Fleet Manager deployment.",
         "operationId": "delete-deployment",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -4916,7 +4812,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -4976,14 +4872,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/fleet-manager/deployments/{deployment_id}/databases": {
+    "/organizations/{organization_id}/projects/{project_id}/fleet-manager/deployments/{deployment_id}/databases": {
       "get": {
         "description": "This endpoint returns details for the logical databases on the given Fleet Manager deployment.",
         "operationId": "get-deployment-databases",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -5046,14 +4942,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/fleet-manager/deployments/{deployment_id}/servers": {
+    "/organizations/{organization_id}/projects/{project_id}/fleet-manager/deployments/{deployment_id}/servers": {
       "get": {
         "description": "This endpoint returns details for the servers on the given Fleet Manager deployment.",
         "operationId": "get-deployment-servers",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -5116,14 +5012,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/fleet-manager/deployments/{deployment_id}/servers/{server_id}/databases": {
+    "/organizations/{organization_id}/projects/{project_id}/fleet-manager/deployments/{deployment_id}/servers/{server_id}/databases": {
       "get": {
         "description": "This endpoint returns details for the physical databases on the server on the given Fleet Manager deployment.",
         "operationId": "get-deployment-server-databases",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -5194,14 +5090,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/fleet-manager/deployments/{deployment_id}/token": {
+    "/organizations/{organization_id}/projects/{project_id}/fleet-manager/deployments/{deployment_id}/token": {
       "delete": {
         "description": "Delete a Fleet Manager deployment token.",
         "operationId": "delete-token",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -5254,7 +5150,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -5325,7 +5221,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -5349,7 +5245,7 @@
           }
         ],
         "responses": {
-          "201": {
+          "200": {
             "content": {
               "application/json": {
                 "schema": {
@@ -5391,7 +5287,7 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/graph-analytics/sessions": {
+    "/organizations/{organization_id}/projects/{project_id}/graph-analytics/sessions": {
       "get": {
         "description": "Lists sessions visible to the caller, optionally filtered by instance, database, owner, start and end date, with pagination.",
         "operationId": "list-sessions",
@@ -5478,7 +5374,7 @@
           },
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -5573,7 +5469,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -5861,14 +5757,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/graph-analytics/sessions/sizing": {
+    "/organizations/{organization_id}/projects/{project_id}/graph-analytics/sessions/sizing": {
       "post": {
         "description": "Estimates the memory size of a session from node count, relationship count, property counts, and algorithm categories.",
         "operationId": "estimate-session-size",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -6057,7 +5953,7 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/graph-analytics/sessions/{session_id}": {
+    "/organizations/{organization_id}/projects/{project_id}/graph-analytics/sessions/{session_id}": {
       "delete": {
         "description": "Deletes a single GDS session by its id. The caller must own the session or hold delete permission on the project.",
         "operationId": "delete-session",
@@ -6080,7 +5976,7 @@
           },
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -6180,7 +6076,7 @@
           },
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -6276,14 +6172,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/import/jobs": {
+    "/organizations/{organization_id}/projects/{project_id}/import/jobs": {
       "post": {
         "description": "Create a new import job by the specified import model ID, Aura instance ID and optional Aura credentials.\nThe model ID can be found in the URL as such `console-preview.neo4j.io/tools/import/model/\u003cmodel ID\u003e`.",
         "operationId": "create-import-job",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -6330,14 +6226,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/import/jobs/{id}": {
+    "/organizations/{organization_id}/projects/{project_id}/import/jobs/{id}": {
       "get": {
         "description": "Retrieves a single job details by its ID.",
         "operationId": "get-import-job",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -6473,14 +6369,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/import/jobs/{id}/cancellation": {
+    "/organizations/{organization_id}/projects/{project_id}/import/jobs/{id}/cancellation": {
       "post": {
         "description": "Cancel an existing import job.",
         "operationId": "cancel-import-job",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -6535,14 +6431,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/instances": {
+    "/organizations/{organization_id}/projects/{project_id}/instances": {
       "get": {
         "description": "Get instances for a given project.",
-        "operationId": "GET/v2beta1/organizations/:org_id/projects/:project_id/instances",
+        "operationId": "GET/v2beta1/organizations/:organization_id/projects/:project_id/instances",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -6620,12 +6516,12 @@
         ]
       },
       "post": {
-        "description": "Create an Instance.",
-        "operationId": "POST/v2beta1/organizations/:org_id/projects/:project_id/instances",
+        "description": "Create an Instance. Instance creation typically takes a few minutes, but can occasionally take up to 10 minutes. Wait until the instance is active in the Aura Console before connecting.",
+        "operationId": "POST/v2beta1/organizations/:organization_id/projects/:project_id/instances",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -6691,6 +6587,80 @@
                     "type": "virtual-dedicated-cloud"
                   }
                 }
+              },
+              "schema": {
+                "additionalProperties": false,
+                "description": "The request body for creating an Instance.",
+                "properties": {
+                  "cloud_provider": {
+                    "description": "The cloud provider to host the Instance.",
+                    "enum": [
+                      "gcp",
+                      "aws",
+                      "azure"
+                    ],
+                    "example": "gcp",
+                    "type": "string"
+                  },
+                  "graph_analytics": {
+                    "description": "The Graph Analytics capability of the Instance.",
+                    "enum": [
+                      "unavailable",
+                      "serverless",
+                      "plugin"
+                    ],
+                    "example": "serverless",
+                    "type": "string"
+                  },
+                  "memory": {
+                    "description": "The memory size of the Instance. Required for all Instances except Free tier.",
+                    "example": "4GB",
+                    "type": "string"
+                  },
+                  "multi_database": {
+                    "description": "Whether multi-database is enabled. Defaults to false.",
+                    "example": true,
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "description": "The name of the Instance.",
+                    "example": "my-instance",
+                    "type": "string"
+                  },
+                  "region": {
+                    "description": "The region where the Instance is deployed.",
+                    "example": "europe-west1",
+                    "type": "string"
+                  },
+                  "storage": {
+                    "description": "The storage size of the Instance. Optional for all paid tiers; defaults are applied when omitted. Fixed at 2GB for Free tier.",
+                    "example": "16GB",
+                    "type": "string"
+                  },
+                  "type": {
+                    "description": "The type of the Instance.",
+                    "enum": [
+                      "virtual-dedicated-cloud",
+                      "business-critical",
+                      "professional",
+                      "free"
+                    ],
+                    "example": "professional",
+                    "type": "string"
+                  },
+                  "vector_optimized": {
+                    "description": "Whether the Instance is vector optimized. Defaults to false.",
+                    "example": true,
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "region",
+                  "type",
+                  "cloud_provider"
+                ],
+                "type": "object"
               }
             }
           }
@@ -6764,14 +6734,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/instances/{instance_id}": {
+    "/organizations/{organization_id}/projects/{project_id}/instances/{instance_id}": {
       "delete": {
         "description": "Delete Instance by ID.",
-        "operationId": "DELETE/v2beta1/organizations/:org_id/projects/:project_id/instances/:instance_id",
+        "operationId": "DELETE/v2beta1/organizations/:organization_id/projects/:project_id/instances/:instance_id",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -6857,11 +6827,11 @@
       },
       "get": {
         "description": "Get Instance by ID.",
-        "operationId": "GET/v2beta1/organizations/:org_id/projects/:project_id/instances/:instance_id",
+        "operationId": "GET/v2beta1/organizations/:organization_id/projects/:project_id/instances/:instance_id",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -6944,11 +6914,11 @@
       },
       "patch": {
         "description": "Update an Instance's configuration \u0026 details.",
-        "operationId": "PATCH/v2beta1/organizations/:org_id/projects/:project_id/instances/:instance_id",
+        "operationId": "PATCH/v2beta1/organizations/:organization_id/projects/:project_id/instances/:instance_id",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -6974,17 +6944,55 @@
         "requestBody": {
           "content": {
             "application/json": {
+              "examples": {
+                "Change ingress traffic type": {
+                  "value": {
+                    "traffic_type": "private_only"
+                  }
+                },
+                "Resize an Instance": {
+                  "value": {
+                    "memory": "16GB",
+                    "storage": "32GB"
+                  }
+                },
+                "Set private endpoints": {
+                  "value": {
+                    "private_endpoint_ids": [
+                      "pe-12345678"
+                    ]
+                  }
+                }
+              },
               "schema": {
+                "additionalProperties": false,
                 "description": "The request body for updating an Instance",
+                "minProperties": 1,
                 "properties": {
                   "memory": {
-                    "description": "The desired memory for the Instance",
+                    "description": "The desired memory for the Instance. Must be provided together with storage.",
                     "example": "16GB",
                     "type": "string"
                   },
+                  "private_endpoint_ids": {
+                    "description": "The IDs of the private endpoints for the Instance. Replaces the current list. Send an empty array to detach all private endpoints.",
+                    "example": [
+                      "pe-12345678"
+                    ],
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
                   "storage": {
-                    "description": "The desired storage for the Instance",
+                    "description": "The desired storage for the Instance. Must be provided together with memory.",
                     "example": "32GB",
+                    "type": "string"
+                  },
+                  "traffic_type": {
+                    "description": "The desired ingress traffic type for the Instance. One of public_only, private_only, hybrid.",
+                    "example": "public_only",
                     "type": "string"
                   }
                 },
@@ -7031,6 +7039,9 @@
             },
             "description": "Accepted"
           },
+          "400": {
+            "description": "Bad request. The request body is malformed or invalid."
+          },
           "401": {
             "description": "Unauthorized."
           },
@@ -7052,14 +7063,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/instances/{instance_id}/databases": {
+    "/organizations/{organization_id}/projects/{project_id}/instances/{instance_id}/databases": {
       "get": {
         "description": "List Databases for a given Instance.",
-        "operationId": "GET/v2beta1/organizations/:org_id/projects/:project_id/instances/:instance_id/databases",
+        "operationId": "GET/v2beta1/organizations/:organization_id/projects/:project_id/instances/:instance_id/databases",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -7139,11 +7150,11 @@
       },
       "post": {
         "description": "Create a Database in a given Instance.",
-        "operationId": "POST/v2beta1/organizations/:org_id/projects/:project_id/instances/:instance_id/databases",
+        "operationId": "POST/v2beta1/organizations/:organization_id/projects/:project_id/instances/:instance_id/databases",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -7170,11 +7181,43 @@
           "content": {
             "application/json": {
               "examples": {
+                "Clone a Database from a Backup": {
+                  "value": {
+                    "backup_id": "backup-5678",
+                    "name": "my-database-clone",
+                    "source_database_id": "db-1234"
+                  }
+                },
                 "Create a named Database": {
                   "value": {
                     "name": "my-database"
                   }
                 }
+              },
+              "schema": {
+                "additionalProperties": false,
+                "description": "The request body for creating an Instance Database.",
+                "properties": {
+                  "backup_id": {
+                    "description": "The ID of the backup of the source Database to clone from. Must be provided together with source_database_id.",
+                    "example": "backup-5678",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "The name of the new Database. 3-63 characters, lowercase letters, digits and dashes; must start with a letter and end with a letter or digit.",
+                    "example": "my-database",
+                    "maxLength": 63,
+                    "minLength": 3,
+                    "pattern": "^[a-z][a-z0-9-]{1,61}[a-z0-9]$",
+                    "type": "string"
+                  },
+                  "source_database_id": {
+                    "description": "The ID of the source Database to clone from. Must be provided together with backup_id.",
+                    "example": "db-1234",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
               }
             }
           }
@@ -7235,14 +7278,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/instances/{instance_id}/databases/{database_id}": {
+    "/organizations/{organization_id}/projects/{project_id}/instances/{instance_id}/databases/{database_id}": {
       "delete": {
         "description": "Delete Database by ID.",
-        "operationId": "DELETE/v2beta1/organizations/:org_id/projects/:project_id/instances/:instance_id/databases/:database_id",
+        "operationId": "DELETE/v2beta1/organizations/:organization_id/projects/:project_id/instances/:instance_id/databases/:database_id",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -7321,11 +7364,11 @@
       },
       "get": {
         "description": "Get Database by ID.",
-        "operationId": "GET/v2beta1/organizations/:org_id/projects/:project_id/instances/:instance_id/databases/:database_id",
+        "operationId": "GET/v2beta1/organizations/:organization_id/projects/:project_id/instances/:instance_id/databases/:database_id",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -7400,14 +7443,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/instances/{instance_id}/databases/{database_id}/backups": {
+    "/organizations/{organization_id}/projects/{project_id}/instances/{instance_id}/databases/{database_id}/backups": {
       "get": {
         "description": "Returns a list of Backups for the given Database.",
         "operationId": "list-instance-database-backups",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -7497,7 +7540,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -7577,14 +7620,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/instances/{instance_id}/databases/{database_id}/backups/{backup_id}": {
+    "/organizations/{organization_id}/projects/{project_id}/instances/{instance_id}/databases/{database_id}/backups/{backup_id}": {
       "get": {
         "description": "Returns details of a specific Backup of the given Database.",
         "operationId": "get-instance-database-backup",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -7672,14 +7715,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/instances/{instance_id}/databases/{database_id}/restore": {
+    "/organizations/{organization_id}/projects/{project_id}/instances/{instance_id}/databases/{database_id}/restore": {
       "post": {
         "description": "Restores the given Database from a Backup.\n\nThe restore is performed asynchronously; you can poll the Database details using the GET endpoint to track its progress.",
         "operationId": "restore-instance-database",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -7713,6 +7756,13 @@
         "requestBody": {
           "content": {
             "application/json": {
+              "examples": {
+                "Restore a Database from a Backup": {
+                  "value": {
+                    "backup_id": "backup-5678"
+                  }
+                }
+              },
               "schema": {
                 "description": "The request body for restoring a Database from a Backup",
                 "minProperties": 1,
@@ -7759,14 +7809,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/instances/{instance_id}/ip-filters": {
+    "/organizations/{organization_id}/projects/{project_id}/instances/{instance_id}/ip-filters": {
       "get": {
         "description": "Returns the IP filter with its status applied to an instance, if present.",
         "operationId": "get-instance-ip-filters",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -7857,14 +7907,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/users": {
+    "/organizations/{organization_id}/projects/{project_id}/users": {
       "get": {
         "description": "Returns a list of all users in an Aura Project.\nRequires the caller to be a project admin.",
         "operationId": "list-project-users",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -7940,7 +7990,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -8034,14 +8084,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/users/{user_id}": {
+    "/organizations/{organization_id}/projects/{project_id}/users/{user_id}": {
       "delete": {
         "description": "Removes a user from an Aura Project.\nRequires the caller to be a project admin.",
         "operationId": "delete-project-user",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -8095,7 +8145,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -8212,7 +8262,7 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/virtual-graphs": {
+    "/organizations/{organization_id}/projects/{project_id}/virtual-graphs": {
       "get": {
         "description": "Lists Virtual Graph instances in the specified project, newest first. Soft-deleted instances are omitted. Results are cursor-paginated: pass page_limit to size the page and the returned links.next as page_token to fetch the next page.",
         "operationId": "list-virtual-graphs",
@@ -8235,7 +8285,7 @@
           },
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -8342,7 +8392,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -8386,7 +8436,7 @@
                     "type": "integer"
                   },
                   "memory": {
-                    "description": "Optional. Memory allocation (for example 4Gi). Must be one of the values from GET …/virtual-graphs/allowed-configs.",
+                    "description": "Optional. Memory allocation (for example 4Gi). Must be one of the values from GET â€¦/virtual-graphs/allowed-configs.",
                     "type": "string"
                   },
                   "name": {
@@ -8471,14 +8521,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/virtual-graphs/allowed-configs": {
+    "/organizations/{organization_id}/projects/{project_id}/virtual-graphs/allowed-configs": {
       "get": {
         "description": "Returns the selectable memory configurations and the default for Virtual Graph instances in the caller's project.",
         "operationId": "get-virtual-graph-allowed-configs",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -8547,14 +8597,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/projects/{project_id}/virtual-graphs/{id}": {
+    "/organizations/{organization_id}/projects/{project_id}/virtual-graphs/{id}": {
       "delete": {
         "description": "Deletes a Virtual Graph instance from the project. Deletion completes asynchronously.",
         "operationId": "delete-virtual-graph",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -8610,7 +8660,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -8697,7 +8747,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -8731,7 +8781,7 @@
                     "type": "string"
                   },
                   "memory": {
-                    "description": "New memory allocation (for example 8Gi). Must be one of the values from GET …/virtual-graphs/allowed-configs.",
+                    "description": "New memory allocation (for example 8Gi). Must be one of the values from GET â€¦/virtual-graphs/allowed-configs.",
                     "type": "string"
                   },
                   "name": {
@@ -8777,14 +8827,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/users": {
+    "/organizations/{organization_id}/users": {
       "get": {
         "description": "Returns a list of all users in an Aura Organization.\nRequires the caller to be an organization admin.",
         "operationId": "list-organization-users",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -8856,14 +8906,14 @@
         ]
       }
     },
-    "/organizations/{org_id}/users/{user_id}": {
+    "/organizations/{organization_id}/users/{user_id}": {
       "delete": {
         "description": "Remove an Aura User from an Aura Organization.",
         "operationId": "delete-organization-user",
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -8912,7 +8962,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
@@ -9001,7 +9051,7 @@
         "parameters": [
           {
             "in": "path",
-            "name": "org_id",
+            "name": "organization_id",
             "required": true,
             "schema": {
               "type": "string"
