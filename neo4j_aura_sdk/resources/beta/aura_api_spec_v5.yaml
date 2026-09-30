@@ -221,6 +221,8 @@ paths:
 
         Creating an instance is an asynchronous operation. Supported instance configurations for your project can be obtained by calling the GET `/tenants/{tenantId}` endpoint. 
 
+        Instance creation typically takes a few minutes, but can occasionally take up to 10 minutes. Wait until the instance is active in the Aura Console before connecting.
+
         You can poll the current status of this operation by periodically getting the instance details for the instance ID using the GET `/instances/{instanceId}` endpoint. Once the status transitions from "creating" to "running" you may begin to use your instance.
 
         This endpoint returns your instance ID, initial credentials, connection URL along with your project id, cloud provider, region, instance type, and the instance name in the response body for you to use once the instance is running. It is important to store these initial credentials until you have the chance to login to your running instance and change them.

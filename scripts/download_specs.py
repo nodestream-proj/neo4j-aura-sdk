@@ -87,8 +87,13 @@ def update_specs(force: bool = False) -> int:
 
         # Check if it would change
         if local_path.exists():
-            with open(local_path, "r") as f:
-                local_content = f.read()
+            try:
+                with open(local_path, "r", encoding="utf-8") as f:
+                    local_content = f.read()
+            except UnicodeDecodeError:
+                # Legacy file written before this script specified an
+                # encoding; treat it as needing an update.
+                local_content = None
 
             if local_content == downloaded_content:
                 print(f"  ✅ {version} is already up-to-date")
@@ -106,7 +111,7 @@ def update_specs(force: bool = False) -> int:
 
         # Write new spec
         try:
-            with open(local_path, "w") as f:
+            with open(local_path, "w", encoding="utf-8") as f:
                 f.write(downloaded_content)
             print(f"  ✅ Updated {version}")
 

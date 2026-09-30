@@ -129,7 +129,7 @@ def compare_specs() -> Dict[str, Dict]:
 
             # At least validate the local file is valid YAML
             try:
-                with open(local_path, "r") as f:
+                with open(local_path, "r", encoding="utf-8") as f:
                     local_content = f.read()
 
                 if validate_content(local_content, local_format):
@@ -173,7 +173,7 @@ def compare_specs() -> Dict[str, Dict]:
         print("OK")
 
         # Read local file
-        with open(local_path, "r") as f:
+        with open(local_path, "r", encoding="utf-8") as f:
             local_content = f.read()
 
         # Calculate hashes. If formats differ, compare semantic hashes.
