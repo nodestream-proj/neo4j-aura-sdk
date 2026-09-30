@@ -999,13 +999,13 @@ class VirtualGraphAllowedConfigsResponse(BaseModel):
 
 
 class CreateVirtualGraphRequest(OpenRequestModel):
-    cloud_provider: Optional[str] = None
-    data_source_id: Optional[str] = None
-    import_model_id: Optional[str] = None
+    cloud_provider: str
+    data_source_id: str
+    import_model_id: str
+    name: str
+    region: str
     maximum_bytes_billed: Optional[int] = None
     memory: Optional[str] = None
-    name: Optional[str] = None
-    region: Optional[str] = None
 
 
 class UpdateVirtualGraphRequest(OpenRequestModel):
@@ -1068,7 +1068,7 @@ class ProjectDatabasesResponse(BaseModel):
 
 
 class ProjectDatabaseResponse(BaseModel):
-    data: Optional[dict] = None
+    data: Optional[ProjectDatabaseSummary] = None
 
 
 class ProjectDatabaseBackup(BaseModel):

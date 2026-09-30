@@ -1542,12 +1542,14 @@ class AuraClient:
         databaseId: str,
         details: RestoreProjectDatabaseRequest,
     ):
-        """Restore a project instance database (v2beta1)."""
+        """Restore a project instance database (v2beta1).
+
+        Returns: None. The API responds 202 with no body.
+        """
         self._ensure_api_is_v2()
         return await self._post(
             f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases/{databaseId}/restore",
             body=details,
-            model=ProjectDatabaseResponse,
             api_version="v2beta1",
         )
 
@@ -1920,12 +1922,14 @@ class AuraClient:
         virtualGraphId: str,
         details: UpdateVirtualGraphRequest,
     ):
-        """Update a virtual graph (v2beta1)."""
+        """Update a virtual graph (v2beta1).
+
+        Returns: None. The API responds 202 with no body.
+        """
         self._ensure_api_is_v2()
         return await self._patch(
             f"organizations/{organizationId}/projects/{projectId}/virtual-graphs/{virtualGraphId}",
             body=details,
-            model=VirtualGraphResponse,
             api_version="v2beta1",
         )
 

@@ -21,6 +21,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Fixed `scripts/download_specs.py` and `scripts/validate_specs.py` to read/write spec files with an explicit `encoding="utf-8"`. Without it, Python defaults to the OS locale encoding, which on Windows silently corrupted non-ASCII characters (e.g. `'` became invalid UTF-8) in every downloaded spec file. All three committed spec files had this corruption baked in from prior runs; re-downloading with the fix restored the correct text with no other content change.
+- `models.ProjectDatabaseResponse.data` (returned by `create_project_instance_database`, `get_project_instance_database`) is now typed as `Optional[ProjectDatabaseSummary]` instead of `Optional[dict]`, so callers get the same typed object as the list endpoint instead of raw dict access.
+- `models.CreateVirtualGraphRequest` now marks `cloud_provider`, `data_source_id`, `import_model_id`, `name`, and `region` as required (`str`, no default) to match the spec, so invalid creates fail at construction instead of at the API. `memory` and `maximum_bytes_billed` remain optional, matching the spec.
+- `update_virtual_graph` and `restore_project_instance_database` no longer declare a response model; both endpoints return 202 with no body, and the declared model was previously unreachable dead code that misrepresented the return type as non-`None`.
+
+### Tests (review follow-up)
+- Added unit test coverage for `restore_project_instance_database`, which previously had none.
 
 ## [0.1.4] - 2026-07-16
 ### Added
