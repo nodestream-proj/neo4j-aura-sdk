@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### Added
+- Added `AuraClient.get_organization_project` (v2beta1), covering the newly-published `GET /organizations/{organization_id}/projects/{project_id}` endpoint. Returns a `ProjectResponse` wrapping `ProjectDetails` (`id`, `name`).
+
+### Changed
+- Synced `neo4j_aura_sdk/resources/v2beta1/spec.json` with the latest published v2beta1 OpenAPI spec.
+- `models.VirtualGraph` gained 3 new optional fields matching the updated spec: `private_access_enabled`, `private_bolt_url`, `public_access_enabled`. `bolt_url`'s description was also clarified to "Public Bolt connection URL" (no schema change).
+
+### Tests
+- Added unit test coverage for `get_organization_project`, which previously had none (the endpoint itself is new).
+
 ## [0.1.5]
 ### Changed
 - Synced `neo4j_aura_sdk/resources/v2beta1/spec.json` with the latest published v2beta1 OpenAPI spec.

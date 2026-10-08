@@ -92,6 +92,25 @@ async def test_list_organization_projects():
         assert resp[0]["name"] == "My Project"
 
 
+@respx.mock
+@pytest.mark.asyncio
+async def test_get_organization_project():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    respx.get(f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}").respond(
+        status_code=200,
+        json={"data": {"id": proj_id, "name": "My Project"}},
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.get_organization_project(org_id, proj_id)
+        assert resp.data.id == proj_id
+        assert resp.data.name == "My Project"
+
+
 # === IP Filter Tests ===
 
 

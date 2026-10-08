@@ -2466,7 +2466,7 @@
         "description": "A Virtual Graph instance in the caller's project.",
         "properties": {
           "bolt_url": {
-            "description": "Bolt connection URL for the instance.",
+            "description": "Public Bolt connection URL for the instance.",
             "type": "string"
           },
           "cloud_provider": {
@@ -2511,6 +2511,18 @@
           "name": {
             "description": "User-defined display name.",
             "type": "string"
+          },
+          "private_access_enabled": {
+            "description": "Whether the instance accepts connections over private networking (VDC / private link).",
+            "type": "boolean"
+          },
+          "private_bolt_url": {
+            "description": "Private Bolt connection URL for the instance. Present only when private access is enabled.",
+            "type": "string"
+          },
+          "public_access_enabled": {
+            "description": "Whether the instance accepts connections over the public internet.",
+            "type": "boolean"
           },
           "region": {
             "description": "Cloud region the instance is deployed in.",
@@ -3800,6 +3812,69 @@
           }
         ],
         "summary": "List projects",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/organizations/{organization_id}/projects/{project_id}": {
+      "get": {
+        "description": "Fetch details of a specific project by its ID within the referenced organization.",
+        "operationId": "get-project",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Get project details": {
+                    "value": {
+                      "data": {
+                        "id": "9aa289f6-1ccf-57c8-bc90-a0c3cecc82ac",
+                        "name": "Operation Dark Koala"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ProjectDetails"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not found. The project does not exist, or you do not have access to it."
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Get project details",
         "tags": [
           "projects"
         ]
@@ -8309,7 +8384,7 @@
                     "value": {
                       "data": [
                         {
-                          "bolt_url": "neo4j+s://ge82059a.graph-engine.neo4j.io",
+                          "bolt_url": "ge82059a.graph-engine.neo4j.io",
                           "cloud_provider": "gcp",
                           "created_at": "2026-06-09T10:15:00Z",
                           "data_source_id": "ds-abc123",
@@ -8318,6 +8393,8 @@
                           "id": "ge82059a",
                           "memory": "4Gi",
                           "name": "sales-analytics",
+                          "private_access_enabled": false,
+                          "public_access_enabled": true,
                           "region": "europe-west1",
                           "status": "running"
                         }
@@ -8469,7 +8546,7 @@
                   "Created virtual graph": {
                     "value": {
                       "data": {
-                        "bolt_url": "neo4j+s://ge82059a.graph-engine.neo4j.io",
+                        "bolt_url": "ge82059a.graph-engine.neo4j.io",
                         "cloud_provider": "gcp",
                         "created_at": "2026-06-09T10:15:00Z",
                         "data_source_id": "ds-abc123",
@@ -8479,6 +8556,8 @@
                         "memory": "4Gi",
                         "name": "sales-analytics",
                         "plain_password": "generated-password-only-shown-once",
+                        "private_access_enabled": false,
+                        "public_access_enabled": true,
                         "region": "europe-west1",
                         "status": "creating"
                       }
@@ -8691,7 +8770,7 @@
                   "Get virtual graph": {
                     "value": {
                       "data": {
-                        "bolt_url": "neo4j+s://ge82059a.graph-engine.neo4j.io",
+                        "bolt_url": "ge82059a.graph-engine.neo4j.io",
                         "cloud_provider": "gcp",
                         "created_at": "2026-06-09T10:15:00Z",
                         "data_source_id": "ds-abc123",
@@ -8700,6 +8779,9 @@
                         "id": "ge82059a",
                         "memory": "4Gi",
                         "name": "sales-analytics",
+                        "private_access_enabled": true,
+                        "private_bolt_url": "ge82059a-vg.production-orch-0032.neo4j.io",
+                        "public_access_enabled": true,
                         "region": "europe-west1",
                         "status": "running"
                       }

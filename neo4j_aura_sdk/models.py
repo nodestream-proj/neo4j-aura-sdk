@@ -789,6 +789,10 @@ class ProjectDetails(BaseModel):
     name: str
 
 
+class ProjectResponse(BaseModel):
+    data: Optional[ProjectDetails] = None
+
+
 # --- Project User Models (v2beta1) ---
 class ProjectUser(BaseModel):
     user_id: str
@@ -973,6 +977,9 @@ class VirtualGraph(BaseModel):
     maximum_bytes_billed: Optional[int] = None
     memory: Optional[str] = None
     name: Optional[str] = None
+    private_access_enabled: Optional[bool] = None
+    private_bolt_url: Optional[str] = None
+    public_access_enabled: Optional[bool] = None
     region: Optional[str] = None
     status: Optional[str] = None
 

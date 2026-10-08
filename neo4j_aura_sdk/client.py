@@ -69,6 +69,7 @@ from .models import (
     ProjectDatabasesResponse,
     ProjectInstanceResponse,
     ProjectInstancesResponse,
+    ProjectResponse,
     ProjectsResponse,
     ProjectUser,
     RestoreProjectDatabaseRequest,
@@ -823,6 +824,18 @@ class AuraClient:
             params=params if params else None,
         )
         return result.data or []
+
+    async def get_organization_project(self, organizationId: str, projectId: str):
+        """Get a project by id within an organization (v2beta1).
+
+        Returns: ProjectResponse with 'data' containing a ProjectDetails object.
+        """
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}",
+            model=ProjectResponse,
+            api_version="v2beta1",
+        )
 
     async def list_organizations(self):
         """List all organizations (v2beta1).
