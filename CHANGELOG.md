@@ -13,6 +13,9 @@ All notable changes to this project will be documented in this file.
 ### Tests
 - Added unit test coverage for `get_organization_project`, which previously had none (the endpoint itself is new).
 
+### Security
+- Resolved a newly-published Dependabot alert: `urllib3` 2.7.0 was in the vulnerable range (>=2.6.2, <2.8.0) for [GHSA-gh4c-6fx4-qh6g](https://github.com/urllib3/urllib3/security/advisories/GHSA-gh4c-6fx4-qh6g) (infinite loop on malformed chunked+Deflate streaming responses). Bumped to 2.8.0 via `poetry lock --regenerate`, which also picked up routine patch bumps for `black`, `charset-normalizer`, `coverage`, `idna`, `iniconfig`, `librt`, `platformdirs`, `python-dotenv`, and `tomli`.
+
 ## [0.1.5]
 ### Changed
 - Synced `neo4j_aura_sdk/resources/v2beta1/spec.json` with the latest published v2beta1 OpenAPI spec.
