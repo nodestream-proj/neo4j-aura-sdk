@@ -15,13 +15,17 @@ server_id = "server1"
 agent_id = "agent1"
 
 
-@respx.mock
-@pytest.mark.asyncio
-async def test_list_organizations():
+def mock_oauth_token():
     respx.post(f"{baseUrl}oauth/token").respond(
         status_code=200,
         json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
     )
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_list_organizations():
+    mock_oauth_token()
 
     respx.get(f"{baseUrl}v2beta1/organizations").respond(
         status_code=200,
@@ -57,10 +61,7 @@ async def test_v2_guard_raises():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_organization():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(f"{baseUrl}v2beta1/organizations/{org_id}").respond(
         status_code=200,
@@ -76,10 +77,7 @@ async def test_get_organization():
 @respx.mock
 @pytest.mark.asyncio
 async def test_list_organization_projects():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(f"{baseUrl}v2beta1/organizations/{org_id}/projects").respond(
         status_code=200,
@@ -95,10 +93,7 @@ async def test_list_organization_projects():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_organization_project():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}").respond(
         status_code=200,
@@ -117,10 +112,7 @@ async def test_get_organization_project():
 @respx.mock
 @pytest.mark.asyncio
 async def test_list_organization_ip_filters_v2():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     ip_filters = [
         {
@@ -154,10 +146,7 @@ async def test_list_organization_ip_filters_v2():
 @respx.mock
 @pytest.mark.asyncio
 async def test_create_organization_ip_filter():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     ip_filter = {
         "id": "filter-123",
@@ -191,10 +180,7 @@ async def test_create_organization_ip_filter():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_organization_ip_filter():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     ip_filter = {
         "id": "filter-123",
@@ -218,10 +204,7 @@ async def test_get_organization_ip_filter():
 @respx.mock
 @pytest.mark.asyncio
 async def test_update_organization_ip_filter():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     updated_filter = {
         "id": "filter-123",
@@ -245,10 +228,7 @@ async def test_update_organization_ip_filter():
 @respx.mock
 @pytest.mark.asyncio
 async def test_delete_organization_ip_filter():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.delete(
         f"{baseUrl}v2beta1/organizations/{org_id}/ip-filters/filter-123"
@@ -262,10 +242,7 @@ async def test_delete_organization_ip_filter():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_instance_ip_filter_status():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     ip_filter_with_status = {
         "id": "filter-123",
@@ -292,10 +269,7 @@ async def test_get_instance_ip_filter_status():
 @respx.mock
 @pytest.mark.asyncio
 async def test_create_import_job_v2():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/import/jobs"
@@ -310,10 +284,7 @@ async def test_create_import_job_v2():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_import_job():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/import/jobs/job-1"
@@ -337,10 +308,7 @@ async def test_get_import_job():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_import_job_with_progress():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/import/jobs/job-1",
@@ -373,10 +341,7 @@ async def test_get_import_job_with_progress():
 @respx.mock
 @pytest.mark.asyncio
 async def test_cancel_import_job():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/import/jobs/job-1/cancellation"
@@ -393,10 +358,7 @@ async def test_cancel_import_job():
 @respx.mock
 @pytest.mark.asyncio
 async def test_list_deployments():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments"
@@ -422,10 +384,7 @@ async def test_list_deployments():
 @respx.mock
 @pytest.mark.asyncio
 async def test_create_deployment():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments"
@@ -440,10 +399,7 @@ async def test_create_deployment():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_deployment():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments/{deployment_id}"
@@ -469,10 +425,7 @@ async def test_get_deployment():
 @respx.mock
 @pytest.mark.asyncio
 async def test_delete_deployment():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.delete(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments/{deployment_id}"
@@ -486,10 +439,7 @@ async def test_delete_deployment():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_deployment_databases():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments/{deployment_id}/databases"
@@ -515,10 +465,7 @@ async def test_get_deployment_databases():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_deployment_servers():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments/{deployment_id}/servers"
@@ -544,10 +491,7 @@ async def test_get_deployment_servers():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_deployment_server_databases():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments/{deployment_id}/servers/{server_id}/databases"
@@ -575,10 +519,7 @@ async def test_get_deployment_server_databases():
 @respx.mock
 @pytest.mark.asyncio
 async def test_create_deployment_token():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments/{deployment_id}/token"
@@ -592,10 +533,7 @@ async def test_create_deployment_token():
 @respx.mock
 @pytest.mark.asyncio
 async def test_update_deployment_token():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.patch(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments/{deployment_id}/token"
@@ -609,10 +547,7 @@ async def test_update_deployment_token():
 @respx.mock
 @pytest.mark.asyncio
 async def test_delete_deployment_token():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.delete(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments/{deployment_id}/token"
@@ -629,10 +564,7 @@ async def test_delete_deployment_token():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_organization_activity_feed():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(f"{baseUrl}v2beta1/organizations/{org_id}/activity-feed").respond(
         status_code=200,
@@ -657,10 +589,7 @@ async def test_get_organization_activity_feed():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_organization_activity_feed_with_filters():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/activity-feed",
@@ -682,10 +611,7 @@ async def test_get_organization_activity_feed_with_filters():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_project_activity_feed():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/activity-feed"
@@ -712,10 +638,7 @@ async def test_get_project_activity_feed():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_project_activity_feed_with_filters():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/activity-feed",
@@ -747,10 +670,7 @@ async def test_get_project_activity_feed_with_filters():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_billing_usage():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     start = "2024-01-01T00:00:00Z"
     end = "2024-01-31T23:59:59Z"
@@ -789,10 +709,7 @@ async def test_get_billing_usage():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_billing_usage_with_project_filter():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     start = "2024-01-01T00:00:00Z"
     end = "2024-01-31T23:59:59Z"
@@ -824,10 +741,7 @@ async def test_get_billing_usage_with_project_filter():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_billing_ledger():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     start = "2024-01-01T00:00:00Z"
     end = "2024-01-31T23:59:59Z"
@@ -863,10 +777,7 @@ async def test_get_billing_ledger():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_billing_ledger_with_pagination_params():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     start = "2024-02-01T00:00:00Z"
     end = "2024-02-29T23:59:59Z"
@@ -897,10 +808,7 @@ async def test_get_billing_ledger_with_pagination_params():
 @respx.mock
 @pytest.mark.asyncio
 async def test_list_agents():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents"
@@ -948,10 +856,7 @@ async def test_list_agents():
 @respx.mock
 @pytest.mark.asyncio
 async def test_create_agent():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents"
@@ -986,10 +891,7 @@ async def test_create_agent():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_agent():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/{agent_id}"
@@ -1015,10 +917,7 @@ async def test_get_agent():
 @respx.mock
 @pytest.mark.asyncio
 async def test_update_agent():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.put(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/{agent_id}"
@@ -1053,10 +952,7 @@ async def test_update_agent():
 @respx.mock
 @pytest.mark.asyncio
 async def test_delete_agent():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.delete(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/{agent_id}"
@@ -1070,10 +966,7 @@ async def test_delete_agent():
 @respx.mock
 @pytest.mark.asyncio
 async def test_invoke_agent():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/{agent_id}/invoke"
@@ -1168,10 +1061,7 @@ def test_similarity_search_tool_config_serializes_as_config():
 @respx.mock
 @pytest.mark.asyncio
 async def test_list_organization_users():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     users = [
         {
@@ -1218,10 +1108,7 @@ async def test_list_organization_users():
 @respx.mock
 @pytest.mark.asyncio
 async def test_remove_organization_user():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     user_id = "user1"
     respx.delete(f"{baseUrl}v2beta1/organizations/{org_id}/users/{user_id}").respond(
@@ -1240,10 +1127,7 @@ async def test_remove_organization_user():
 @respx.mock
 @pytest.mark.asyncio
 async def test_patch_organization_user():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     user_id = "user1"
     route = respx.patch(
@@ -1274,10 +1158,7 @@ async def test_patch_organization_user():
 @respx.mock
 @pytest.mark.asyncio
 async def test_list_agents_allows_similarity_search_summary_tools():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents"
@@ -1302,10 +1183,7 @@ async def test_list_agents_allows_similarity_search_summary_tools():
 @respx.mock
 @pytest.mark.asyncio
 async def test_add_project_user():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     user_id = "user1"
     respx.post(
@@ -1350,10 +1228,7 @@ async def test_add_project_user_requires_user_id():
 @respx.mock
 @pytest.mark.asyncio
 async def test_virtual_graph_methods():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     vg_id = "ge82059a"
     respx.get(
@@ -1436,10 +1311,7 @@ async def test_virtual_graph_methods():
 @respx.mock
 @pytest.mark.asyncio
 async def test_organization_invites_crud():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     invite_id = "invite-1"
     respx.get(f"{baseUrl}v2beta1/organizations/{org_id}/invites").respond(
@@ -1487,10 +1359,7 @@ async def test_organization_invites_crud():
 @respx.mock
 @pytest.mark.asyncio
 async def test_graph_analytics_session_methods():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     session_id = "session-1"
     respx.get(
@@ -1545,10 +1414,7 @@ async def test_graph_analytics_session_methods():
 @respx.mock
 @pytest.mark.asyncio
 async def test_project_instance_and_database_methods():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     database_id = "db-1"
     backup_id = "bkp-1"
@@ -1649,10 +1515,7 @@ async def test_project_instance_and_database_methods():
 @respx.mock
 @pytest.mark.asyncio
 async def test_project_instance_lifecycle_methods():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     instance_data = {
         "id": inst_id,
@@ -1724,10 +1587,7 @@ async def test_project_instance_lifecycle_methods():
 @respx.mock
 @pytest.mark.asyncio
 async def test_agent_evaluation_dataset_methods():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     dataset_id = "dataset-1"
 
@@ -1818,10 +1678,7 @@ async def test_agent_evaluation_dataset_methods():
 @respx.mock
 @pytest.mark.asyncio
 async def test_agent_evaluation_run_methods():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     run_id = "run-1"
     run_summary = {
@@ -1908,10 +1765,7 @@ async def test_agent_evaluation_run_methods():
 @respx.mock
 @pytest.mark.asyncio
 async def test_patch_agent():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.patch(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/{agent_id}"
@@ -1944,10 +1798,7 @@ async def test_patch_agent():
 @respx.mock
 @pytest.mark.asyncio
 async def test_patch_agent_partial_update():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.patch(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/{agent_id}"
@@ -1994,10 +1845,7 @@ async def test_add_project_user_rejects_conflicting_user_ids():
 @respx.mock
 @pytest.mark.asyncio
 async def test_add_project_user_does_not_mutate_details():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     route = respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/users"
