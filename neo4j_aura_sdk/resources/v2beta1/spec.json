@@ -799,6 +799,560 @@
         },
         "type": "object"
       },
+      "EvaluationAgentResponse": {
+        "description": "The response returned by the evaluated agent.",
+        "properties": {
+          "content": {
+            "items": {
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "input": {
+                  "type": "object"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "output": {
+                  "type": "object"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "thinking": {
+                  "type": "string"
+                },
+                "tool_use_id": {
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "text",
+                    "thinking",
+                    "tool_use",
+                    "tool_result"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "end_reason": {
+            "type": "string"
+          },
+          "error": {
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "status_code": {
+                "type": "integer"
+              },
+              "type": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "id": {
+            "description": "The response identifier",
+            "type": "string"
+          },
+          "role": {
+            "description": "The message role",
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "description": "The response type",
+            "enum": [
+              "message",
+              "error"
+            ],
+            "type": "string"
+          },
+          "usage": {
+            "properties": {
+              "request_tokens": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "response_tokens": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "total_tokens": {
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "request_tokens",
+              "response_tokens",
+              "total_tokens"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "type",
+          "role",
+          "content",
+          "usage"
+        ],
+        "type": "object"
+      },
+      "EvaluationDatasetDetail": {
+        "description": "An evaluation dataset and its questions.",
+        "properties": {
+          "created_at": {
+            "description": "When the dataset was created",
+            "format": "date-time",
+            "type": "string"
+          },
+          "dataset_name": {
+            "description": "The name of the dataset",
+            "type": "string"
+          },
+          "description": {
+            "description": "A description of the dataset",
+            "type": "string"
+          },
+          "id": {
+            "description": "The unique identifier of the dataset",
+            "format": "uuid",
+            "type": "string"
+          },
+          "questions": {
+            "description": "The questions in the dataset",
+            "items": {
+              "$ref": "#/components/schemas/EvaluationDatasetQuestion"
+            },
+            "type": "array"
+          },
+          "updated_at": {
+            "description": "When the dataset was last updated",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "dataset_name",
+          "description",
+          "created_at",
+          "updated_at",
+          "questions"
+        ],
+        "type": "object"
+      },
+      "EvaluationDatasetQuestion": {
+        "description": "A question and its expected result in an evaluation dataset.",
+        "properties": {
+          "expected_answer": {
+            "description": "The expected answer used by evaluation metrics",
+            "type": "string"
+          },
+          "expected_tool_calls": {
+            "description": "The tool calls expected while answering the question",
+            "items": {
+              "$ref": "#/components/schemas/EvaluationExpectedToolCall"
+            },
+            "type": "array"
+          },
+          "query_number": {
+            "description": "The question's position in the dataset",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "query_text": {
+            "description": "The prompt sent to the agent",
+            "type": "string"
+          },
+          "question_id": {
+            "description": "The stable identifier of the question",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query_number",
+          "query_text",
+          "expected_answer"
+        ],
+        "type": "object"
+      },
+      "EvaluationDatasetSummary": {
+        "description": "Summary information about an evaluation dataset.",
+        "properties": {
+          "created_at": {
+            "description": "When the dataset was created",
+            "format": "date-time",
+            "type": "string"
+          },
+          "dataset_name": {
+            "description": "The name of the dataset",
+            "type": "string"
+          },
+          "description": {
+            "description": "A description of the dataset",
+            "type": "string"
+          },
+          "id": {
+            "description": "The unique identifier of the dataset",
+            "format": "uuid",
+            "type": "string"
+          },
+          "question_count": {
+            "description": "The number of questions in the dataset",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "updated_at": {
+            "description": "When the dataset was last updated",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "dataset_name",
+          "description",
+          "created_at",
+          "updated_at",
+          "question_count"
+        ],
+        "type": "object"
+      },
+      "EvaluationExpectedToolCall": {
+        "description": "A tool call expected while answering an evaluation question.",
+        "properties": {
+          "tool_input": {
+            "description": "The expected tool input",
+            "type": "object"
+          },
+          "tool_name": {
+            "description": "The name of the tool",
+            "type": "string"
+          },
+          "tool_output": {
+            "description": "The expected tool output"
+          },
+          "tool_type": {
+            "description": "The type of the tool",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_name",
+          "tool_type"
+        ],
+        "type": "object"
+      },
+      "EvaluationMetricOutcome": {
+        "description": "The result of one metric for one evaluation question.",
+        "properties": {
+          "error": {
+            "description": "The evaluator error when the metric could not be scored",
+            "type": "string"
+          },
+          "name": {
+            "description": "The metric name",
+            "enum": [
+              "accuracy",
+              "tool_trajectory",
+              "groundedness",
+              "relevance"
+            ],
+            "type": "string"
+          },
+          "reason": {
+            "description": "An explanation of the score; omitted when unavailable",
+            "type": "string"
+          },
+          "value": {
+            "description": "The metric score; omitted when the metric did not apply or failed. A score of zero is included",
+            "format": "double",
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "EvaluationPaginationLinks": {
+        "properties": {
+          "first": {
+            "description": "The first page",
+            "format": "uri",
+            "type": "string"
+          },
+          "next": {
+            "description": "The next page; omitted on the last page",
+            "format": "uri",
+            "type": "string"
+          },
+          "self": {
+            "description": "The current page",
+            "format": "uri",
+            "type": "string"
+          }
+        },
+        "required": [
+          "self",
+          "first"
+        ],
+        "type": "object"
+      },
+      "EvaluationRunDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/EvaluationRunSummary"
+          },
+          {
+            "properties": {
+              "questions": {
+                "items": {
+                  "$ref": "#/components/schemas/EvaluationRunQuestionResult"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "questions"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "EvaluationRunProgress": {
+        "description": "Derived progress counts for an evaluation run.",
+        "properties": {
+          "failed": {
+            "description": "Questions that recorded an evaluation error",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "success": {
+            "description": "Questions evaluated without an error",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "total": {
+            "description": "Questions in the dataset version used by the run",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "success",
+          "failed",
+          "total"
+        ],
+        "type": "object"
+      },
+      "EvaluationRunQuestionResult": {
+        "description": "An evaluation question and its result, when available.",
+        "properties": {
+          "agent_response": {
+            "$ref": "#/components/schemas/EvaluationAgentResponse"
+          },
+          "error": {
+            "type": "string"
+          },
+          "error_category": {
+            "enum": [
+              "auth",
+              "timeout",
+              "orchestrator_error",
+              "malformed_input",
+              "token_expired",
+              "persistence",
+              "dataset_unavailable",
+              "cancelled",
+              "agent_deleted",
+              "interrupted",
+              "internal"
+            ],
+            "type": "string"
+          },
+          "expected_answer": {
+            "type": "string"
+          },
+          "expected_tool_calls": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluationExpectedToolCall"
+            },
+            "type": "array"
+          },
+          "latency_ms": {
+            "description": "The recorded latency; omitted until a question outcome records it. A latency of zero is included",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluationMetricOutcome"
+            },
+            "type": "array"
+          },
+          "query_number": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "query_text": {
+            "type": "string"
+          },
+          "reached_agent": {
+            "description": "Whether the agent was reached before the question failed; omitted when unknown",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "query_number",
+          "query_text",
+          "expected_answer",
+          "metrics"
+        ],
+        "type": "object"
+      },
+      "EvaluationRunSummary": {
+        "description": "Summary information and aggregate scores for an evaluation run.",
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "agent_version_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "avg_accuracy": {
+            "description": "Average accuracy; omitted when no accuracy score has been recorded",
+            "format": "double",
+            "type": "number"
+          },
+          "avg_groundedness": {
+            "description": "Average groundedness; omitted when no groundedness score has been recorded",
+            "format": "double",
+            "type": "number"
+          },
+          "avg_latency_ms": {
+            "description": "Average recorded latency; omitted when no latency has been recorded",
+            "format": "double",
+            "type": "number"
+          },
+          "avg_relevance": {
+            "description": "Average relevance; omitted when no relevance score has been recorded",
+            "format": "double",
+            "type": "number"
+          },
+          "avg_tool_trajectory": {
+            "description": "Average tool trajectory score; omitted when no tool trajectory score has been recorded",
+            "format": "double",
+            "type": "number"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "dataset_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "dataset_version_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "dataset_version_label": {
+            "type": "string"
+          },
+          "error_category": {
+            "enum": [
+              "auth",
+              "timeout",
+              "orchestrator_error",
+              "malformed_input",
+              "token_expired",
+              "persistence",
+              "dataset_unavailable",
+              "cancelled",
+              "agent_deleted",
+              "interrupted",
+              "internal"
+            ],
+            "type": "string"
+          },
+          "error_detail": {
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "finished_at": {
+            "description": "When execution finished; omitted until the run reaches a terminal state",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "metrics": {
+            "items": {
+              "enum": [
+                "accuracy",
+                "tool_trajectory",
+                "groundedness",
+                "relevance"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/EvaluationRunProgress"
+          },
+          "started_at": {
+            "description": "When execution started; omitted until the run starts",
+            "format": "date-time",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed",
+              "cancelled"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "agent_id",
+          "dataset_id",
+          "status",
+          "metrics",
+          "progress",
+          "created_at",
+          "expires_at"
+        ],
+        "type": "object"
+      },
       "GDSError": {
         "description": "Error response schema.",
         "properties": {
@@ -1084,6 +1638,89 @@
           "graph_analytics",
           "vector_optimized",
           "legacy_status"
+        ],
+        "type": "object"
+      },
+      "InstanceRestorePoint": {
+        "description": "The Restore Point of an Instance for a given point in time: what each database of the Instance would be restored to, based on the latest Backup of the system database and of each user database at or before it.",
+        "properties": {
+          "system_database": {
+            "description": "The system database's entry in the Restore Point.",
+            "properties": {
+              "backup": {
+                "description": "The latest system database Backup at or before the requested time, or null when no system Backup exists that far back.",
+                "properties": {
+                  "created_at": {
+                    "description": "The time the Backup was taken",
+                    "format": "date-time",
+                    "type": "string"
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              }
+            },
+            "type": "object"
+          },
+          "user_databases": {
+            "description": "One entry per user Database currently belonging to the Instance. A Database with no Backup at or before the requested time reports `backup` as null. A Database deleted since its last Backup is not listed.",
+            "items": {
+              "properties": {
+                "backup": {
+                  "description": "The latest Backup of the Database at or before the requested time, or null when the Database has none and would be reset to an empty Database by a restore.",
+                  "properties": {
+                    "created_at": {
+                      "description": "The time the Backup was taken",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "id": {
+                      "description": "The ID of the Backup",
+                      "type": "string"
+                    }
+                  },
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "database_id": {
+                  "description": "The ID of the user Database",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "database_id",
+                "backup"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "system_database",
+          "user_databases"
+        ],
+        "type": "object"
+      },
+      "InstanceRestoreResponse": {
+        "description": "The response returned when an Instance restore has been scheduled",
+        "properties": {
+          "instance_id": {
+            "description": "The ID of the Instance being restored",
+            "type": "string"
+          },
+          "restore_id": {
+            "description": "The ID of the scheduled restore",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instance_id",
+          "restore_id"
         ],
         "type": "object"
       },
@@ -1470,6 +2107,44 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "ListEvaluationDatasetsResponse": {
+        "description": "A cursor-paginated page of evaluation datasets.",
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluationDatasetSummary"
+            },
+            "type": "array"
+          },
+          "links": {
+            "$ref": "#/components/schemas/EvaluationPaginationLinks"
+          }
+        },
+        "required": [
+          "data",
+          "links"
+        ],
+        "type": "object"
+      },
+      "ListEvaluationRunsResponse": {
+        "description": "A page of evaluation runs.",
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluationRunSummary"
+            },
+            "type": "array"
+          },
+          "links": {
+            "$ref": "#/components/schemas/EvaluationPaginationLinks"
+          }
+        },
+        "required": [
+          "data",
+          "links"
+        ],
         "type": "object"
       },
       "ModelCreatedBy": {
@@ -4206,6 +4881,1005 @@
           }
         ],
         "summary": "Create an agent",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/organizations/{organization_id}/projects/{project_id}/agents/evaluation-datasets": {
+      "get": {
+        "description": "Returns a cursor-paginated page of evaluation datasets in the specified project, newest first by default. Question counts include only the current dataset version. Follow links.next until it is absent, retaining the same sort order.",
+        "operationId": "list-agent-evaluation-datasets",
+        "parameters": [
+          {
+            "description": "Sort field. Only created_at is supported and is the default; id breaks ties.",
+            "in": "query",
+            "name": "sort_by",
+            "schema": {
+              "enum": [
+                "created_at"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sort direction. Defaults to desc (newest first).",
+            "in": "query",
+            "name": "sort_order",
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The number of datasets per page. Defaults to 20; minimum 1, maximum 100.",
+            "in": "query",
+            "name": "page_limit",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Opaque cursor from links.next. Omit for the first page; maximum 2048 characters.",
+            "in": "query",
+            "name": "page_token",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListEvaluationDatasetsResponse"
+                }
+              }
+            },
+            "description": "OK."
+          },
+          "400": {
+            "description": "Bad Request. A query parameter is invalid."
+          },
+          "404": {
+            "description": "Not Found. The project or organization does not exist or is inaccessible."
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "List evaluation datasets",
+        "tags": [
+          "agents"
+        ]
+      },
+      "post": {
+        "description": "Creates a ground-truth evaluation dataset containing between 1 and 50 questions. The service assigns each question a stable question identifier.",
+        "operationId": "create-agent-evaluation-dataset",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "description": "The evaluation dataset to create.",
+                "properties": {
+                  "dataset_name": {
+                    "description": "The name of the dataset.",
+                    "maxLength": 255,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "description": {
+                    "description": "A description of the dataset.",
+                    "maxLength": 2000,
+                    "type": "string"
+                  },
+                  "questions": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "expected_answer": {
+                          "maxLength": 10000,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "expected_tool_calls": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "tool_input": {
+                                "type": "object"
+                              },
+                              "tool_name": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "tool_output": {},
+                              "tool_type": {
+                                "minLength": 1,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "tool_name",
+                              "tool_type"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "query_number": {
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "query_text": {
+                          "maxLength": 2000,
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "query_number",
+                        "query_text",
+                        "expected_answer"
+                      ],
+                      "type": "object"
+                    },
+                    "maxItems": 50,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "dataset_name",
+                  "questions"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "id": {
+                          "format": "uuid",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id"
+                      ],
+                      "type": "object"
+                    },
+                    "links": {
+                      "properties": {
+                        "resource": {
+                          "format": "uri",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "resource"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "links"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK. The dataset was created."
+          },
+          "400": {
+            "description": "Bad Request. The dataset payload is invalid."
+          },
+          "403": {
+            "description": "Forbidden. Viewing is permitted but creating a dataset is not, the organization's plan disallows evaluation datasets, or Aura Agents is disabled."
+          },
+          "404": {
+            "description": "Not Found. The project or organization does not exist or is inaccessible."
+          },
+          "409": {
+            "description": "Conflict. A dataset with the same name already exists in the project."
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Create an evaluation dataset",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/organizations/{organization_id}/projects/{project_id}/agents/evaluation-datasets/{dataset_id}": {
+      "delete": {
+        "description": "Deletes an evaluation dataset, its questions, and its terminal runs. A dataset with a queued or running evaluation cannot be deleted.",
+        "operationId": "delete-agent-evaluation-dataset",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK. The dataset was deleted."
+          },
+          "400": {
+            "description": "Bad Request. The dataset identifier is invalid."
+          },
+          "403": {
+            "description": "Forbidden. Viewing is permitted but this action is not."
+          },
+          "404": {
+            "description": "Not Found. The dataset does not exist in the project or is inaccessible."
+          },
+          "409": {
+            "description": "Conflict. The dataset has a queued or running evaluation."
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Delete an evaluation dataset",
+        "tags": [
+          "agents"
+        ]
+      },
+      "get": {
+        "description": "Returns an evaluation dataset and all of its questions.",
+        "operationId": "get-agent-evaluation-dataset",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EvaluationDatasetDetail"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK."
+          },
+          "400": {
+            "description": "Bad Request. The dataset identifier is invalid."
+          },
+          "404": {
+            "description": "Not Found. The dataset does not exist in the project or is inaccessible."
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Get an evaluation dataset",
+        "tags": [
+          "agents"
+        ]
+      },
+      "patch": {
+        "description": "Updates an evaluation dataset's name, description, or complete question set. Existing runs remain pinned to the dataset version they started with.",
+        "operationId": "update-agent-evaluation-dataset",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "description": "The evaluation dataset fields to update.",
+                "minProperties": 1,
+                "properties": {
+                  "dataset_name": {
+                    "maxLength": 255,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 2000,
+                    "type": "string"
+                  },
+                  "questions": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "expected_answer": {
+                          "maxLength": 10000,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "expected_tool_calls": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "tool_input": {
+                                "type": "object"
+                              },
+                              "tool_name": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "tool_output": {},
+                              "tool_type": {
+                                "minLength": 1,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "tool_name",
+                              "tool_type"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "query_number": {
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "query_text": {
+                          "maxLength": 2000,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "question_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "query_number",
+                        "query_text",
+                        "expected_answer"
+                      ],
+                      "type": "object"
+                    },
+                    "maxItems": 50,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EvaluationDatasetDetail"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK."
+          },
+          "400": {
+            "description": "Bad Request. The dataset identifier or update payload is invalid."
+          },
+          "403": {
+            "description": "Forbidden. Viewing is permitted but this action is not."
+          },
+          "404": {
+            "description": "Not Found. The dataset does not exist in the project or is inaccessible."
+          },
+          "409": {
+            "description": "Conflict. A dataset with the same name already exists in the project."
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Update an evaluation dataset",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/organizations/{organization_id}/projects/{project_id}/agents/evaluation-runs": {
+      "get": {
+        "description": "Returns a cursor-paginated page of evaluation runs in the specified project, newest first by default. Each run includes progress and aggregate scores but not per-question results. Unavailable scores and timestamps are omitted; recorded zero values are included. Follow links.next until it is absent, retaining the same agent filter and sort order.",
+        "operationId": "list-agent-evaluation-runs",
+        "parameters": [
+          {
+            "description": "Only return runs for this agent.",
+            "in": "query",
+            "name": "agent_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sort field. Only created_at is supported and is the default; id breaks ties.",
+            "in": "query",
+            "name": "sort_by",
+            "schema": {
+              "enum": [
+                "created_at"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sort direction. Defaults to desc (newest first).",
+            "in": "query",
+            "name": "sort_order",
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The number of runs per page. Defaults to 20; minimum 1, maximum 100.",
+            "in": "query",
+            "name": "page_limit",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Opaque cursor from links.next. Omit for the first page; maximum 2048 characters.",
+            "in": "query",
+            "name": "page_token",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListEvaluationRunsResponse"
+                }
+              }
+            },
+            "description": "OK."
+          },
+          "400": {
+            "description": "Bad Request. A query parameter is invalid."
+          },
+          "404": {
+            "description": "Not Found. The project or organization does not exist or is inaccessible."
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "List evaluation runs",
+        "tags": [
+          "agents"
+        ]
+      },
+      "post": {
+        "description": "Starts an asynchronous evaluation of an agent against a stored dataset. The run is a job resource representing one execution and its results: poll links.resource for progress and results rather than a separate operation endpoint.",
+        "operationId": "start-agent-evaluation-run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "description": "The evaluation run to start.",
+                "properties": {
+                  "agent_id": {
+                    "description": "The agent to evaluate.",
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "dataset_id": {
+                    "description": "The dataset to evaluate the agent against.",
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "metrics": {
+                    "description": "The metrics to calculate. Latency is always recorded and is not selected here.",
+                    "items": {
+                      "enum": [
+                        "accuracy",
+                        "tool_trajectory",
+                        "groundedness",
+                        "relevance"
+                      ],
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "type": "array",
+                    "uniqueItems": true
+                  }
+                },
+                "required": [
+                  "agent_id",
+                  "dataset_id",
+                  "metrics"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "queued",
+                            "running"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status"
+                      ],
+                      "type": "object"
+                    },
+                    "links": {
+                      "properties": {
+                        "resource": {
+                          "format": "uri",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "resource"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "links"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Accepted. The evaluation run has started."
+          },
+          "400": {
+            "description": "Bad Request. The evaluation run payload is invalid."
+          },
+          "403": {
+            "description": "Forbidden. Viewing is permitted but starting a run is not, Aura Agents is disabled, the organization's plan disallows evaluations, or the database does not allow seamless connections."
+          },
+          "404": {
+            "description": "Not Found. The project, organization, agent, dataset, or backing database does not exist or is inaccessible."
+          },
+          "409": {
+            "description": "Conflict. The agent's daily evaluation run limit has been reached; try again tomorrow."
+          },
+          "422": {
+            "description": "Unprocessable Entity. The selected agent type does not support evaluations."
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Start an evaluation run",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/organizations/{organization_id}/projects/{project_id}/agents/evaluation-runs/{run_id}": {
+      "delete": {
+        "description": "Deletes a terminal evaluation run and its question and metric results. A queued or running evaluation cannot be deleted.",
+        "operationId": "delete-agent-evaluation-run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK. The run was deleted."
+          },
+          "400": {
+            "description": "Bad Request. The run identifier is invalid."
+          },
+          "403": {
+            "description": "Forbidden. Viewing is permitted but this action is not."
+          },
+          "404": {
+            "description": "Not Found. The run does not exist in the project or is inaccessible."
+          },
+          "409": {
+            "description": "Conflict. The run is queued or running."
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Delete an evaluation run",
+        "tags": [
+          "agents"
+        ]
+      },
+      "get": {
+        "description": "Returns an evaluation run's status, progress, aggregate scores, and one result entry per dataset question. Poll this job resource while the run executes. Unavailable scores, latency, and timestamps are omitted; recorded zero values are included. Arrays are never null. A failed run carries error_detail inside data; question and metric failures carry their own error fields.",
+        "operationId": "get-agent-evaluation-run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EvaluationRunDetail"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK."
+          },
+          "400": {
+            "description": "Bad Request. The run identifier is invalid."
+          },
+          "404": {
+            "description": "Not Found. The run does not exist in the project or is inaccessible."
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Get an evaluation run",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/organizations/{organization_id}/projects/{project_id}/agents/evaluation-runs/{run_id}/cancel": {
+      "post": {
+        "description": "Cancels a queued or running evaluation. The run becomes cancelled before the response, while any in-flight question work settles cooperatively.",
+        "operationId": "cancel-agent-evaluation-run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "cancelled"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK. The run was cancelled."
+          },
+          "400": {
+            "description": "Bad Request. The run identifier is invalid."
+          },
+          "403": {
+            "description": "Forbidden. Viewing is permitted but this action is not."
+          },
+          "404": {
+            "description": "Not Found. The run does not exist in the project or is inaccessible."
+          },
+          "409": {
+            "description": "Conflict. The run has already finished."
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Cancel an evaluation run",
         "tags": [
           "agents"
         ]
@@ -7267,6 +8941,12 @@
                   "value": {
                     "name": "my-database"
                   }
+                },
+                "Replicate from an existing Database": {
+                  "value": {
+                    "name": "my-database-replica",
+                    "replicate_from_database_id": "db-1234"
+                  }
                 }
               },
               "schema": {
@@ -7284,6 +8964,11 @@
                     "maxLength": 63,
                     "minLength": 3,
                     "pattern": "^[a-z][a-z0-9-]{1,61}[a-z0-9]$",
+                    "type": "string"
+                  },
+                  "replicate_from_database_id": {
+                    "description": "The ID of the Database to replicate from. Must be provided on its own, and cannot be combined with source_database_id or backup_id.",
+                    "example": "db-1234",
                     "type": "string"
                   },
                   "source_database_id": {
@@ -7339,7 +9024,7 @@
             "description": "Conflict. The Add Database action is currently unavailable for this Instance."
           },
           "422": {
-            "description": "Unprocessable entity. Can be caused by a failed request body validation,\nthe database limit for the Instance being reached, or invalid clone parameters."
+            "description": "Unprocessable entity. Can be caused by a failed request body validation,\nthe database limit for the Instance being reached, having invalid clone or replication parameters."
           }
         },
         "security": [
@@ -7977,6 +9662,416 @@
           }
         ],
         "summary": "Returns a list of IP filters for the organization",
+        "tags": [
+          "instances"
+        ]
+      }
+    },
+    "/organizations/{organization_id}/projects/{project_id}/instances/{instance_id}/pause": {
+      "post": {
+        "description": "Sets the desired state of the given Instance to paused. The Instance is paused asynchronously; you can poll the Instance details using the GET endpoint to track its progress.\n\n**Notice:** To maintain compatibility, your instance will automatically resume after 30 days and you will be billed at the normal running rate.",
+        "operationId": "POST/v2beta1/organizations/:organization_id/projects/:project_id/instances/:instance_id/pause",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "instance_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Instance being paused": {
+                    "value": {
+                      "data": {
+                        "cloud_provider": "gcp",
+                        "graph_analytics": "serverless",
+                        "id": "2f49c2b3",
+                        "legacy_status": "pausing",
+                        "memory": "4GB",
+                        "multi_database": true,
+                        "name": "Production",
+                        "region": "europe-west1",
+                        "storage": "16GB",
+                        "type": "enterprise-db",
+                        "vector_optimized": false
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/InstanceDetails"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Accepted. Instance is being paused."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden. The Organization the Instance belongs to is suspended."
+          },
+          "404": {
+            "description": "Not found. The given Instance does not exist."
+          },
+          "409": {
+            "description": "Conflict. Another operation is in progress on this Instance."
+          },
+          "422": {
+            "description": "Unprocessable entity. The Instance is not running, so it cannot be paused."
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Pause a given Instance",
+        "tags": [
+          "instances"
+        ]
+      }
+    },
+    "/organizations/{organization_id}/projects/{project_id}/instances/{instance_id}/restore": {
+      "post": {
+        "description": "Restores the given Instance to the Restore Point for the `latest_before` timestamp. Each Database is restored to its latest Backup at or before that time; a Database with no such Backup is restored to an empty Database.\n\nThis is only supported for Multi Database Instances. The restore is performed asynchronously; you can poll the Instance details using the GET endpoint to track its progress.",
+        "operationId": "restore-instance",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "instance_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "examples": {
+                "Restore Instance": {
+                  "value": {
+                    "latest_before": "2026-01-01T00:00:00Z"
+                  }
+                }
+              },
+              "schema": {
+                "additionalProperties": false,
+                "description": "The request body for restoring an Instance to a Restore Point.",
+                "properties": {
+                  "latest_before": {
+                    "description": "The point in time to restore the Instance to, as an ISO 8601 UTC timestamp (e.g. 2026-01-01T00:00:00Z). Each Database is restored to its latest Backup at or before this time. A Database with no Backup at or before this time is restored to an empty Database.",
+                    "example": "2026-01-01T00:00:00Z",
+                    "format": "date-time",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "latest_before"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Restore Instance": {
+                    "value": {
+                      "data": {
+                        "instance_id": "2f49c2b3",
+                        "restore_id": "restore-9a3f7c"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/InstanceRestoreResponse"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
+          "400": {
+            "description": "Bad request. The request body is malformed."
+          },
+          "403": {
+            "description": "Forbidden. The Organization the Instance belongs to is suspended."
+          },
+          "404": {
+            "description": "Not found. The given Instance does not exist."
+          },
+          "409": {
+            "description": "Conflict. The Instance already has an ongoing restore."
+          },
+          "422": {
+            "description": "Unprocessable entity. The Instance is suspended, not running, or a single-database Instance."
+          },
+          "429": {
+            "description": "Too many requests. The Instance has reached its limit of queued operations."
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Restore a given Instance to a Restore Point",
+        "tags": [
+          "restores"
+        ]
+      }
+    },
+    "/organizations/{organization_id}/projects/{project_id}/instances/{instance_id}/restore-point": {
+      "get": {
+        "description": "Returns the Restore Point of the given Instance: the latest Backup of the system database and of each user database at or before the `latest_before` timestamp.\n\nThis is only supported for Multi Database Instances. A database with no Backup at or before the given time reports `backup` as `null`; restoring the Instance resets such a database to an empty one.",
+        "operationId": "get-instance-restore-point",
+        "parameters": [
+          {
+            "description": "The point in time to resolve the Restore Point at, as an ISO 8601 UTC timestamp (e.g. 2026-01-01T00:00:00Z).",
+            "in": "query",
+            "name": "latest_before",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "instance_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Instance restore point": {
+                    "value": {
+                      "data": {
+                        "system_database": {
+                          "backup": {
+                            "created_at": "2026-01-01T00:00:00Z"
+                          }
+                        },
+                        "user_databases": [
+                          {
+                            "backup": {
+                              "created_at": "2026-01-01T00:00:00Z",
+                              "id": "backup-5678"
+                            },
+                            "database_id": "db0"
+                          },
+                          {
+                            "backup": null,
+                            "database_id": "db1"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/InstanceRestorePoint"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not found. The given Instance does not exist."
+          },
+          "422": {
+            "description": "Unprocessable entity. The `latest_before` query parameter is missing or is not a valid ISO 8601 timestamp, or the Instance is a single-database Instance, which this feature does not support."
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Get the Restore Point of a given Instance",
+        "tags": [
+          "restores"
+        ]
+      }
+    },
+    "/organizations/{organization_id}/projects/{project_id}/instances/{instance_id}/resume": {
+      "post": {
+        "description": "Sets the desired state of the given paused Instance to running. The Instance is resumed asynchronously; you can poll the Instance details using the GET endpoint to track its progress.",
+        "operationId": "POST/v2beta1/organizations/:organization_id/projects/:project_id/instances/:instance_id/resume",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "instance_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Instance being resumed": {
+                    "value": {
+                      "data": {
+                        "cloud_provider": "gcp",
+                        "graph_analytics": "serverless",
+                        "id": "2f49c2b3",
+                        "legacy_status": "resuming",
+                        "memory": "4GB",
+                        "multi_database": true,
+                        "name": "Production",
+                        "region": "europe-west1",
+                        "storage": "16GB",
+                        "type": "enterprise-db",
+                        "vector_optimized": false
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/InstanceDetails"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Accepted. Instance is being resumed."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden. The Organization the Instance belongs to is suspended."
+          },
+          "404": {
+            "description": "Not found. The given Instance does not exist."
+          },
+          "409": {
+            "description": "Conflict. Another operation is in progress on this Instance."
+          },
+          "422": {
+            "description": "Unprocessable entity. The Instance is not paused, or it cannot be resumed (for example the associated billing account is not funded)."
+          }
+        },
+        "security": [
+          {
+            "oauthToken": []
+          }
+        ],
+        "summary": "Resume a given Instance",
         "tags": [
           "instances"
         ]
@@ -9278,6 +11373,10 @@
     {
       "description": "Relates to Aura Instances.",
       "name": "instances"
+    },
+    {
+      "description": "Relates to Aura Instance Restores.",
+      "name": "restores"
     },
     {
       "description": "Relates to Aura Databases.",

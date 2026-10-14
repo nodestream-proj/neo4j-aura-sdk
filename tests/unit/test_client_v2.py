@@ -1646,6 +1646,262 @@ async def test_project_instance_and_database_methods():
         assert backup.data["id"] == backup_id
 
 
+@respx.mock
+@pytest.mark.asyncio
+async def test_project_instance_lifecycle_methods():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    instance_data = {
+        "id": inst_id,
+        "name": "inst",
+        "type": "enterprise-db",
+        "cloud_provider": "gcp",
+        "region": "us-central1",
+        "multi_database": True,
+        "graph_analytics": "serverless",
+        "vector_optimized": False,
+        "legacy_status": "paused",
+    }
+
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/pause"
+    ).respond(status_code=202, json={"data": instance_data})
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/resume"
+    ).respond(status_code=202, json={"data": instance_data})
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/restore-point"
+    ).respond(
+        status_code=200,
+        json={
+            "data": {
+                "system_database": {"backup": {"created_at": "2026-01-01T00:00:00Z"}},
+                "user_databases": [
+                    {
+                        "database_id": "db-1",
+                        "backup": {"id": "bkp-1", "created_at": "2026-01-01T00:00:00Z"},
+                    },
+                    {"database_id": "db-2", "backup": None},
+                ],
+            }
+        },
+    )
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/restore"
+    ).respond(
+        status_code=202,
+        json={"data": {"instance_id": inst_id, "restore_id": "restore-1"}},
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        paused = await client.pause_project_instance(org_id, proj_id, inst_id)
+        assert paused.data.id == inst_id
+        assert paused.data.graph_analytics == "serverless"
+
+        resumed = await client.resume_project_instance(org_id, proj_id, inst_id)
+        assert resumed.data.id == inst_id
+
+        restore_point = await client.get_project_instance_restore_point(
+            org_id, proj_id, inst_id, "2026-01-01T00:00:00Z"
+        )
+        assert restore_point.data.user_databases[0].database_id == "db-1"
+        assert restore_point.data.user_databases[0].backup.id == "bkp-1"
+        assert restore_point.data.user_databases[1].backup is None
+
+        restore_req = models.RestoreInstanceRequest(
+            latest_before="2026-01-01T00:00:00Z"
+        )
+        restored = await client.restore_project_instance(
+            org_id, proj_id, inst_id, restore_req
+        )
+        assert restored.data.instance_id == inst_id
+        assert restored.data.restore_id == "restore-1"
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_agent_evaluation_dataset_methods():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    dataset_id = "dataset-1"
+
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-datasets"
+    ).respond(
+        status_code=200,
+        json={
+            "data": [
+                {
+                    "id": dataset_id,
+                    "dataset_name": "greetings",
+                    "description": "basic greetings",
+                    "created_at": "2026-01-01T00:00:00Z",
+                    "updated_at": "2026-01-01T00:00:00Z",
+                    "question_count": 1,
+                }
+            ],
+            "links": {
+                "self": "https://api.neo4j.io/self",
+                "first": "https://api.neo4j.io/first",
+            },
+        },
+    )
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-datasets"
+    ).respond(
+        status_code=200,
+        json={
+            "data": {"id": dataset_id},
+            "links": {"resource": "https://api.neo4j.io/resource"},
+        },
+    )
+    dataset_detail = {
+        "id": dataset_id,
+        "dataset_name": "greetings",
+        "description": "basic greetings",
+        "created_at": "2026-01-01T00:00:00Z",
+        "updated_at": "2026-01-01T00:00:00Z",
+        "questions": [
+            {
+                "query_number": 1,
+                "query_text": "hello?",
+                "expected_answer": "hi!",
+            }
+        ],
+    }
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-datasets/{dataset_id}"
+    ).respond(status_code=200, json={"data": dataset_detail})
+    respx.patch(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-datasets/{dataset_id}"
+    ).respond(status_code=200, json={"data": dataset_detail})
+    respx.delete(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-datasets/{dataset_id}"
+    ).respond(status_code=200, json={})
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        listed = await client.list_agent_evaluation_datasets(org_id, proj_id)
+        assert listed.data[0].id == dataset_id
+        assert listed.links.self == "https://api.neo4j.io/self"
+
+        create_req = models.CreateEvaluationDatasetRequest(
+            dataset_name="greetings",
+            questions=[
+                models.EvaluationDatasetQuestionInput(
+                    query_number=1, query_text="hello?", expected_answer="hi!"
+                )
+            ],
+        )
+        created = await client.create_agent_evaluation_dataset(
+            org_id, proj_id, create_req
+        )
+        assert created.data.id == dataset_id
+
+        fetched = await client.get_agent_evaluation_dataset(org_id, proj_id, dataset_id)
+        assert fetched.data.questions[0].query_text == "hello?"
+
+        update_req = models.UpdateEvaluationDatasetRequest(dataset_name="greetings-v2")
+        updated = await client.update_agent_evaluation_dataset(
+            org_id, proj_id, dataset_id, update_req
+        )
+        assert updated.data.id == dataset_id
+
+        await client.delete_agent_evaluation_dataset(org_id, proj_id, dataset_id)
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_agent_evaluation_run_methods():
+    respx.post(f"{baseUrl}oauth/token").respond(
+        status_code=200,
+        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
+    )
+
+    run_id = "run-1"
+    run_summary = {
+        "id": run_id,
+        "agent_id": agent_id,
+        "dataset_id": "dataset-1",
+        "status": "succeeded",
+        "metrics": ["accuracy"],
+        "progress": {"success": 1, "failed": 0, "total": 1},
+        "created_at": "2026-01-01T00:00:00Z",
+        "expires_at": "2026-02-01T00:00:00Z",
+    }
+
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-runs"
+    ).respond(
+        status_code=200,
+        json={
+            "data": [run_summary],
+            "links": {
+                "self": "https://api.neo4j.io/self",
+                "first": "https://api.neo4j.io/first",
+            },
+        },
+    )
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-runs"
+    ).respond(
+        status_code=202,
+        json={
+            "data": {"id": run_id, "status": "queued"},
+            "links": {"resource": "https://api.neo4j.io/resource"},
+        },
+    )
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-runs/{run_id}"
+    ).respond(
+        status_code=200,
+        json={
+            "data": {
+                **run_summary,
+                "questions": [
+                    {
+                        "query_number": 1,
+                        "query_text": "hello?",
+                        "expected_answer": "hi!",
+                        "metrics": [{"name": "accuracy", "value": 1.0}],
+                    }
+                ],
+            }
+        },
+    )
+    respx.delete(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-runs/{run_id}"
+    ).respond(status_code=200, json={})
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-runs/{run_id}/cancel"
+    ).respond(status_code=200, json={"data": {"id": run_id, "status": "cancelled"}})
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        listed = await client.list_agent_evaluation_runs(org_id, proj_id)
+        assert listed.data[0].id == run_id
+
+        start_req = models.StartEvaluationRunRequest(
+            agent_id=agent_id, dataset_id="dataset-1", metrics=["accuracy"]
+        )
+        started = await client.start_agent_evaluation_run(org_id, proj_id, start_req)
+        assert started.data.id == run_id
+        assert started.data.status == "queued"
+
+        fetched = await client.get_agent_evaluation_run(org_id, proj_id, run_id)
+        assert fetched.data.id == run_id
+        assert fetched.data.questions[0].metrics[0].value == 1.0
+
+        await client.delete_agent_evaluation_run(org_id, proj_id, run_id)
+
+        cancelled = await client.cancel_agent_evaluation_run(org_id, proj_id, run_id)
+        assert cancelled.data.status == "cancelled"
+
+
 # === Agent Patch Tests ===
 
 

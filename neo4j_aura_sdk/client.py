@@ -23,8 +23,11 @@ from .models import (
     AuraError,
     AuraErrors,
     AuthResponse,
+    CancelEvaluationRunResponse,
     CreateAgentRequest,
     CreateDeploymentRequest,
+    CreateEvaluationDatasetRequest,
+    CreateEvaluationDatasetResponse,
     CreateGraphAnalyticsSessionRequest,
     CreateImportJobRequest,
     CreateOrganizationInviteRequest,
@@ -41,11 +44,14 @@ from .models import (
     DeploymentResponse,
     DeploymentsResponse,
     DeploymentTokenResponse,
+    EvaluationDatasetDetailResponse,
+    EvaluationRunDetailResponse,
     GetAgentResponse,
     ImportJobEnvelope,
     InstancePatchRequest,
     InstanceRequest,
     InstanceResponse,
+    InstanceRestorePointResponse,
     InstanceSizingRequest,
     InstanceSizingResponse,
     InstancesResponse,
@@ -56,6 +62,8 @@ from .models import (
     JobIdEnvelope,
     LedgerResponse,
     ListAgentResponse,
+    ListEvaluationDatasetsResponse,
+    ListEvaluationRunsResponse,
     OrganizationDetailsEnvelope,
     OrganizationInviteResponse,
     OrganizationInvitesResponse,
@@ -72,6 +80,8 @@ from .models import (
     ProjectResponse,
     ProjectsResponse,
     ProjectUser,
+    RestoreInstanceRequest,
+    RestoreInstanceResponse,
     RestoreProjectDatabaseRequest,
     ServerDatabasesResponse,
     ServersResponse,
@@ -81,8 +91,11 @@ from .models import (
     SessionsResponse,
     SnapshotResponse,
     SnapshotsResponse,
+    StartEvaluationRunRequest,
+    StartEvaluationRunResponse,
     TenantResponse,
     TenantsResponse,
+    UpdateEvaluationDatasetRequest,
     UpdateVirtualGraphRequest,
     UsageResponse,
     VirtualGraphAllowedConfigsResponse,
@@ -1434,6 +1447,95 @@ class AuraClient:
             api_version="v2beta1",
         )
 
+    async def pause_project_instance(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+    ):
+        """Pause a project instance (v2beta1).
+
+        The instance is paused asynchronously; poll get_project_instance to
+        track progress. Note: Aura automatically resumes a paused instance
+        after 30 days.
+
+        Returns: ProjectInstanceResponse for the instance (desired state).
+        """
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/pause",
+            model=ProjectInstanceResponse,
+            api_version="v2beta1",
+        )
+
+    async def resume_project_instance(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+    ):
+        """Resume a paused project instance (v2beta1).
+
+        The instance is resumed asynchronously; poll get_project_instance to
+        track progress.
+
+        Returns: ProjectInstanceResponse for the instance (desired state).
+        """
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/resume",
+            model=ProjectInstanceResponse,
+            api_version="v2beta1",
+        )
+
+    async def get_project_instance_restore_point(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+        latestBefore: str,
+    ):
+        """Get the restore point for a Multi Database project instance (v2beta1).
+
+        Args:
+            latestBefore: ISO 8601 UTC timestamp; the restore point reflects
+                the latest backup of each database at or before this time.
+
+        Returns: InstanceRestorePointResponse with 'data' containing an
+        InstanceRestorePoint.
+        """
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/restore-point",
+            model=InstanceRestorePointResponse,
+            api_version="v2beta1",
+            params={"latest_before": latestBefore},
+        )
+
+    async def restore_project_instance(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+        details: RestoreInstanceRequest,
+    ):
+        """Restore a Multi Database project instance to a restore point (v2beta1).
+
+        Each database is restored to its latest backup at or before
+        `details.latest_before`; a database with no such backup is restored
+        to an empty database. The restore is performed asynchronously.
+
+        Returns: RestoreInstanceResponse with 'data' containing the
+        scheduled instance_id/restore_id.
+        """
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/restore",
+            body=details,
+            model=RestoreInstanceResponse,
+            api_version="v2beta1",
+        )
+
     async def list_project_instance_databases(
         self,
         organizationId: str,
@@ -1862,6 +1964,193 @@ class AuraClient:
             f"organizations/{organizationId}/projects/{projectId}/agents/{agentId}/invoke",
             body=details,
             model=InvokeAgentResponse,
+            api_version="v2beta1",
+        )
+
+    # --- Agent Evaluation Methods (v2beta1) ---
+
+    async def list_agent_evaluation_datasets(
+        self,
+        organizationId: str,
+        projectId: str,
+        sort_by: str = None,
+        sort_order: str = None,
+        page_limit: int = None,
+        page_token: str = None,
+    ):
+        """List evaluation datasets for a project (v2beta1).
+
+        Returns: ListEvaluationDatasetsResponse with 'data' containing a
+        list of EvaluationDatasetSummary objects and 'links' for pagination.
+        """
+        self._ensure_api_is_v2()
+        params = {}
+        if sort_by:
+            params["sort_by"] = sort_by
+        if sort_order:
+            params["sort_order"] = sort_order
+        if page_limit:
+            params["page_limit"] = page_limit
+        if page_token:
+            params["page_token"] = page_token
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/agents/evaluation-datasets",
+            model=ListEvaluationDatasetsResponse,
+            api_version="v2beta1",
+            params=params if params else None,
+        )
+
+    async def create_agent_evaluation_dataset(
+        self,
+        organizationId: str,
+        projectId: str,
+        details: CreateEvaluationDatasetRequest,
+    ):
+        """Create an evaluation dataset (v2beta1).
+
+        Returns: CreateEvaluationDatasetResponse with the new dataset's id.
+        """
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/agents/evaluation-datasets",
+            body=details,
+            model=CreateEvaluationDatasetResponse,
+            api_version="v2beta1",
+        )
+
+    async def get_agent_evaluation_dataset(
+        self, organizationId: str, projectId: str, datasetId: str
+    ):
+        """Get an evaluation dataset by id, including its questions (v2beta1).
+
+        Returns: EvaluationDatasetDetailResponse with 'data' containing an
+        EvaluationDatasetDetail.
+        """
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/agents/evaluation-datasets/{datasetId}",
+            model=EvaluationDatasetDetailResponse,
+            api_version="v2beta1",
+        )
+
+    async def update_agent_evaluation_dataset(
+        self,
+        organizationId: str,
+        projectId: str,
+        datasetId: str,
+        details: UpdateEvaluationDatasetRequest,
+    ):
+        """Update an evaluation dataset (v2beta1).
+
+        Returns: EvaluationDatasetDetailResponse with 'data' containing the
+        updated EvaluationDatasetDetail.
+        """
+        self._ensure_api_is_v2()
+        return await self._patch(
+            f"organizations/{organizationId}/projects/{projectId}/agents/evaluation-datasets/{datasetId}",
+            body=details,
+            model=EvaluationDatasetDetailResponse,
+            api_version="v2beta1",
+        )
+
+    async def delete_agent_evaluation_dataset(
+        self, organizationId: str, projectId: str, datasetId: str
+    ):
+        """Delete an evaluation dataset by id (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/projects/{projectId}/agents/evaluation-datasets/{datasetId}",
+            api_version="v2beta1",
+        )
+
+    async def list_agent_evaluation_runs(
+        self,
+        organizationId: str,
+        projectId: str,
+        agent_id: str = None,
+        sort_by: str = None,
+        sort_order: str = None,
+        page_limit: int = None,
+        page_token: str = None,
+    ):
+        """List agent evaluation runs for a project (v2beta1).
+
+        Returns: ListEvaluationRunsResponse with 'data' containing a list of
+        EvaluationRunSummary objects and 'links' for pagination.
+        """
+        self._ensure_api_is_v2()
+        params = {}
+        if agent_id:
+            params["agent_id"] = agent_id
+        if sort_by:
+            params["sort_by"] = sort_by
+        if sort_order:
+            params["sort_order"] = sort_order
+        if page_limit:
+            params["page_limit"] = page_limit
+        if page_token:
+            params["page_token"] = page_token
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/agents/evaluation-runs",
+            model=ListEvaluationRunsResponse,
+            api_version="v2beta1",
+            params=params if params else None,
+        )
+
+    async def start_agent_evaluation_run(
+        self,
+        organizationId: str,
+        projectId: str,
+        details: StartEvaluationRunRequest,
+    ):
+        """Start an agent evaluation run (v2beta1).
+
+        Returns: StartEvaluationRunResponse with the new run's id and status.
+        """
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/agents/evaluation-runs",
+            body=details,
+            model=StartEvaluationRunResponse,
+            api_version="v2beta1",
+        )
+
+    async def get_agent_evaluation_run(
+        self, organizationId: str, projectId: str, runId: str
+    ):
+        """Get an agent evaluation run by id, including per-question results (v2beta1).
+
+        Returns: EvaluationRunDetailResponse with 'data' containing an
+        EvaluationRunDetail.
+        """
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/agents/evaluation-runs/{runId}",
+            model=EvaluationRunDetailResponse,
+            api_version="v2beta1",
+        )
+
+    async def delete_agent_evaluation_run(
+        self, organizationId: str, projectId: str, runId: str
+    ):
+        """Delete an agent evaluation run by id (v2beta1)."""
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/projects/{projectId}/agents/evaluation-runs/{runId}",
+            api_version="v2beta1",
+        )
+
+    async def cancel_agent_evaluation_run(
+        self, organizationId: str, projectId: str, runId: str
+    ):
+        """Cancel a running agent evaluation run (v2beta1).
+
+        Returns: CancelEvaluationRunResponse with the run's id and status.
+        """
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/agents/evaluation-runs/{runId}/cancel",
+            model=CancelEvaluationRunResponse,
             api_version="v2beta1",
         )
 

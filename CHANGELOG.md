@@ -5,13 +5,20 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 ### Added
 - Added `AuraClient.get_organization_project` (v2beta1), covering the newly-published `GET /organizations/{organization_id}/projects/{project_id}` endpoint. Returns a `ProjectResponse` wrapping `ProjectDetails` (`id`, `name`).
+- Added v2beta1 project instance lifecycle support: `pause_project_instance`, `resume_project_instance`, `get_project_instance_restore_point`, and `restore_project_instance` (Multi Database instances only), with new `InstanceRestorePoint`, `InstanceRestoreResponse`, and `RestoreInstanceRequest` models.
+- Added full v2beta1 agent evaluation support (a new upstream feature area): evaluation dataset CRUD (`list_agent_evaluation_datasets`, `create_agent_evaluation_dataset`, `get_agent_evaluation_dataset`, `update_agent_evaluation_dataset`, `delete_agent_evaluation_dataset`) and evaluation run lifecycle (`list_agent_evaluation_runs`, `start_agent_evaluation_run`, `get_agent_evaluation_run`, `delete_agent_evaluation_run`, `cancel_agent_evaluation_run`), plus their request/response models. Per-question agent responses reuse the existing `InvokeAgentResponse`/`InvokeAgentContentBlock`/`InvokeAgentError`/`InvokeAgentUsage` models rather than duplicating them, since the spec's `EvaluationAgentResponse` schema is structurally identical.
 
 ### Changed
-- Synced `neo4j_aura_sdk/resources/v2beta1/spec.json` with the latest published v2beta1 OpenAPI spec.
+- Synced `neo4j_aura_sdk/resources/v2beta1/spec.json` with the latest published v2beta1 OpenAPI spec (42 → 52 endpoints).
 - `models.VirtualGraph` gained 3 new optional fields matching the updated spec: `private_access_enabled`, `private_bolt_url`, `public_access_enabled`. `bolt_url`'s description was also clarified to "Public Bolt connection URL" (no schema change).
+- `models.ProjectInstanceDetails` gained `graph_analytics` (was already present and required in the spec's `InstanceDetails` schema for the existing get/create project-instance endpoints, but missing from this model — filled in while reusing this model for the new pause/resume endpoints, which return the same schema).
 
 ### Tests
 - Added unit test coverage for `get_organization_project`, which previously had none (the endpoint itself is new).
+- Added unit test coverage for the new instance lifecycle methods (pause/resume/restore-point/restore) and all ten new agent evaluation methods.
+
+### Notes
+- The evaluation dataset create/update request models deliberately use a dedicated "question" model without a `question_id` field for create (`EvaluationDatasetQuestionInput`), separate from the one with optional `question_id` used for update/responses (`EvaluationDatasetQuestion`). The create endpoint's schema has `additionalProperties: false` and doesn't allow `question_id` at all; since this client doesn't use `exclude_none=True` when serializing request bodies, a shared model would have sent `"question_id": null` on every create call and been rejected by the API.
 
 ### Security
 - Resolved a newly-published Dependabot alert: `urllib3` 2.7.0 was in the vulnerable range (>=2.6.2, <2.8.0) for [GHSA-gh4c-6fx4-qh6g](https://github.com/urllib3/urllib3/security/advisories/GHSA-gh4c-6fx4-qh6g) (infinite loop on malformed chunked+Deflate streaming responses). Bumped to 2.8.0 via `poetry lock --regenerate`, which also picked up routine patch bumps for `black`, `charset-normalizer`, `coverage`, `idna`, `iniconfig`, `librt`, `platformdirs`, `python-dotenv`, and `tomli`.
