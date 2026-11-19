@@ -38,6 +38,7 @@ All notable changes to this project will be documented in this file.
 
 ### Security
 - Resolved a newly-published Dependabot alert: `urllib3` 2.7.0 was in the vulnerable range (>=2.6.2, <2.8.0) for [GHSA-gh4c-6fx4-qh6g](https://github.com/urllib3/urllib3/security/advisories/GHSA-gh4c-6fx4-qh6g) (infinite loop on malformed chunked+Deflate streaming responses). Bumped to 2.8.0 via `poetry lock --regenerate`, which also picked up routine patch bumps for `black`, `charset-normalizer`, `coverage`, `idna`, `iniconfig`, `librt`, `platformdirs`, `python-dotenv`, and `tomli`.
+- Resolved two more Dependabot alerts found on a later check: `certifi` 2026.7.22 bundled a compromised emSign intermediate CA (critical; fixed in 2026.10.23), and `black` 26.10.0 had a GitHub Action that installs an unvalidated `required-version` from `pyproject.toml` (high; fixed in 26.10.1, though this project doesn't use that Action). Two more `urllib3` alerts (a TLS-proxy-config issue and an unbounded chunk-size-line buffering issue, both fixed in 2.8.0) were already covered by the prior bump. `poetry lock --regenerate` also picked up `anyio`, `click`, `librt`, `mypy-extensions`, `pluggy`, `pydantic`/`pydantic-core`, `pytest`, `pytest-asyncio`, and `typing-inspection` — none required a `pyproject.toml` constraint change.
 
 ## [0.1.5]
 ### Changed
