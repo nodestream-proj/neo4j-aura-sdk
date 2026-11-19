@@ -1,3 +1,5 @@
+import json
+
 import pytest
 import respx
 from pydantic import ValidationError
@@ -111,7 +113,9 @@ async def test_get_organization_project():
 async def test_organization_project_crud_methods():
     mock_oauth_token()
 
-    respx.post(f"{baseUrl}v2beta1/organizations/{org_id}/projects").respond(
+    create_route = respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects"
+    ).respond(
         status_code=200,
         json={
             "data": {"id": proj_id, "name": "My Project"},
@@ -143,6 +147,8 @@ async def test_organization_project_crud_methods():
         created = await client.create_organization_project(org_id, create_req)
         assert created.data.id == proj_id
         assert created.links.resource == "https://api.neo4j.io/resource"
+        sent_body = json.loads(create_route.calls.last.request.content)
+        assert sent_body == {"name": "My Project"}
 
         update_req = models.UpdateProjectRequest(name="My Project Renamed")
         updated = await client.update_organization_project(org_id, proj_id, update_req)
@@ -992,6 +998,8 @@ async def test_get_agent():
             "is_private": False,
             "tools": [{"name": "query-tool", "type": "text2cypher", "enabled": True}],
             "enabled": True,
+            # availability without a status is valid per spec (no required list)
+            "availability": {"reason": "database instance was deleted"},
         },
     )
 
@@ -999,6 +1007,8 @@ async def test_get_agent():
         resp = await client.get_agent(org_id, proj_id, agent_id)
         assert isinstance(resp, models.GetAgentResponse)
         assert resp.id == agent_id
+        assert resp.availability.status is None
+        assert resp.availability.reason == "database instance was deleted"
 
 
 @respx.mock
@@ -1716,7 +1726,7 @@ async def test_agent_evaluation_dataset_methods():
             },
         },
     )
-    respx.post(
+    create_dataset_route = respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-datasets"
     ).respond(
         status_code=200,
@@ -1747,7 +1757,7 @@ async def test_agent_evaluation_dataset_methods():
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-datasets/{dataset_id}"
     ).respond(status_code=200, json={"data": dataset_detail})
-    respx.patch(
+    update_dataset_route = respx.patch(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-datasets/{dataset_id}"
     ).respond(status_code=200, json={"data": dataset_detail})
     respx.delete(
@@ -1771,6 +1781,13 @@ async def test_agent_evaluation_dataset_methods():
             org_id, proj_id, create_req
         )
         assert created.data.id == dataset_id
+        sent_create_body = json.loads(create_dataset_route.calls.last.request.content)
+        assert sent_create_body == {
+            "dataset_name": "greetings",
+            "questions": [
+                {"query_number": 1, "query_text": "hello?", "expected_answer": "hi!"}
+            ],
+        }
 
         fetched = await client.get_agent_evaluation_dataset(org_id, proj_id, dataset_id)
         assert fetched.data.questions[0].query_text == "hello?"
@@ -1780,6 +1797,8 @@ async def test_agent_evaluation_dataset_methods():
             org_id, proj_id, dataset_id, update_req
         )
         assert updated.data.id == dataset_id
+        sent_update_body = json.loads(update_dataset_route.calls.last.request.content)
+        assert sent_update_body == {"dataset_name": "greetings-v2"}
 
         await client.delete_agent_evaluation_dataset(org_id, proj_id, dataset_id)
 

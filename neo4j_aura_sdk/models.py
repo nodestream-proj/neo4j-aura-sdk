@@ -675,7 +675,7 @@ class CreateAgentRequest(BaseModel):
 
 
 class AgentAvailability(BaseModel):
-    status: str
+    status: Optional[str] = None
     reason: Optional[str] = None
 
 

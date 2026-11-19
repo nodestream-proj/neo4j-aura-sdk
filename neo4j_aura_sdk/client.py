@@ -430,10 +430,16 @@ class AuraClient:
         model: Type[BaseModel] | None = None,
         body: BaseModel | None = None,
         api_version: str | None = None,
+        exclude_none: bool = False,
     ):
         """Perform a POST request to the API. See `_get` for parameter semantics."""
         return await self._request(
-            "POST", path, model=model, body=body, api_version=api_version
+            "POST",
+            path,
+            model=model,
+            body=body,
+            api_version=api_version,
+            exclude_none=exclude_none,
         )
 
     async def _delete(
@@ -454,10 +460,16 @@ class AuraClient:
         body: BaseModel | None = None,
         model: Type[BaseModel] | None = None,
         api_version: str | None = None,
+        exclude_none: bool = False,
     ):
         """Perform a PATCH request to the API. See `_get` for parameter semantics."""
         return await self._request(
-            "PATCH", path, model=model, body=body, api_version=api_version
+            "PATCH",
+            path,
+            model=model,
+            body=body,
+            api_version=api_version,
+            exclude_none=exclude_none,
         )
 
     async def _put(
@@ -482,6 +494,7 @@ class AuraClient:
         default: BaseModel | None = None,
         api_version: str | None = None,
         params: dict | None = None,
+        exclude_none: bool = False,
     ):
         """Generic request helper that supports API versioning and optional model parsing.
 
@@ -492,6 +505,12 @@ class AuraClient:
         - default: value to return if response has no JSON (useful for 204 responses)
         - api_version: API version segment to use (defaults to 'v1')
         - params: optional dict of query parameters
+        - exclude_none: omit unset-to-None fields (and nested ones) from the
+          serialized body instead of sending them as JSON null. Defaults to
+          False to preserve existing PATCH endpoints' semantics, where an
+          explicit null may mean "clear this field" rather than "unset".
+          Opt in per call site for endpoints whose schema rejects null for
+          untyped-as-nullable optional fields.
         """
         token = await self._get_token()
         headers = {"Authorization": f"Bearer {token}"}
@@ -504,7 +523,7 @@ class AuraClient:
         url = f"{self._base_url}/{effective_api_version}/{path}"
         content = None
         if body:
-            content = body.model_dump_json()
+            content = body.model_dump_json(exclude_none=exclude_none)
 
         response = await self._client.request(
             method, url, headers=headers, content=content, params=params
@@ -881,6 +900,7 @@ class AuraClient:
             body=details,
             model=CreateProjectResponse,
             api_version="v2beta1",
+            exclude_none=True,
         )
 
     async def update_organization_project(
@@ -2199,6 +2219,7 @@ class AuraClient:
             body=details,
             model=CreateEvaluationDatasetResponse,
             api_version="v2beta1",
+            exclude_none=True,
         )
 
     async def get_agent_evaluation_dataset(
@@ -2234,6 +2255,7 @@ class AuraClient:
             body=details,
             model=EvaluationDatasetDetailResponse,
             api_version="v2beta1",
+            exclude_none=True,
         )
 
     async def delete_agent_evaluation_dataset(
