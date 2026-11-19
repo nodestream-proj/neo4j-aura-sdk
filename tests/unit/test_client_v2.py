@@ -1,3 +1,5 @@
+import json
+
 import pytest
 import respx
 from pydantic import ValidationError
@@ -15,13 +17,17 @@ server_id = "server1"
 agent_id = "agent1"
 
 
-@respx.mock
-@pytest.mark.asyncio
-async def test_list_organizations():
+def mock_oauth_token():
     respx.post(f"{baseUrl}oauth/token").respond(
         status_code=200,
         json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
     )
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_list_organizations():
+    mock_oauth_token()
 
     respx.get(f"{baseUrl}v2beta1/organizations").respond(
         status_code=200,
@@ -57,10 +63,7 @@ async def test_v2_guard_raises():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_organization():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(f"{baseUrl}v2beta1/organizations/{org_id}").respond(
         status_code=200,
@@ -76,10 +79,7 @@ async def test_get_organization():
 @respx.mock
 @pytest.mark.asyncio
 async def test_list_organization_projects():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(f"{baseUrl}v2beta1/organizations/{org_id}/projects").respond(
         status_code=200,
@@ -92,16 +92,82 @@ async def test_list_organization_projects():
         assert resp[0]["name"] == "My Project"
 
 
+@respx.mock
+@pytest.mark.asyncio
+async def test_get_organization_project():
+    mock_oauth_token()
+
+    respx.get(f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}").respond(
+        status_code=200,
+        json={"data": {"id": proj_id, "name": "My Project"}},
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        resp = await client.get_organization_project(org_id, proj_id)
+        assert resp.data.id == proj_id
+        assert resp.data.name == "My Project"
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_organization_project_crud_methods():
+    mock_oauth_token()
+
+    create_route = respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects"
+    ).respond(
+        status_code=200,
+        json={
+            "data": {"id": proj_id, "name": "My Project"},
+            "links": {"resource": "https://api.neo4j.io/resource"},
+        },
+    )
+    respx.patch(f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}").respond(
+        status_code=200,
+        json={"data": {"id": proj_id, "name": "My Project Renamed"}},
+    )
+    respx.delete(f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}").respond(
+        status_code=200,
+        json={
+            "data": {
+                "status": "deletion_requested",
+                "scheduled_hard_delete_at": "2026-12-31T00:00:00Z",
+            }
+        },
+    )
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/restore"
+    ).respond(
+        status_code=200,
+        json={"data": {"id": proj_id, "name": "My Project"}},
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        create_req = models.CreateProjectRequest(name="My Project")
+        created = await client.create_organization_project(org_id, create_req)
+        assert created.data.id == proj_id
+        assert created.links.resource == "https://api.neo4j.io/resource"
+        sent_body = json.loads(create_route.calls.last.request.content)
+        assert sent_body == {"name": "My Project"}
+
+        update_req = models.UpdateProjectRequest(name="My Project Renamed")
+        updated = await client.update_organization_project(org_id, proj_id, update_req)
+        assert updated.data.name == "My Project Renamed"
+
+        deleted = await client.delete_organization_project(org_id, proj_id)
+        assert deleted.data.status == "deletion_requested"
+
+        restored = await client.restore_organization_project(org_id, proj_id)
+        assert restored.data.id == proj_id
+
+
 # === IP Filter Tests ===
 
 
 @respx.mock
 @pytest.mark.asyncio
 async def test_list_organization_ip_filters_v2():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     ip_filters = [
         {
@@ -135,10 +201,7 @@ async def test_list_organization_ip_filters_v2():
 @respx.mock
 @pytest.mark.asyncio
 async def test_create_organization_ip_filter():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     ip_filter = {
         "id": "filter-123",
@@ -172,10 +235,7 @@ async def test_create_organization_ip_filter():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_organization_ip_filter():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     ip_filter = {
         "id": "filter-123",
@@ -199,10 +259,7 @@ async def test_get_organization_ip_filter():
 @respx.mock
 @pytest.mark.asyncio
 async def test_update_organization_ip_filter():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     updated_filter = {
         "id": "filter-123",
@@ -226,10 +283,7 @@ async def test_update_organization_ip_filter():
 @respx.mock
 @pytest.mark.asyncio
 async def test_delete_organization_ip_filter():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.delete(
         f"{baseUrl}v2beta1/organizations/{org_id}/ip-filters/filter-123"
@@ -243,10 +297,7 @@ async def test_delete_organization_ip_filter():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_instance_ip_filter_status():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     ip_filter_with_status = {
         "id": "filter-123",
@@ -273,10 +324,7 @@ async def test_get_instance_ip_filter_status():
 @respx.mock
 @pytest.mark.asyncio
 async def test_create_import_job_v2():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/import/jobs"
@@ -291,10 +339,7 @@ async def test_create_import_job_v2():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_import_job():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/import/jobs/job-1"
@@ -318,10 +363,7 @@ async def test_get_import_job():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_import_job_with_progress():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/import/jobs/job-1",
@@ -354,10 +396,7 @@ async def test_get_import_job_with_progress():
 @respx.mock
 @pytest.mark.asyncio
 async def test_cancel_import_job():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/import/jobs/job-1/cancellation"
@@ -368,16 +407,51 @@ async def test_cancel_import_job():
         assert resp.data["id"] == "job-1"
 
 
+@respx.mock
+@pytest.mark.asyncio
+async def test_unstructured_import_job_methods():
+    mock_oauth_token()
+
+    job_id = "uij-1"
+    operation_id = "op-1"
+
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/unstructured-import-jobs"
+    ).respond(status_code=202)
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/unstructured-import-jobs/{job_id}"
+    ).respond(status_code=200, json={"id": job_id, "schema": {}})
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/unstructured-import-jobs/{job_id}/operations/{operation_id}"
+    ).respond(status_code=200, json={"id": operation_id, "status": "running"})
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        create_req = models.CreateUnstructuredImportJobRequest(
+            data_source_id="ds-1",
+            instance_id=inst_id,
+            schema={"node_types": []},
+        )
+        created = await client.create_unstructured_import_job(
+            org_id, proj_id, create_req
+        )
+        assert created is None
+
+        job = await client.get_unstructured_import_job(org_id, proj_id, job_id)
+        assert job["id"] == job_id
+
+        operation = await client.get_unstructured_import_job_operation(
+            org_id, proj_id, job_id, operation_id
+        )
+        assert operation["status"] == "running"
+
+
 # === Deployment Tests ===
 
 
 @respx.mock
 @pytest.mark.asyncio
 async def test_list_deployments():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments"
@@ -403,10 +477,7 @@ async def test_list_deployments():
 @respx.mock
 @pytest.mark.asyncio
 async def test_create_deployment():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments"
@@ -421,10 +492,7 @@ async def test_create_deployment():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_deployment():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments/{deployment_id}"
@@ -450,10 +518,7 @@ async def test_get_deployment():
 @respx.mock
 @pytest.mark.asyncio
 async def test_delete_deployment():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.delete(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments/{deployment_id}"
@@ -467,10 +532,7 @@ async def test_delete_deployment():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_deployment_databases():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments/{deployment_id}/databases"
@@ -496,10 +558,7 @@ async def test_get_deployment_databases():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_deployment_servers():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments/{deployment_id}/servers"
@@ -525,10 +584,7 @@ async def test_get_deployment_servers():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_deployment_server_databases():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments/{deployment_id}/servers/{server_id}/databases"
@@ -556,10 +612,7 @@ async def test_get_deployment_server_databases():
 @respx.mock
 @pytest.mark.asyncio
 async def test_create_deployment_token():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments/{deployment_id}/token"
@@ -573,10 +626,7 @@ async def test_create_deployment_token():
 @respx.mock
 @pytest.mark.asyncio
 async def test_update_deployment_token():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.patch(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments/{deployment_id}/token"
@@ -590,10 +640,7 @@ async def test_update_deployment_token():
 @respx.mock
 @pytest.mark.asyncio
 async def test_delete_deployment_token():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.delete(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/fleet-manager/deployments/{deployment_id}/token"
@@ -610,10 +657,7 @@ async def test_delete_deployment_token():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_organization_activity_feed():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(f"{baseUrl}v2beta1/organizations/{org_id}/activity-feed").respond(
         status_code=200,
@@ -638,10 +682,7 @@ async def test_get_organization_activity_feed():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_organization_activity_feed_with_filters():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/activity-feed",
@@ -663,10 +704,7 @@ async def test_get_organization_activity_feed_with_filters():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_project_activity_feed():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/activity-feed"
@@ -693,10 +731,7 @@ async def test_get_project_activity_feed():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_project_activity_feed_with_filters():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/activity-feed",
@@ -728,10 +763,7 @@ async def test_get_project_activity_feed_with_filters():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_billing_usage():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     start = "2024-01-01T00:00:00Z"
     end = "2024-01-31T23:59:59Z"
@@ -770,10 +802,7 @@ async def test_get_billing_usage():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_billing_usage_with_project_filter():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     start = "2024-01-01T00:00:00Z"
     end = "2024-01-31T23:59:59Z"
@@ -805,10 +834,7 @@ async def test_get_billing_usage_with_project_filter():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_billing_ledger():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     start = "2024-01-01T00:00:00Z"
     end = "2024-01-31T23:59:59Z"
@@ -844,10 +870,7 @@ async def test_get_billing_ledger():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_billing_ledger_with_pagination_params():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     start = "2024-02-01T00:00:00Z"
     end = "2024-02-29T23:59:59Z"
@@ -878,10 +901,7 @@ async def test_get_billing_ledger_with_pagination_params():
 @respx.mock
 @pytest.mark.asyncio
 async def test_list_agents():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents"
@@ -929,10 +949,7 @@ async def test_list_agents():
 @respx.mock
 @pytest.mark.asyncio
 async def test_create_agent():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents"
@@ -967,10 +984,7 @@ async def test_create_agent():
 @respx.mock
 @pytest.mark.asyncio
 async def test_get_agent():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/{agent_id}"
@@ -984,6 +998,8 @@ async def test_get_agent():
             "is_private": False,
             "tools": [{"name": "query-tool", "type": "text2cypher", "enabled": True}],
             "enabled": True,
+            # availability without a status is valid per spec (no required list)
+            "availability": {"reason": "database instance was deleted"},
         },
     )
 
@@ -991,15 +1007,14 @@ async def test_get_agent():
         resp = await client.get_agent(org_id, proj_id, agent_id)
         assert isinstance(resp, models.GetAgentResponse)
         assert resp.id == agent_id
+        assert resp.availability.status is None
+        assert resp.availability.reason == "database instance was deleted"
 
 
 @respx.mock
 @pytest.mark.asyncio
 async def test_update_agent():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.put(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/{agent_id}"
@@ -1034,10 +1049,7 @@ async def test_update_agent():
 @respx.mock
 @pytest.mark.asyncio
 async def test_delete_agent():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.delete(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/{agent_id}"
@@ -1051,10 +1063,7 @@ async def test_delete_agent():
 @respx.mock
 @pytest.mark.asyncio
 async def test_invoke_agent():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/{agent_id}/invoke"
@@ -1149,10 +1158,7 @@ def test_similarity_search_tool_config_serializes_as_config():
 @respx.mock
 @pytest.mark.asyncio
 async def test_list_organization_users():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     users = [
         {
@@ -1199,10 +1205,7 @@ async def test_list_organization_users():
 @respx.mock
 @pytest.mark.asyncio
 async def test_remove_organization_user():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     user_id = "user1"
     respx.delete(f"{baseUrl}v2beta1/organizations/{org_id}/users/{user_id}").respond(
@@ -1221,10 +1224,7 @@ async def test_remove_organization_user():
 @respx.mock
 @pytest.mark.asyncio
 async def test_patch_organization_user():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     user_id = "user1"
     route = respx.patch(
@@ -1255,10 +1255,7 @@ async def test_patch_organization_user():
 @respx.mock
 @pytest.mark.asyncio
 async def test_list_agents_allows_similarity_search_summary_tools():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents"
@@ -1283,10 +1280,7 @@ async def test_list_agents_allows_similarity_search_summary_tools():
 @respx.mock
 @pytest.mark.asyncio
 async def test_add_project_user():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     user_id = "user1"
     respx.post(
@@ -1331,10 +1325,7 @@ async def test_add_project_user_requires_user_id():
 @respx.mock
 @pytest.mark.asyncio
 async def test_virtual_graph_methods():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     vg_id = "ge82059a"
     respx.get(
@@ -1417,33 +1408,26 @@ async def test_virtual_graph_methods():
 @respx.mock
 @pytest.mark.asyncio
 async def test_organization_invites_crud():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     invite_id = "invite-1"
+    invite_json = {
+        "id": invite_id,
+        "email": "new-user@example.com",
+        "status": "active",
+        "invited_by": "inviter-1",
+        "organization_id": org_id,
+        "organization_roles": ["organization-member"],
+        "project_invites": [],
+        "expires_at": "2026-12-31T00:00:00Z",
+    }
     respx.get(f"{baseUrl}v2beta1/organizations/{org_id}/invites").respond(
         status_code=200,
-        json={
-            "data": [
-                {
-                    "id": invite_id,
-                    "email": "new-user@example.com",
-                    "status": "active",
-                }
-            ]
-        },
+        json={"data": [invite_json]},
     )
     respx.post(f"{baseUrl}v2beta1/organizations/{org_id}/invites").respond(
         status_code=201,
-        json={
-            "data": {
-                "id": invite_id,
-                "email": "new-user@example.com",
-                "status": "active",
-            }
-        },
+        json={"data": invite_json},
     )
     respx.delete(
         f"{baseUrl}v2beta1/organizations/{org_id}/invites/{invite_id}"
@@ -1468,10 +1452,7 @@ async def test_organization_invites_crud():
 @respx.mock
 @pytest.mark.asyncio
 async def test_graph_analytics_session_methods():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     session_id = "session-1"
     respx.get(
@@ -1526,10 +1507,7 @@ async def test_graph_analytics_session_methods():
 @respx.mock
 @pytest.mark.asyncio
 async def test_project_instance_and_database_methods():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     database_id = "db-1"
     backup_id = "bkp-1"
@@ -1571,6 +1549,12 @@ async def test_project_instance_and_database_methods():
     respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases/{database_id}/restore"
     ).respond(status_code=202)
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases/{database_id}/promote"
+    ).respond(
+        status_code=202,
+        json={"data": {"id": database_id, "name": database_name}},
+    )
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases/{database_id}/backups"
     ).respond(status_code=200, json={"data": [{"id": backup_id}]})
@@ -1616,6 +1600,11 @@ async def test_project_instance_and_database_methods():
         )
         assert restored is None
 
+        promoted = await client.promote_project_database(
+            org_id, proj_id, inst_id, database_id
+        )
+        assert promoted.data.id == database_id
+
         backups = await client.list_project_database_backups(
             org_id, proj_id, inst_id, database_id
         )
@@ -1627,16 +1616,355 @@ async def test_project_instance_and_database_methods():
         assert backup.data["id"] == backup_id
 
 
+@respx.mock
+@pytest.mark.asyncio
+async def test_project_instance_lifecycle_methods():
+    mock_oauth_token()
+
+    instance_data = {
+        "id": inst_id,
+        "name": "inst",
+        "type": "enterprise-db",
+        "cloud_provider": "gcp",
+        "region": "us-central1",
+        "multi_database": True,
+        "graph_analytics": "serverless",
+        "vector_optimized": False,
+        "legacy_status": "paused",
+    }
+
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/pause"
+    ).respond(status_code=202, json={"data": instance_data})
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/resume"
+    ).respond(status_code=202, json={"data": instance_data})
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/restore-point"
+    ).respond(
+        status_code=200,
+        json={
+            "data": {
+                "system_database": {"backup": {"created_at": "2026-01-01T00:00:00Z"}},
+                "user_databases": [
+                    {
+                        "database_id": "db-1",
+                        "backup": {"id": "bkp-1", "created_at": "2026-01-01T00:00:00Z"},
+                    },
+                    {"database_id": "db-2", "backup": None},
+                ],
+            }
+        },
+    )
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/restore"
+    ).respond(
+        status_code=202,
+        json={"data": {"instance_id": inst_id, "restore_id": "restore-1"}},
+    )
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/backups"
+    ).respond(status_code=202)
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        paused = await client.pause_project_instance(org_id, proj_id, inst_id)
+        assert paused.data.id == inst_id
+        assert paused.data.graph_analytics == "serverless"
+
+        resumed = await client.resume_project_instance(org_id, proj_id, inst_id)
+        assert resumed.data.id == inst_id
+
+        restore_point = await client.get_project_instance_restore_point(
+            org_id, proj_id, inst_id, "2026-01-01T00:00:00Z"
+        )
+        assert restore_point.data.user_databases[0].database_id == "db-1"
+        assert restore_point.data.user_databases[0].backup.id == "bkp-1"
+        assert restore_point.data.user_databases[1].backup is None
+
+        restore_req = models.RestoreInstanceRequest(
+            latest_before="2026-01-01T00:00:00Z"
+        )
+        restored = await client.restore_project_instance(
+            org_id, proj_id, inst_id, restore_req
+        )
+        assert restored.data.instance_id == inst_id
+        assert restored.data.restore_id == "restore-1"
+
+        backed_up = await client.create_project_instance_backup(
+            org_id, proj_id, inst_id
+        )
+        assert backed_up is None
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_agent_evaluation_dataset_methods():
+    mock_oauth_token()
+
+    dataset_id = "dataset-1"
+
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-datasets"
+    ).respond(
+        status_code=200,
+        json={
+            "data": [
+                {
+                    "id": dataset_id,
+                    "dataset_name": "greetings",
+                    "description": "basic greetings",
+                    "created_at": "2026-01-01T00:00:00Z",
+                    "updated_at": "2026-01-01T00:00:00Z",
+                    "question_count": 1,
+                    "current_version_id": "version-1",
+                    "current_version_label": "v1",
+                }
+            ],
+            "links": {
+                "self": "https://api.neo4j.io/self",
+                "first": "https://api.neo4j.io/first",
+            },
+        },
+    )
+    create_dataset_route = respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-datasets"
+    ).respond(
+        status_code=200,
+        json={
+            "data": {"id": dataset_id},
+            "links": {"resource": "https://api.neo4j.io/resource"},
+        },
+    )
+    dataset_detail = {
+        "id": dataset_id,
+        "dataset_name": "greetings",
+        "description": "basic greetings",
+        "created_at": "2026-01-01T00:00:00Z",
+        "updated_at": "2026-01-01T00:00:00Z",
+        "questions": [
+            {
+                "query_number": 1,
+                "query_text": "hello?",
+                "expected_answer": "hi!",
+            }
+        ],
+        "current_version_id": "version-1",
+        "current_version_label": "v1",
+        "added_question_count": 1,
+        "deleted_question_count": 0,
+        "changed_question_count": 0,
+    }
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-datasets/{dataset_id}"
+    ).respond(status_code=200, json={"data": dataset_detail})
+    update_dataset_route = respx.patch(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-datasets/{dataset_id}"
+    ).respond(status_code=200, json={"data": dataset_detail})
+    respx.delete(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-datasets/{dataset_id}"
+    ).respond(status_code=200, json={})
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        listed = await client.list_agent_evaluation_datasets(org_id, proj_id)
+        assert listed.data[0].id == dataset_id
+        assert listed.links.self == "https://api.neo4j.io/self"
+
+        create_req = models.CreateEvaluationDatasetRequest(
+            dataset_name="greetings",
+            questions=[
+                models.EvaluationDatasetQuestionInput(
+                    query_number=1, query_text="hello?", expected_answer="hi!"
+                )
+            ],
+        )
+        created = await client.create_agent_evaluation_dataset(
+            org_id, proj_id, create_req
+        )
+        assert created.data.id == dataset_id
+        sent_create_body = json.loads(create_dataset_route.calls.last.request.content)
+        assert sent_create_body == {
+            "dataset_name": "greetings",
+            "questions": [
+                {"query_number": 1, "query_text": "hello?", "expected_answer": "hi!"}
+            ],
+        }
+
+        fetched = await client.get_agent_evaluation_dataset(org_id, proj_id, dataset_id)
+        assert fetched.data.questions[0].query_text == "hello?"
+
+        update_req = models.UpdateEvaluationDatasetRequest(dataset_name="greetings-v2")
+        updated = await client.update_agent_evaluation_dataset(
+            org_id, proj_id, dataset_id, update_req
+        )
+        assert updated.data.id == dataset_id
+        sent_update_body = json.loads(update_dataset_route.calls.last.request.content)
+        assert sent_update_body == {"dataset_name": "greetings-v2"}
+
+        await client.delete_agent_evaluation_dataset(org_id, proj_id, dataset_id)
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_agent_evaluation_dataset_version_methods():
+    mock_oauth_token()
+
+    dataset_id = "dataset-1"
+    version_id = "version-1"
+
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-datasets/{dataset_id}/versions"
+    ).respond(
+        status_code=200,
+        json={
+            "data": [
+                {
+                    "id": version_id,
+                    "label": "v1",
+                    "created_at": "2026-01-01T00:00:00Z",
+                    "question_count": 1,
+                    "added_question_count": 1,
+                    "deleted_question_count": 0,
+                    "changed_question_count": 0,
+                }
+            ]
+        },
+    )
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-datasets/{dataset_id}/versions/{version_id}"
+    ).respond(
+        status_code=200,
+        json={
+            "data": {
+                "id": version_id,
+                "dataset_id": dataset_id,
+                "label": "v1",
+                "current_version_id": version_id,
+                "current_version_label": "v1",
+                "added_question_count": 1,
+                "deleted_question_count": 0,
+                "changed_question_count": 0,
+                "dataset_name": "greetings",
+                "description": "basic greetings",
+                "created_at": "2026-01-01T00:00:00Z",
+                "dataset_created_at": "2026-01-01T00:00:00Z",
+                "dataset_updated_at": "2026-01-01T00:00:00Z",
+                "questions": [
+                    {
+                        "query_number": 1,
+                        "query_text": "hello?",
+                        "expected_answer": "hi!",
+                    }
+                ],
+            }
+        },
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        versions = await client.list_agent_evaluation_dataset_versions(
+            org_id, proj_id, dataset_id
+        )
+        assert versions.data[0].id == version_id
+        assert versions.data[0].label == "v1"
+
+        version_detail = await client.get_agent_evaluation_dataset_version(
+            org_id, proj_id, dataset_id, version_id
+        )
+        assert version_detail.data.id == version_id
+        assert version_detail.data.questions[0].query_text == "hello?"
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_agent_evaluation_run_methods():
+    mock_oauth_token()
+
+    run_id = "run-1"
+    run_summary = {
+        "id": run_id,
+        "agent_id": agent_id,
+        "dataset_id": "dataset-1",
+        "status": "succeeded",
+        "metrics": ["accuracy"],
+        "progress": {"success": 1, "failed": 0, "total": 1},
+        "created_at": "2026-01-01T00:00:00Z",
+        "expires_at": "2026-02-01T00:00:00Z",
+    }
+
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-runs"
+    ).respond(
+        status_code=200,
+        json={
+            "data": [run_summary],
+            "links": {
+                "self": "https://api.neo4j.io/self",
+                "first": "https://api.neo4j.io/first",
+            },
+        },
+    )
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-runs"
+    ).respond(
+        status_code=202,
+        json={
+            "data": {"id": run_id, "status": "queued"},
+            "links": {"resource": "https://api.neo4j.io/resource"},
+        },
+    )
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-runs/{run_id}"
+    ).respond(
+        status_code=200,
+        json={
+            "data": {
+                **run_summary,
+                "questions": [
+                    {
+                        "question_id": "question-1",
+                        "query_number": 1,
+                        "query_text": "hello?",
+                        "expected_answer": "hi!",
+                        "metrics": [{"name": "accuracy", "value": 1.0}],
+                    }
+                ],
+            }
+        },
+    )
+    respx.delete(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-runs/{run_id}"
+    ).respond(status_code=200, json={})
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-runs/{run_id}/cancel"
+    ).respond(status_code=200, json={"data": {"id": run_id, "status": "cancelled"}})
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        listed = await client.list_agent_evaluation_runs(org_id, proj_id)
+        assert listed.data[0].id == run_id
+
+        start_req = models.StartEvaluationRunRequest(
+            agent_id=agent_id, dataset_id="dataset-1", metrics=["accuracy"]
+        )
+        started = await client.start_agent_evaluation_run(org_id, proj_id, start_req)
+        assert started.data.id == run_id
+        assert started.data.status == "queued"
+
+        fetched = await client.get_agent_evaluation_run(org_id, proj_id, run_id)
+        assert fetched.data.id == run_id
+        assert fetched.data.questions[0].metrics[0].value == 1.0
+
+        await client.delete_agent_evaluation_run(org_id, proj_id, run_id)
+
+        cancelled = await client.cancel_agent_evaluation_run(org_id, proj_id, run_id)
+        assert cancelled.data.status == "cancelled"
+
+
 # === Agent Patch Tests ===
 
 
 @respx.mock
 @pytest.mark.asyncio
 async def test_patch_agent():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.patch(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/{agent_id}"
@@ -1669,10 +1997,7 @@ async def test_patch_agent():
 @respx.mock
 @pytest.mark.asyncio
 async def test_patch_agent_partial_update():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     respx.patch(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/{agent_id}"
@@ -1719,10 +2044,7 @@ async def test_add_project_user_rejects_conflicting_user_ids():
 @respx.mock
 @pytest.mark.asyncio
 async def test_add_project_user_does_not_mutate_details():
-    respx.post(f"{baseUrl}oauth/token").respond(
-        status_code=200,
-        json={"access_token": "tok", "expires_in": 3600, "token_type": "bearer"},
-    )
+    mock_oauth_token()
 
     route = respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/users"

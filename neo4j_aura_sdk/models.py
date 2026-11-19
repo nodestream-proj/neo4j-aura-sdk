@@ -326,6 +326,12 @@ class CreateImportJobRequest(BaseModel):
     importConfig: Optional[dict] = None
 
 
+class CreateUnstructuredImportJobRequest(BaseModel):
+    data_source_id: str
+    instance_id: str
+    schema: Dict[str, Any]
+
+
 class ImportExitStatus(BaseModel):
     state: Optional[str] = None
     message: Optional[str] = None
@@ -668,6 +674,11 @@ class CreateAgentRequest(BaseModel):
     enabled: Optional[bool] = None
 
 
+class AgentAvailability(BaseModel):
+    status: Optional[str] = None
+    reason: Optional[str] = None
+
+
 class ListAgentResponse(BaseModel):
     id: Optional[str] = None
     name: Optional[str] = None
@@ -681,6 +692,8 @@ class ListAgentResponse(BaseModel):
     updated_at: Optional[str] = None
     is_private: Optional[bool] = None
     is_mcp_enabled: Optional[bool] = None
+    is_graph_engine: Optional[bool] = None
+    availability: Optional[AgentAvailability] = None
     tools: Optional[List[AgentToolSummary]] = None
     endpoint_link: Optional[str] = None
     mcp_endpoint_link: Optional[str] = None
@@ -700,6 +713,8 @@ class GetAgentResponse(BaseModel):
     dbid: Optional[str] = None
     is_private: Optional[bool] = None
     is_mcp_enabled: Optional[bool] = None
+    is_graph_engine: Optional[bool] = None
+    availability: Optional[AgentAvailability] = None
     tools: Optional[List[AgentTool]] = None
     enabled: Optional[bool] = None
 
@@ -721,6 +736,7 @@ class InvokeAgentContentBlock(BaseModel):
     type: Optional[str] = None
     text: Optional[str] = None
     thinking: Optional[str] = None
+    thought_signature: Optional[str] = None
     id: Optional[str] = None
     name: Optional[str] = None
     input: Optional[Dict[str, Any]] = None
@@ -787,6 +803,38 @@ class OrganizationDetails(BaseModel):
 class ProjectDetails(BaseModel):
     id: str
     name: str
+
+
+class ProjectResponse(BaseModel):
+    data: Optional[ProjectDetails] = None
+
+
+class CreateProjectRequest(BaseModel):
+    name: str
+    billing_account_id: Optional[str] = None
+    sso_config_ids: Optional[List[str]] = None
+
+
+class ProjectCreateLinks(BaseModel):
+    resource: Optional[str] = None
+
+
+class CreateProjectResponse(BaseModel):
+    data: Optional[ProjectDetails] = None
+    links: Optional[ProjectCreateLinks] = None
+
+
+class UpdateProjectRequest(BaseModel):
+    name: str
+
+
+class ProjectDeletion(BaseModel):
+    status: str
+    scheduled_hard_delete_at: str
+
+
+class ProjectDeletionResponse(BaseModel):
+    data: ProjectDeletion
 
 
 # --- Project User Models (v2beta1) ---
@@ -860,14 +908,14 @@ class CreateOrganizationInviteRequest(OpenRequestModel):
 
 
 class OrganizationInvite(BaseModel):
-    id: Optional[str] = None
-    email: Optional[str] = None
-    invited_by: Optional[str] = None
-    organization_id: Optional[str] = None
-    organization_roles: Optional[List[str]] = None
-    project_invites: Optional[List[dict]] = None
-    status: Optional[str] = None
-    expires_at: Optional[str] = None
+    id: str
+    email: str
+    invited_by: str
+    organization_id: str
+    organization_roles: List[str]
+    project_invites: List[dict]
+    status: str
+    expires_at: str
 
 
 class OrganizationInvitesResponse(BaseModel):
@@ -973,6 +1021,9 @@ class VirtualGraph(BaseModel):
     maximum_bytes_billed: Optional[int] = None
     memory: Optional[str] = None
     name: Optional[str] = None
+    private_access_enabled: Optional[bool] = None
+    private_bolt_url: Optional[str] = None
+    public_access_enabled: Optional[bool] = None
     region: Optional[str] = None
     status: Optional[str] = None
 
@@ -1044,6 +1095,7 @@ class ProjectInstanceDetails(BaseModel):
     storage: Optional[str] = None
     vector_optimized: Optional[bool] = None
     multi_database: Optional[bool] = None
+    graph_analytics: Optional[str] = None
     legacy_status: Optional[str] = None
     connection_url: Optional[str] = None
     username: Optional[str] = None
@@ -1093,3 +1145,255 @@ class CreateProjectDatabaseBackupResponse(BaseModel):
 class RestoreProjectDatabaseRequest(OpenRequestModel):
     source_instance_id: Optional[str] = None
     source_snapshot_id: Optional[str] = None
+
+
+# --- Project Instance Lifecycle Models (v2beta1) ---
+class SystemDatabaseBackupInfo(BaseModel):
+    created_at: Optional[str] = None
+
+
+class SystemDatabaseRestorePoint(BaseModel):
+    backup: Optional[SystemDatabaseBackupInfo] = None
+
+
+class UserDatabaseBackupInfo(BaseModel):
+    id: Optional[str] = None
+    created_at: Optional[str] = None
+
+
+class UserDatabaseRestorePoint(BaseModel):
+    database_id: str
+    backup: Optional[UserDatabaseBackupInfo] = None
+
+
+class InstanceRestorePoint(BaseModel):
+    system_database: SystemDatabaseRestorePoint
+    user_databases: List[UserDatabaseRestorePoint]
+
+
+class InstanceRestorePointResponse(BaseModel):
+    data: Optional[InstanceRestorePoint] = None
+
+
+class RestoreInstanceRequest(OpenRequestModel):
+    latest_before: str
+
+
+class InstanceRestoreResponse(BaseModel):
+    instance_id: str
+    restore_id: str
+
+
+class RestoreInstanceResponse(BaseModel):
+    data: Optional[InstanceRestoreResponse] = None
+
+
+# --- Agent Evaluation Models (v2beta1) ---
+class EvaluationPaginationLinks(BaseModel):
+    self: str
+    first: str
+    next: Optional[str] = None
+
+
+class EvaluationExpectedToolCall(BaseModel):
+    tool_name: str
+    tool_type: str
+    tool_input: Optional[Dict[str, Any]] = None
+    tool_output: Optional[Any] = None
+
+
+class EvaluationDatasetQuestionInput(BaseModel):
+    """A question as sent when creating an evaluation dataset (no question_id)."""
+
+    query_number: int
+    query_text: str
+    expected_answer: str
+    expected_tool_calls: Optional[List[EvaluationExpectedToolCall]] = None
+
+
+class EvaluationDatasetQuestion(EvaluationDatasetQuestionInput):
+    """A question as returned by the API, or sent when updating a dataset (question_id optional)."""
+
+    question_id: Optional[str] = None
+
+
+class CreateEvaluationDatasetRequest(OpenRequestModel):
+    dataset_name: str
+    questions: List[EvaluationDatasetQuestionInput]
+    description: Optional[str] = None
+
+
+class UpdateEvaluationDatasetRequest(OpenRequestModel):
+    dataset_name: Optional[str] = None
+    description: Optional[str] = None
+    questions: Optional[List[EvaluationDatasetQuestion]] = None
+
+
+class EvaluationResourceLinks(BaseModel):
+    resource: str
+
+
+class EvaluationDatasetCreatedData(BaseModel):
+    id: str
+
+
+class CreateEvaluationDatasetResponse(BaseModel):
+    data: EvaluationDatasetCreatedData
+    links: EvaluationResourceLinks
+
+
+class EvaluationDatasetSummary(BaseModel):
+    id: str
+    dataset_name: str
+    description: str
+    created_at: str
+    updated_at: str
+    question_count: int
+    current_version_id: str
+    current_version_label: str
+
+
+class ListEvaluationDatasetsResponse(BaseModel):
+    data: List[EvaluationDatasetSummary]
+    links: EvaluationPaginationLinks
+
+
+class EvaluationDatasetDetail(BaseModel):
+    id: str
+    dataset_name: str
+    description: str
+    created_at: str
+    updated_at: str
+    questions: List[EvaluationDatasetQuestion]
+    current_version_id: str
+    current_version_label: str
+    added_question_count: int
+    deleted_question_count: int
+    changed_question_count: int
+
+
+class EvaluationDatasetDetailResponse(BaseModel):
+    data: EvaluationDatasetDetail
+
+
+class StartEvaluationRunRequest(OpenRequestModel):
+    agent_id: str
+    dataset_id: str
+    metrics: List[str]
+
+
+class EvaluationRunStartedData(BaseModel):
+    id: str
+    status: str
+
+
+class StartEvaluationRunResponse(BaseModel):
+    data: EvaluationRunStartedData
+    links: EvaluationResourceLinks
+
+
+class EvaluationRunProgress(BaseModel):
+    success: int
+    failed: int
+    total: int
+
+
+class EvaluationRunSummary(BaseModel):
+    id: str
+    agent_id: str
+    dataset_id: str
+    status: str
+    metrics: List[str]
+    progress: EvaluationRunProgress
+    created_at: str
+    expires_at: str
+    agent_version_id: Optional[str] = None
+    dataset_version_id: Optional[str] = None
+    dataset_version_label: Optional[str] = None
+    avg_accuracy: Optional[float] = None
+    avg_groundedness: Optional[float] = None
+    avg_latency_ms: Optional[float] = None
+    avg_relevance: Optional[float] = None
+    avg_tool_trajectory: Optional[float] = None
+    error_category: Optional[str] = None
+    error_detail: Optional[str] = None
+    finished_at: Optional[str] = None
+    started_at: Optional[str] = None
+
+
+class ListEvaluationRunsResponse(BaseModel):
+    data: List[EvaluationRunSummary]
+    links: EvaluationPaginationLinks
+
+
+class EvaluationMetricOutcome(BaseModel):
+    name: str
+    value: Optional[float] = None
+    reason: Optional[str] = None
+    error: Optional[str] = None
+
+
+class EvaluationRunQuestionResult(BaseModel):
+    query_number: int
+    query_text: str
+    expected_answer: str
+    metrics: List[EvaluationMetricOutcome]
+    question_id: str
+    expected_tool_calls: Optional[List[EvaluationExpectedToolCall]] = None
+    agent_response: Optional[InvokeAgentResponse] = None
+    error: Optional[str] = None
+    error_category: Optional[str] = None
+    latency_ms: Optional[int] = None
+    reached_agent: Optional[bool] = None
+
+
+class EvaluationRunDetail(EvaluationRunSummary):
+    questions: List[EvaluationRunQuestionResult]
+
+
+class EvaluationRunDetailResponse(BaseModel):
+    data: EvaluationRunDetail
+
+
+class CancelEvaluationRunData(BaseModel):
+    id: str
+    status: str
+
+
+class CancelEvaluationRunResponse(BaseModel):
+    data: CancelEvaluationRunData
+
+
+class EvaluationDatasetVersion(BaseModel):
+    id: str
+    label: str
+    created_at: str
+    question_count: int
+    added_question_count: int
+    deleted_question_count: int
+    changed_question_count: int
+
+
+class ListEvaluationDatasetVersionsResponse(BaseModel):
+    data: List[EvaluationDatasetVersion]
+
+
+class EvaluationDatasetVersionDetail(BaseModel):
+    id: str
+    dataset_id: str
+    label: str
+    current_version_id: str
+    current_version_label: str
+    added_question_count: int
+    deleted_question_count: int
+    changed_question_count: int
+    dataset_name: str
+    description: str
+    created_at: str
+    dataset_created_at: str
+    dataset_updated_at: str
+    questions: List[EvaluationDatasetQuestion]
+
+
+class EvaluationDatasetVersionDetailResponse(BaseModel):
+    data: EvaluationDatasetVersionDetail
