@@ -34,6 +34,9 @@ from .models import (
     CreateProjectDatabaseBackupResponse,
     CreateProjectDatabaseRequest,
     CreateProjectInstanceRequest,
+    CreateProjectRequest,
+    CreateProjectResponse,
+    CreateUnstructuredImportJobRequest,
     CreateVirtualGraphRequest,
     CustomerManagedKey,
     CustomerManagedKeyRequest,
@@ -45,6 +48,7 @@ from .models import (
     DeploymentsResponse,
     DeploymentTokenResponse,
     EvaluationDatasetDetailResponse,
+    EvaluationDatasetVersionDetailResponse,
     EvaluationRunDetailResponse,
     GetAgentResponse,
     ImportJobEnvelope,
@@ -63,6 +67,7 @@ from .models import (
     LedgerResponse,
     ListAgentResponse,
     ListEvaluationDatasetsResponse,
+    ListEvaluationDatasetVersionsResponse,
     ListEvaluationRunsResponse,
     OrganizationDetailsEnvelope,
     OrganizationInviteResponse,
@@ -75,6 +80,7 @@ from .models import (
     ProjectDatabaseBackupsResponse,
     ProjectDatabaseResponse,
     ProjectDatabasesResponse,
+    ProjectDeletionResponse,
     ProjectInstanceResponse,
     ProjectInstancesResponse,
     ProjectResponse,
@@ -96,6 +102,7 @@ from .models import (
     TenantResponse,
     TenantsResponse,
     UpdateEvaluationDatasetRequest,
+    UpdateProjectRequest,
     UpdateVirtualGraphRequest,
     UsageResponse,
     VirtualGraphAllowedConfigsResponse,
@@ -708,11 +715,19 @@ class AuraClient:
         )
 
     async def pause_instance(self, instanceId: str):
-        """Pause an instance (v1). Returns InstanceResponse with pausing status."""
+        """Pause an instance (v1). Returns InstanceResponse with pausing status.
+
+        Deprecated: this v1 endpoint is marked deprecated upstream. Prefer
+        pause_project_instance (v2beta1) for new code.
+        """
         return await self._post(f"instances/{instanceId}/pause", model=InstanceResponse)
 
     async def resume_instance(self, instanceId: str):
-        """Resume a paused instance (v1). Returns InstanceResponse with resuming status."""
+        """Resume a paused instance (v1). Returns InstanceResponse with resuming status.
+
+        Deprecated: this v1 endpoint is marked deprecated upstream. Prefer
+        resume_project_instance (v2beta1) for new code.
+        """
         return await self._post(
             f"instances/{instanceId}/resume", model=InstanceResponse
         )
@@ -846,6 +861,76 @@ class AuraClient:
         self._ensure_api_is_v2()
         return await self._get(
             f"organizations/{organizationId}/projects/{projectId}",
+            model=ProjectResponse,
+            api_version="v2beta1",
+        )
+
+    async def create_organization_project(
+        self, organizationId: str, details: CreateProjectRequest
+    ):
+        """Create a project within an organization (v2beta1).
+
+        The caller is added as an admin of the new project.
+
+        Returns: CreateProjectResponse with 'data' containing the new
+        ProjectDetails and 'links.resource' pointing to it.
+        """
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects",
+            body=details,
+            model=CreateProjectResponse,
+            api_version="v2beta1",
+        )
+
+    async def update_organization_project(
+        self, organizationId: str, projectId: str, details: UpdateProjectRequest
+    ):
+        """Update (rename) a project within an organization (v2beta1).
+
+        Requires the caller to be a project admin.
+
+        Returns: ProjectResponse with 'data' containing the updated
+        ProjectDetails.
+        """
+        self._ensure_api_is_v2()
+        return await self._patch(
+            f"organizations/{organizationId}/projects/{projectId}",
+            body=details,
+            model=ProjectResponse,
+            api_version="v2beta1",
+        )
+
+    async def delete_organization_project(self, organizationId: str, projectId: str):
+        """Request deletion of a project (v2beta1).
+
+        This suspends all resources in the project and stops billing
+        immediately. The project can be restored within 30 days via
+        restore_organization_project before it is permanently deleted.
+
+        Returns: ProjectDeletionResponse with 'data' containing the
+        deletion status and scheduled hard-delete time.
+        """
+        self._ensure_api_is_v2()
+        return await self._delete(
+            f"organizations/{organizationId}/projects/{projectId}",
+            model=ProjectDeletionResponse,
+            api_version="v2beta1",
+        )
+
+    async def restore_organization_project(self, organizationId: str, projectId: str):
+        """Restore a project that is pending deletion (v2beta1).
+
+        Only available while the project is in a pending-deletion state.
+        Reactivation of the project's resources continues asynchronously
+        after this call returns.
+
+        Returns: ProjectResponse with 'data' containing the now-active
+        ProjectDetails.
+        """
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/restore",
             model=ProjectResponse,
             api_version="v2beta1",
         )
@@ -1285,6 +1370,62 @@ class AuraClient:
             api_version="v2beta1",
         )
 
+    async def create_unstructured_import_job(
+        self,
+        organizationId: str,
+        projectId: str,
+        details: CreateUnstructuredImportJobRequest,
+    ):
+        """Start a Document Intelligence import job (v2beta1).
+
+        Extraction and load run as one job. Poll
+        get_unstructured_import_job_operation until it reaches a terminal
+        status.
+
+        Returns: None. The API responds 202 with no body.
+        """
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/unstructured-import-jobs",
+            body=details,
+            api_version="v2beta1",
+        )
+
+    async def get_unstructured_import_job(
+        self, organizationId: str, projectId: str, jobId: str
+    ):
+        """Get a Document Intelligence import job by id (v2beta1).
+
+        Returns the submitted schema and graph statistics once available;
+        status/progress of the run is on the operation, see
+        get_unstructured_import_job_operation.
+
+        Returns: raw dict. The API does not yet document a response schema
+        for this endpoint.
+        """
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/unstructured-import-jobs/{jobId}",
+            api_version="v2beta1",
+        )
+
+    async def get_unstructured_import_job_operation(
+        self, organizationId: str, projectId: str, jobId: str, operationId: str
+    ):
+        """Get the status of a Document Intelligence import job operation (v2beta1).
+
+        This is the endpoint to poll. A failed import is still HTTP 200;
+        check the operation's status field for 'failed'.
+
+        Returns: raw dict. The API does not yet document a response schema
+        for this endpoint.
+        """
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/unstructured-import-jobs/{jobId}/operations/{operationId}",
+            api_version="v2beta1",
+        )
+
     # Graph analytics sessions
     async def list_organization_graph_analytics_sessions(
         self,
@@ -1536,6 +1677,26 @@ class AuraClient:
             api_version="v2beta1",
         )
 
+    async def create_project_instance_backup(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+    ):
+        """Create a whole-instance Restore Point backup (v2beta1).
+
+        Backs up the system database and all user databases of a Multi
+        Database instance with multi-database backup and restore enabled.
+        The backup is taken asynchronously.
+
+        Returns: None. The API responds 202 with no body.
+        """
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/backups",
+            api_version="v2beta1",
+        )
+
     async def list_project_instance_databases(
         self,
         organizationId: str,
@@ -1596,6 +1757,28 @@ class AuraClient:
         self._ensure_api_is_v2()
         return await self._delete(
             f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases/{databaseId}",
+            api_version="v2beta1",
+        )
+
+    async def promote_project_database(
+        self,
+        organizationId: str,
+        projectId: str,
+        instanceId: str,
+        databaseId: str,
+    ):
+        """Promote a replica database to standalone (v2beta1).
+
+        The database stops replicating from its upstream database and
+        starts accepting writes. Promotion cannot be undone.
+
+        Returns: ProjectDatabaseResponse with 'data' containing the
+        promoted ProjectDatabaseSummary.
+        """
+        self._ensure_api_is_v2()
+        return await self._post(
+            f"organizations/{organizationId}/projects/{projectId}/instances/{instanceId}/databases/{databaseId}/promote",
+            model=ProjectDatabaseResponse,
             api_version="v2beta1",
         )
 
@@ -2060,6 +2243,36 @@ class AuraClient:
         self._ensure_api_is_v2()
         return await self._delete(
             f"organizations/{organizationId}/projects/{projectId}/agents/evaluation-datasets/{datasetId}",
+            api_version="v2beta1",
+        )
+
+    async def list_agent_evaluation_dataset_versions(
+        self, organizationId: str, projectId: str, datasetId: str
+    ):
+        """List the immutable versions of an evaluation dataset (v2beta1).
+
+        Returns: ListEvaluationDatasetVersionsResponse with 'data'
+        containing a list of EvaluationDatasetVersion objects.
+        """
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/agents/evaluation-datasets/{datasetId}/versions",
+            model=ListEvaluationDatasetVersionsResponse,
+            api_version="v2beta1",
+        )
+
+    async def get_agent_evaluation_dataset_version(
+        self, organizationId: str, projectId: str, datasetId: str, versionId: str
+    ):
+        """Get a specific evaluation dataset version, including its questions (v2beta1).
+
+        Returns: EvaluationDatasetVersionDetailResponse with 'data'
+        containing an EvaluationDatasetVersionDetail.
+        """
+        self._ensure_api_is_v2()
+        return await self._get(
+            f"organizations/{organizationId}/projects/{projectId}/agents/evaluation-datasets/{datasetId}/versions/{versionId}",
+            model=EvaluationDatasetVersionDetailResponse,
             api_version="v2beta1",
         )
 

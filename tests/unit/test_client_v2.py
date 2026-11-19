@@ -106,6 +106,55 @@ async def test_get_organization_project():
         assert resp.data.name == "My Project"
 
 
+@respx.mock
+@pytest.mark.asyncio
+async def test_organization_project_crud_methods():
+    mock_oauth_token()
+
+    respx.post(f"{baseUrl}v2beta1/organizations/{org_id}/projects").respond(
+        status_code=200,
+        json={
+            "data": {"id": proj_id, "name": "My Project"},
+            "links": {"resource": "https://api.neo4j.io/resource"},
+        },
+    )
+    respx.patch(f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}").respond(
+        status_code=200,
+        json={"data": {"id": proj_id, "name": "My Project Renamed"}},
+    )
+    respx.delete(f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}").respond(
+        status_code=200,
+        json={
+            "data": {
+                "status": "deletion_requested",
+                "scheduled_hard_delete_at": "2026-12-31T00:00:00Z",
+            }
+        },
+    )
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/restore"
+    ).respond(
+        status_code=200,
+        json={"data": {"id": proj_id, "name": "My Project"}},
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        create_req = models.CreateProjectRequest(name="My Project")
+        created = await client.create_organization_project(org_id, create_req)
+        assert created.data.id == proj_id
+        assert created.links.resource == "https://api.neo4j.io/resource"
+
+        update_req = models.UpdateProjectRequest(name="My Project Renamed")
+        updated = await client.update_organization_project(org_id, proj_id, update_req)
+        assert updated.data.name == "My Project Renamed"
+
+        deleted = await client.delete_organization_project(org_id, proj_id)
+        assert deleted.data.status == "deletion_requested"
+
+        restored = await client.restore_organization_project(org_id, proj_id)
+        assert restored.data.id == proj_id
+
+
 # === IP Filter Tests ===
 
 
@@ -350,6 +399,44 @@ async def test_cancel_import_job():
     async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
         resp = await client.cancel_import_job(org_id, proj_id, "job-1")
         assert resp.data["id"] == "job-1"
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_unstructured_import_job_methods():
+    mock_oauth_token()
+
+    job_id = "uij-1"
+    operation_id = "op-1"
+
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/unstructured-import-jobs"
+    ).respond(status_code=202)
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/unstructured-import-jobs/{job_id}"
+    ).respond(status_code=200, json={"id": job_id, "schema": {}})
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/unstructured-import-jobs/{job_id}/operations/{operation_id}"
+    ).respond(status_code=200, json={"id": operation_id, "status": "running"})
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        create_req = models.CreateUnstructuredImportJobRequest(
+            data_source_id="ds-1",
+            instance_id=inst_id,
+            schema={"node_types": []},
+        )
+        created = await client.create_unstructured_import_job(
+            org_id, proj_id, create_req
+        )
+        assert created is None
+
+        job = await client.get_unstructured_import_job(org_id, proj_id, job_id)
+        assert job["id"] == job_id
+
+        operation = await client.get_unstructured_import_job_operation(
+            org_id, proj_id, job_id, operation_id
+        )
+        assert operation["status"] == "running"
 
 
 # === Deployment Tests ===
@@ -1314,27 +1401,23 @@ async def test_organization_invites_crud():
     mock_oauth_token()
 
     invite_id = "invite-1"
+    invite_json = {
+        "id": invite_id,
+        "email": "new-user@example.com",
+        "status": "active",
+        "invited_by": "inviter-1",
+        "organization_id": org_id,
+        "organization_roles": ["organization-member"],
+        "project_invites": [],
+        "expires_at": "2026-12-31T00:00:00Z",
+    }
     respx.get(f"{baseUrl}v2beta1/organizations/{org_id}/invites").respond(
         status_code=200,
-        json={
-            "data": [
-                {
-                    "id": invite_id,
-                    "email": "new-user@example.com",
-                    "status": "active",
-                }
-            ]
-        },
+        json={"data": [invite_json]},
     )
     respx.post(f"{baseUrl}v2beta1/organizations/{org_id}/invites").respond(
         status_code=201,
-        json={
-            "data": {
-                "id": invite_id,
-                "email": "new-user@example.com",
-                "status": "active",
-            }
-        },
+        json={"data": invite_json},
     )
     respx.delete(
         f"{baseUrl}v2beta1/organizations/{org_id}/invites/{invite_id}"
@@ -1456,6 +1539,12 @@ async def test_project_instance_and_database_methods():
     respx.post(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases/{database_id}/restore"
     ).respond(status_code=202)
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases/{database_id}/promote"
+    ).respond(
+        status_code=202,
+        json={"data": {"id": database_id, "name": database_name}},
+    )
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/databases/{database_id}/backups"
     ).respond(status_code=200, json={"data": [{"id": backup_id}]})
@@ -1500,6 +1589,11 @@ async def test_project_instance_and_database_methods():
             org_id, proj_id, inst_id, database_id, restore_req
         )
         assert restored is None
+
+        promoted = await client.promote_project_database(
+            org_id, proj_id, inst_id, database_id
+        )
+        assert promoted.data.id == database_id
 
         backups = await client.list_project_database_backups(
             org_id, proj_id, inst_id, database_id
@@ -1558,6 +1652,9 @@ async def test_project_instance_lifecycle_methods():
         status_code=202,
         json={"data": {"instance_id": inst_id, "restore_id": "restore-1"}},
     )
+    respx.post(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/instances/{inst_id}/backups"
+    ).respond(status_code=202)
 
     async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
         paused = await client.pause_project_instance(org_id, proj_id, inst_id)
@@ -1583,6 +1680,11 @@ async def test_project_instance_lifecycle_methods():
         assert restored.data.instance_id == inst_id
         assert restored.data.restore_id == "restore-1"
 
+        backed_up = await client.create_project_instance_backup(
+            org_id, proj_id, inst_id
+        )
+        assert backed_up is None
+
 
 @respx.mock
 @pytest.mark.asyncio
@@ -1604,6 +1706,8 @@ async def test_agent_evaluation_dataset_methods():
                     "created_at": "2026-01-01T00:00:00Z",
                     "updated_at": "2026-01-01T00:00:00Z",
                     "question_count": 1,
+                    "current_version_id": "version-1",
+                    "current_version_label": "v1",
                 }
             ],
             "links": {
@@ -1634,6 +1738,11 @@ async def test_agent_evaluation_dataset_methods():
                 "expected_answer": "hi!",
             }
         ],
+        "current_version_id": "version-1",
+        "current_version_label": "v1",
+        "added_question_count": 1,
+        "deleted_question_count": 0,
+        "changed_question_count": 0,
     }
     respx.get(
         f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-datasets/{dataset_id}"
@@ -1673,6 +1782,76 @@ async def test_agent_evaluation_dataset_methods():
         assert updated.data.id == dataset_id
 
         await client.delete_agent_evaluation_dataset(org_id, proj_id, dataset_id)
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_agent_evaluation_dataset_version_methods():
+    mock_oauth_token()
+
+    dataset_id = "dataset-1"
+    version_id = "version-1"
+
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-datasets/{dataset_id}/versions"
+    ).respond(
+        status_code=200,
+        json={
+            "data": [
+                {
+                    "id": version_id,
+                    "label": "v1",
+                    "created_at": "2026-01-01T00:00:00Z",
+                    "question_count": 1,
+                    "added_question_count": 1,
+                    "deleted_question_count": 0,
+                    "changed_question_count": 0,
+                }
+            ]
+        },
+    )
+    respx.get(
+        f"{baseUrl}v2beta1/organizations/{org_id}/projects/{proj_id}/agents/evaluation-datasets/{dataset_id}/versions/{version_id}"
+    ).respond(
+        status_code=200,
+        json={
+            "data": {
+                "id": version_id,
+                "dataset_id": dataset_id,
+                "label": "v1",
+                "current_version_id": version_id,
+                "current_version_label": "v1",
+                "added_question_count": 1,
+                "deleted_question_count": 0,
+                "changed_question_count": 0,
+                "dataset_name": "greetings",
+                "description": "basic greetings",
+                "created_at": "2026-01-01T00:00:00Z",
+                "dataset_created_at": "2026-01-01T00:00:00Z",
+                "dataset_updated_at": "2026-01-01T00:00:00Z",
+                "questions": [
+                    {
+                        "query_number": 1,
+                        "query_text": "hello?",
+                        "expected_answer": "hi!",
+                    }
+                ],
+            }
+        },
+    )
+
+    async with AuraClient(clientId, clientSecret, api_version="v2beta1") as client:
+        versions = await client.list_agent_evaluation_dataset_versions(
+            org_id, proj_id, dataset_id
+        )
+        assert versions.data[0].id == version_id
+        assert versions.data[0].label == "v1"
+
+        version_detail = await client.get_agent_evaluation_dataset_version(
+            org_id, proj_id, dataset_id, version_id
+        )
+        assert version_detail.data.id == version_id
+        assert version_detail.data.questions[0].query_text == "hello?"
 
 
 @respx.mock
@@ -1722,6 +1901,7 @@ async def test_agent_evaluation_run_methods():
                 **run_summary,
                 "questions": [
                     {
+                        "question_id": "question-1",
                         "query_number": 1,
                         "query_text": "hello?",
                         "expected_answer": "hi!",

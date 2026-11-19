@@ -982,6 +982,7 @@ paths:
       tags:
         - instances
       operationId: post-pause-instance
+      deprecated: true
       requestBody:
         content:
           application/json:
@@ -1061,6 +1062,7 @@ paths:
       tags:
         - instances
       operationId: post-resume-instance
+      deprecated: true
       requestBody:
         content:
           application/json:
